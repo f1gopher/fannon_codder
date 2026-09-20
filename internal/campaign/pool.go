@@ -1,5 +1,7 @@
 package campaign
 
+import "fmt"
+
 const (
 	// StartingRecruits is the Boot Hill queue at a new game (Amiga: 15).
 	StartingRecruits = 15
@@ -9,8 +11,9 @@ const (
 
 // Soldier is one named man in the pool or on the field.
 type Soldier struct {
-	Name string
-	Rank Rank
+	Name               string `json:"name"`
+	Rank               Rank   `json:"rank"`
+	PhasesThisMission  int    `json:"phasesThisMission,omitempty"`
 }
 
 // Pool is the unused recruit queue. Deployed men leave it.
@@ -39,6 +42,13 @@ func NewGamePoolNames(names []string) *Pool {
 		p.Recruits = append(p.Recruits, Soldier{Name: names[i], Rank: Private})
 	}
 	return p
+}
+
+func (p *Pool) NextNameIndex() int {
+	if p == nil {
+		return 0
+	}
+	return p.nextName
 }
 
 func (p *Pool) Remaining() int {
@@ -71,6 +81,59 @@ func (p *Pool) Return(men []Soldier) {
 		return
 	}
 	p.Recruits = append(append([]Soldier{}, men...), p.Recruits...)
+}
+
+// CompleteMission promotes anyone who survived phases this mission, then
+// adds RecruitsPerMission new men. missionsCompleted is the count AFTER this mission.
+func (p *Pool) CompleteMission(missionsCompleted int) {
+	if p == nil {
+		return
+	}
+	for i := range p.Recruits {
+		n := p.Recruits[i].PhasesThisMission
+		if n <= 0 {
+			continue
+		}
+		p.Recruits[i].Rank = p.Recruits[i].Rank.Add(n)
+		p.Recruits[i].PhasesThisMission = 0
+	}
+	intake := Rank(missionsCompleted / 3) // extra training every 3 missions
+	p.AddRecruits(RecruitsPerMission, intake)
+}
+
+// AddRecruits appends n men of the given rank, drawing names from the list.
+func (p *Pool) AddRecruits(n int, rank Rank) {
+	if p == nil || n <= 0 {
+		return
+	}
+	for i := 0; i < n; i++ {
+		p.Recruits = append(p.Recruits, Soldier{Name: p.nextRecruitName(), Rank: rank})
+	}
+}
+
+func (p *Pool) nextRecruitName() string {
+	if len(p.names) == 0 {
+		p.nextName++
+		return fmt.Sprintf("Recruit%d", p.nextName)
+	}
+	idx := p.nextName % len(p.names)
+	gen := p.nextName / len(p.names)
+	p.nextName++
+	base := p.names[idx]
+	if gen == 0 {
+		return base
+	}
+	return fmt.Sprintf("%s%d", base, gen+1)
+}
+
+// Restore rebuilds a pool from a save (names list is reloaded from disk).
+func RestorePool(recruits []Soldier, nextName int) *Pool {
+	p := &Pool{
+		Recruits: append([]Soldier{}, recruits...),
+		nextName: nextName,
+		names:    LoadNames(),
+	}
+	return p
 }
 
 func (p *Pool) pickIndex() int {

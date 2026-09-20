@@ -121,14 +121,14 @@ func (b *Battle) Leave() {}
 func (b *Battle) Update(h Host) error {
 	p := h.Pointer()
 	if b.world.Status != sim.Playing {
-		b.settleOnce()
+		b.settleOnce(b.world.Status == sim.Won)
 		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			b.leaveBattle(h, b.world.Status == sim.Won)
 		}
 		return nil
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		b.settleOnce()
+		b.settleOnce(false)
 		b.leaveBattle(h, false)
 		return nil
 	}
@@ -150,12 +150,17 @@ func (b *Battle) Update(h Host) error {
 	return nil
 }
 
-func (b *Battle) settleOnce() {
+func (b *Battle) settleOnce(won bool) {
 	if b.settled {
 		return
 	}
 	b.settled = true
 	graves, survivors := b.tally()
+	if won {
+		for i := range survivors {
+			survivors[i].PhasesThisMission++
+		}
+	}
 	b.prog.Graves += graves
 	b.prog.Pool.Return(survivors)
 	b.remaining = b.prog.Pool.Remaining()

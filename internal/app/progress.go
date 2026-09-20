@@ -7,13 +7,15 @@ import (
 
 // Progress is the campaign loop shared by Boot Hill, briefing, and battle.
 type Progress struct {
-	Pool         *campaign.Pool
-	Graves       int
-	PhaseIndex   int
-	Campaign     *data.Campaign
-	Phase        *data.Phase
-	MissionDone  bool
-	GameOver     bool
+	Pool               *campaign.Pool
+	Graves             int
+	PhaseIndex         int
+	MissionsCompleted  int
+	Campaign           *data.Campaign
+	Phase              *data.Phase
+	GameOver           bool
+	AwaitingStub       bool // next mission has no map yet
+	SaveNotice         string
 }
 
 func NewProgress() *Progress {
@@ -49,31 +51,94 @@ func (p *Progress) MissionNumber() int {
 	if p.Phase != nil && p.Phase.Mission > 0 {
 		return p.Phase.Mission
 	}
+	if p.MissionsCompleted > 0 {
+		return p.MissionsCompleted
+	}
 	return 1
 }
 
 func (p *Progress) CanStart() bool {
-	return !p.MissionDone && !p.GameOver && p.Pool.Remaining() >= p.DeployCount()
+	if p.GameOver || p.AwaitingStub {
+		return false
+	}
+	return p.Phase != nil && p.Pool.Remaining() >= p.DeployCount()
+}
+
+func (p *Progress) CanSave() bool {
+	return p.MissionsCompleted > 0 && !p.GameOver
 }
 
 func (p *Progress) MarkGameOverIfNeeded() {
+	if p.AwaitingStub {
+		return
+	}
 	if p.Pool.Remaining() < p.DeployCount() {
 		p.GameOver = true
 	}
 }
 
 func (p *Progress) OnPhaseWon() {
-	if p.Campaign == nil {
-		p.MissionDone = true
-		return
-	}
 	cur := p.MissionNumber()
 	p.PhaseIndex++
 	p.reloadPhase()
-	if p.Phase == nil || p.Phase.Mission != cur {
-		// Next file is a new mission (or none). Promotions/+15 are chunk 09.
-		p.MissionDone = true
-		p.PhaseIndex-- // stay on completed phase for the label
-		p.reloadPhase()
+	if p.Phase != nil && p.Phase.Mission == cur {
+		return // more phases in this mission
 	}
+	p.MissionsCompleted++
+	p.Pool.CompleteMission(p.MissionsCompleted)
+	if p.Phase == nil {
+		p.AwaitingStub = true
+	}
+}
+
+func (p *Progress) ToSave() campaign.SaveGame {
+	var recruits []campaign.Soldier
+	next := 0
+	if p.Pool != nil {
+		recruits = append(recruits, p.Pool.Recruits...)
+		next = p.Pool.NextNameIndex()
+	}
+	return campaign.SaveGame{
+		PhaseIndex:        p.PhaseIndex,
+		MissionsCompleted: p.MissionsCompleted,
+		Graves:            p.Graves,
+		GameOver:          p.GameOver,
+		AwaitingStub:      p.AwaitingStub,
+		Recruits:          recruits,
+		NextName:          next,
+	}
+}
+
+func (p *Progress) ApplySave(s campaign.SaveGame) {
+	p.PhaseIndex = s.PhaseIndex
+	p.MissionsCompleted = s.MissionsCompleted
+	p.Graves = s.Graves
+	p.GameOver = s.GameOver
+	p.AwaitingStub = s.AwaitingStub
+	p.Pool = campaign.RestorePool(s.Recruits, s.NextName)
+	p.reloadPhase()
+	if p.Phase == nil && p.MissionsCompleted > 0 {
+		p.AwaitingStub = true
+	}
+}
+
+func (p *Progress) Save() error {
+	path, err := campaign.DefaultSavePath()
+	if err != nil {
+		return err
+	}
+	return campaign.Save(path, p.ToSave())
+}
+
+func (p *Progress) Load() error {
+	path, err := campaign.DefaultSavePath()
+	if err != nil {
+		return err
+	}
+	s, err := campaign.Load(path)
+	if err != nil {
+		return err
+	}
+	p.ApplySave(s)
+	return nil
 }

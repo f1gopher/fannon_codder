@@ -75,3 +75,8 @@ func (r Rank) String() string { return rankNames[r.clamp()] }
 
 // Abbrev is the short HUD label (Pte, Cpl, …).
 func (r Rank) Abbrev() string { return rankAbbrev[r.clamp()] }
+
+// Add returns a rank n steps higher, capped at General.
+func (r Rank) Add(n int) Rank {
+	return Rank(int(r) + n).clamp()
+}

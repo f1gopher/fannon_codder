@@ -10,7 +10,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 06 Mission 1 playable (data + tiny jungle)
 - [x] 07 Names, ranks, recruit pool
 - [x] 08 Boot Hill, briefing, fail/retry
-- [ ] 09 Mission complete: promotions, +15, save/load
+- [x] 09 Mission complete: promotions, +15, save/load
 - [ ] 10 Rank gun stats + HUD ammo icons
 - [ ] 11 Tilemaps, scrolling, cover
 - [ ] 12 Water, swimming, bridges
@@ -56,3 +56,7 @@ Verify: left HUD shows Snake logo, Pte Jools and Pte Jops, R13 remaining. Restar
 ### Chunk 08 done
 Files: `internal/app/progress.go`, `internal/app/boothill.go`, `internal/app/briefing.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/campaign/pool.go`, `internal/campaign/pool_test.go`.
 Verify: Title → Boot Hill (queue of 15, 0 graves) → briefing → battle. Wipe: graves go up, queue shrinks, next attempt is Stoo & Jon. ESC returns living men to the pool. Win → Boot Hill “MISSION COMPLETE”. No save or +15 yet.
+
+### Chunk 09 done
+Files: `internal/campaign/save.go`, `internal/campaign/save_test.go`, `internal/campaign/pool.go`, `internal/campaign/ranks.go`, `internal/app/progress.go`, `internal/app/boothill.go`, `internal/app/stub.go`, `internal/app/scenes.go`.
+Verify: finish M1 with no deaths → Boot Hill queue 30, Cpl Jools and Cpl Jops. SAVE/LOAD icons (save in `~/.config/fannon-codder/save.json`). Click continues to a Mission 2 stub, not a crash. No M2 map yet.

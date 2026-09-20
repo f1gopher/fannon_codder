@@ -46,11 +46,11 @@ func (w *World) stepFire(dt float64) {
 		if w.Spread > 0 {
 			ang += (w.rng.Float64()*2 - 1) * w.Spread
 		}
-		w.spawnMG(u, ang)
+		w.spawnMG(u, ang, MGRange)
 	}
 }
 
-func (w *World) spawnMG(u *Unit, ang float64) {
+func (w *World) spawnMG(u *Unit, ang float64, maxRange float64) {
 	nx, ny := math.Cos(ang), math.Sin(ang)
 	muzzle := float64(UnitSize) / 2
 	w.Projectiles = append(w.Projectiles, Projectile{
@@ -60,7 +60,7 @@ func (w *World) spawnMG(u *Unit, ang float64) {
 		VY:        ny * MGSpeed,
 		OwnerID:   u.ID,
 		OwnerSide: u.Side,
-		Left:      MGRange,
+		Left:      maxRange,
 		Alive:     true,
 	})
 }

@@ -6,7 +6,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 02 Scenes + pointer + camera shell
 - [x] 03 Troopers walk in file
 - [x] 04 Machine guns, death, friendly-fire rules
-- [ ] 05 Enemy grunts + kill-all
+- [x] 05 Enemy grunts + kill-all
 - [ ] 06 Mission 1 playable (data + tiny jungle)
 - [ ] 07 Names, ranks, recruit pool
 - [ ] 08 Boot Hill, briefing, fail/retry
@@ -40,3 +40,7 @@ Verify: after the title, two green squares. Left-click: leader walks there, seco
 ### Chunk 04 done
 Files: `internal/sim/combat.go`, `internal/sim/projectile.go`, `internal/sim/combat_test.go`, `internal/sim/world.go`, `internal/sim/unit.go`, `internal/render/units.go`, `internal/app/scenes.go`.
 Verify: hold right (or Ctrl) to hose MG fire. The red dummy dies in one hit and stays as a dark corpse. Shooting through your own green man does not kill him. Dead troopers drop out of the file. No enemy AI yet.
+
+### Chunk 05 done
+Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/objectives.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/app/scenes.go`.
+Verify: 2 greens vs 3 reds. Reds shoot if you enter range, otherwise wander in if close. Kill all three → PHASE COMPLETE. Lose both men → PHASE FAILED. Click/Enter returns to title. No campaign or maps yet.

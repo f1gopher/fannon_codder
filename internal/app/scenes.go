@@ -66,6 +66,12 @@ func (b *Battle) Leave() {}
 
 func (b *Battle) Update(h Host) error {
 	p := h.Pointer()
+	if b.world.Status != sim.Playing {
+		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+			h.Switch(NewTitle())
+		}
+		return nil
+	}
 	wx := p.X + b.world.Camera.X
 	wy := p.Y + b.world.Camera.Y
 	if p.LeftDown {
@@ -88,4 +94,10 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	screen.Fill(battleColor)
 	render.Units(screen, b.world)
 	render.Projectiles(screen, b.world)
+	switch b.world.Status {
+	case sim.Won:
+		ebitenutil.DebugPrint(screen, "\n\n  PHASE COMPLETE\n  Click or Enter")
+	case sim.Lost:
+		ebitenutil.DebugPrint(screen, "\n\n  PHASE FAILED\n  Click or Enter")
+	}
 }

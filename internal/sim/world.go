@@ -15,6 +15,9 @@ type World struct {
 	AimX, AimY  float64
 	Firing      bool
 	Spread      float64
+	AI          bool
+	Status      Status
+	Objectives  []Objective
 	nextID      int
 	rng         *rand.Rand
 }
@@ -28,16 +31,20 @@ func NewDemoWorld() *World {
 			MapW:  320,
 			MapH:  256,
 		},
-		Spread: MGSpread,
-		nextID: 1,
-		rng:    newRNG(),
+		Spread:     MGSpread,
+		AI:         true,
+		Status:     Playing,
+		Objectives: []Objective{KillAllEnemy},
+		nextID:     1,
+		rng:        newRNG(),
 	}
 	w.SpawnPlayerSquad(SquadSnake, []Vec2{
 		{X: 80, Y: 128},
 		{X: 80 - FileSpacing, Y: 128},
 	})
-	// Stationary dummy so MG can be verified (no AI this chunk).
-	w.SpawnUnit(SideEnemy, Vec2{X: 160, Y: 100})
+	w.SpawnUnit(SideEnemy, Vec2{X: 200, Y: 56})
+	w.SpawnUnit(SideEnemy, Vec2{X: 248, Y: 140})
+	w.SpawnUnit(SideEnemy, Vec2{X: 176, Y: 208})
 	return w
 }
 
@@ -128,8 +135,10 @@ func (w *World) Step(dt float64) {
 	for i := range w.Squads {
 		w.stepSquad(&w.Squads[i], dt)
 	}
+	w.stepAI(dt)
 	w.stepFire(dt)
 	w.stepProjectiles(dt)
+	w.evaluateObjectives()
 }
 
 func (w *World) stepSquad(s *Squad, dt float64) {

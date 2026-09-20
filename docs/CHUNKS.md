@@ -11,7 +11,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 07 Names, ranks, recruit pool
 - [x] 08 Boot Hill, briefing, fail/retry
 - [x] 09 Mission complete: promotions, +15, save/load
-- [ ] 10 Rank gun stats + HUD ammo icons
+- [x] 10 Rank gun stats + HUD ammo icons
 - [ ] 11 Tilemaps, scrolling, cover
 - [ ] 12 Water, swimming, bridges
 - [ ] 13 Split squads (Snake / Eagle / Panther)
@@ -60,3 +60,7 @@ Verify: Title → Boot Hill (queue of 15, 0 graves) → briefing → battle. Wip
 ### Chunk 09 done
 Files: `internal/campaign/save.go`, `internal/campaign/save_test.go`, `internal/campaign/pool.go`, `internal/campaign/ranks.go`, `internal/app/progress.go`, `internal/app/boothill.go`, `internal/app/stub.go`, `internal/app/scenes.go`.
 Verify: finish M1 with no deaths → Boot Hill queue 30, Cpl Jools and Cpl Jops. SAVE/LOAD icons (save in `~/.config/fannon-codder/save.json`). Click continues to a Mission 2 stub, not a crash. No M2 map yet.
+
+### Chunk 10 done
+Files: `internal/sim/combat.go`, `internal/sim/combat_test.go`, `internal/sim/ai.go`, `internal/render/hud.go`.
+Verify: HUD shows G0 and R0. A Corporal’s MG range/RoF beat a Private (`go test ./internal/sim`). Enemies stay on the grunt table (70 px, 4/s). No grenades yet.

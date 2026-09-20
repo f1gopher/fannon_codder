@@ -6,12 +6,41 @@ import (
 )
 
 const (
-	MGRoF    = 8.0  // shots / second / living trooper
-	MGRange  = 100.0
 	MGSpeed  = 500.0
-	MGSpread = 0.05 // radians
 	MGHitR   = 4.0
+	MGSpread = 0.05 // default world spread enable (0 in tests = none)
+
+	privateRange  = 80.0
+	generalRange  = 150.0
+	privateRoF    = 8.0
+	generalRoF    = 14.0
+	privateSpread = 0.12 // radians, wide
+	generalSpread = 0.02 // tight
+	rankMax       = 15   // General
 )
+
+// GunStats is MG performance for a player rank (0=Private … 15=General).
+type GunStats struct {
+	Range  float64
+	RoF    float64
+	Spread float64
+}
+
+// GunStatsFor interpolates the Amiga-ish curve by rank index.
+func GunStatsFor(rank int) GunStats {
+	if rank < 0 {
+		rank = 0
+	}
+	if rank > rankMax {
+		rank = rankMax
+	}
+	t := float64(rank) / float64(rankMax)
+	return GunStats{
+		Range:  privateRange + (generalRange-privateRange)*t,
+		RoF:    privateRoF + (generalRoF-privateRoF)*t,
+		Spread: privateSpread + (generalSpread-privateSpread)*t,
+	}
+}
 
 // SetFire aims the active squad at a world-space point. firing is right-held (or Ctrl).
 func (w *World) SetFire(aimX, aimY float64, firing bool) {
@@ -25,12 +54,12 @@ func (w *World) stepFire(dt float64) {
 	if s == nil || !w.Firing {
 		return
 	}
-	interval := 1.0 / MGRoF
 	for _, id := range s.MemberIDs {
 		u := w.Unit(id)
 		if u == nil || !u.Living() {
 			continue
 		}
+		st := GunStatsFor(u.Rank)
 		dx := w.AimX - u.X
 		dy := w.AimY - u.Y
 		if dx == 0 && dy == 0 {
@@ -41,12 +70,16 @@ func (w *World) stepFire(dt float64) {
 		if u.FireCD > 0 {
 			continue
 		}
-		u.FireCD = interval
+		u.FireCD = 1.0 / st.RoF
 		ang := u.Facing
-		if w.Spread > 0 {
-			ang += (w.rng.Float64()*2 - 1) * w.Spread
+		spread := st.Spread
+		if w.Spread == 0 {
+			spread = 0
 		}
-		w.spawnMG(u, ang, MGRange)
+		if spread > 0 {
+			ang += (w.rng.Float64()*2 - 1) * spread
+		}
+		w.spawnMG(u, ang, st.Range)
 	}
 }
 

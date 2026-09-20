@@ -4,7 +4,7 @@ import "math"
 
 const (
 	EnemyMGRoF     = 4.0  // slower than player 8/s
-	EnemyMGRange   = 80.0 // shorter than player 100
+	EnemyMGRange   = 70.0 // shorter than a Private's 80
 	EnemyWalkSpeed = 18.0
 	EnemyApproach  = 140.0
 )

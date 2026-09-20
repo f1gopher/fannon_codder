@@ -68,6 +68,42 @@ func TestAllLivingSquadMembersFire(t *testing.T) {
 	}
 }
 
+func TestCorporalOutrangesPrivate(t *testing.T) {
+	pvt := GunStatsFor(0)
+	cpl := GunStatsFor(1)
+	if cpl.Range <= pvt.Range {
+		t.Fatalf("corporal range %v should exceed private %v", cpl.Range, pvt.Range)
+	}
+	if cpl.RoF <= pvt.RoF {
+		t.Fatalf("corporal RoF %v should exceed private %v", cpl.RoF, pvt.RoF)
+	}
+	if cpl.Spread >= pvt.Spread {
+		t.Fatalf("corporal spread %v should be tighter than private %v", cpl.Spread, pvt.Spread)
+	}
+	gen := GunStatsFor(15)
+	if gen.Range != generalRange || gen.RoF != generalRoF {
+		t.Fatalf("general stats %+v", gen)
+	}
+}
+
+func TestCorporalProjectileOutrangesPrivate(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 0, Y: 0}, {X: 0, Y: 16}}, Vec2{X: 400, Y: 400})
+	w.Unit(w.ActiveSquad().MemberIDs[0]).Rank = 0
+	w.Unit(w.ActiveSquad().MemberIDs[1]).Rank = 1
+	w.SetFire(80, 0, true)
+	w.Step(1.0 / 60)
+	if len(w.Projectiles) != 2 {
+		t.Fatalf("shots=%d", len(w.Projectiles))
+	}
+	a, b := w.Projectiles[0].Left, w.Projectiles[1].Left
+	if a < b {
+		a, b = b, a
+	}
+	if a <= b {
+		t.Fatalf("remaining travel %v and %v; corporal shot should have more range left", a, b)
+	}
+}
+
 func gunWorld(players []Vec2, dummy Vec2) *World {
 	w := &World{Spread: 0, nextID: 1, rng: newRNG()}
 	w.SpawnPlayerSquad(SquadSnake, players)

@@ -1,0 +1,20 @@
+# Binaries
+/fannon
+/fannon.exe
+/cmd/fannon/fannon
+*.exe
+*.test
+*.out
+
+# Go
+vendor/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db

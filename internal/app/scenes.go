@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"fannon-codder/internal/campaign"
 	"fannon-codder/internal/data"
 	"fannon-codder/internal/input"
 	"fannon-codder/internal/render"
@@ -55,16 +56,40 @@ func (t *Title) Draw(screen *ebiten.Image) {
 
 // Battle is a green field with a two-man squad (Chunk 03).
 type Battle struct {
-	world *sim.World
+	world     *sim.World
+	remaining int
 }
 
 func NewBattle() *Battle {
 	w, err := data.LoadFirstWorld()
 	if err != nil {
-		// Tests and missing data still get the empty-field sandbox.
 		w = sim.NewDemoWorld()
 	}
-	return &Battle{world: w}
+	pool := campaign.NewGamePool()
+	n := 0
+	if s := w.ActiveSquad(); s != nil {
+		n = len(s.MemberIDs)
+	}
+	nameSquad(w, pool.Deploy(n))
+	return &Battle{world: w, remaining: pool.Remaining()}
+}
+
+func nameSquad(w *sim.World, men []campaign.Soldier) {
+	s := w.ActiveSquad()
+	if s == nil {
+		return
+	}
+	for i, id := range s.MemberIDs {
+		if i >= len(men) {
+			break
+		}
+		u := w.Unit(id)
+		if u == nil {
+			continue
+		}
+		u.Name = men[i].Name
+		u.Rank = int(men[i].Rank)
+	}
 }
 
 func (b *Battle) Enter() {}
@@ -101,6 +126,7 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	render.Tiles(screen, b.world.Map, b.world.Camera)
 	render.Units(screen, b.world)
 	render.Projectiles(screen, b.world)
+	render.HUD(screen, b.world, b.remaining)
 	switch b.world.Status {
 	case sim.Won:
 		ebitenutil.DebugPrint(screen, "\n\n  PHASE COMPLETE\n  Click or Enter")

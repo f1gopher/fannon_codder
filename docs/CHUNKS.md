@@ -8,7 +8,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 04 Machine guns, death, friendly-fire rules
 - [x] 05 Enemy grunts + kill-all
 - [x] 06 Mission 1 playable (data + tiny jungle)
-- [ ] 07 Names, ranks, recruit pool
+- [x] 07 Names, ranks, recruit pool
 - [ ] 08 Boot Hill, briefing, fail/retry
 - [ ] 09 Mission complete: promotions, +15, save/load
 - [ ] 10 Rank gun stats + HUD ammo icons
@@ -48,3 +48,7 @@ Verify: 2 greens vs 3 reds. Reds shoot if you enter range, otherwise wander in i
 ### Chunk 06 done
 Files: `internal/sim/map.go`, `internal/sim/map_test.go`, `internal/sim/move.go`, `internal/sim/world.go`, `internal/sim/ai.go`, `internal/sim/objectives.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`, `data/missions/campaign.json`, `data/missions/m01p01.json`.
 Verify: `go run ./cmd/fannon` (or `-skip-title`). Mission 1 jungle, 2 men, 3 isolated grunts, trees block walking (slide around). Kill all → PHASE COMPLETE. Stand in the open and you can lose. No Boot Hill/names yet.
+
+### Chunk 07 done
+Files: `internal/campaign/pool.go`, `internal/campaign/ranks.go`, `internal/campaign/names.go`, `internal/campaign/pool_test.go`, `internal/render/hud.go`, `internal/app/scenes.go`, `data/names.txt`.
+Verify: left HUD shows Snake logo, Pte Jools and Pte Jops, R13 remaining. Restarting a new game deploys the same two names. `go test ./internal/campaign`. No Boot Hill, promotions, or save yet.

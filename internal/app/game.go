@@ -24,10 +24,14 @@ type Game struct {
 	pointer input.Pointer
 }
 
-func New() *Game {
+func New(skipTitle bool) *Game {
 	ebiten.SetCursorMode(ebiten.CursorModeHidden)
 	g := &Game{}
-	g.scene = NewTitle()
+	if skipTitle {
+		g.scene = NewBattle()
+	} else {
+		g.scene = NewTitle()
+	}
 	g.scene.Enter()
 	return g
 }

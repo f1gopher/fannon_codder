@@ -7,6 +7,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"fannon-codder/internal/data"
 	"fannon-codder/internal/input"
 	"fannon-codder/internal/render"
 	"fannon-codder/internal/sim"
@@ -58,7 +59,12 @@ type Battle struct {
 }
 
 func NewBattle() *Battle {
-	return &Battle{world: sim.NewDemoWorld()}
+	w, err := data.LoadFirstWorld()
+	if err != nil {
+		// Tests and missing data still get the empty-field sandbox.
+		w = sim.NewDemoWorld()
+	}
+	return &Battle{world: w}
 }
 
 func (b *Battle) Enter() {}
@@ -92,6 +98,7 @@ func (b *Battle) Update(h Host) error {
 
 func (b *Battle) Draw(screen *ebiten.Image) {
 	screen.Fill(battleColor)
+	render.Tiles(screen, b.world.Map, b.world.Camera)
 	render.Units(screen, b.world)
 	render.Projectiles(screen, b.world)
 	switch b.world.Status {

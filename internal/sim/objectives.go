@@ -17,6 +17,17 @@ const (
 	DestroyEnemyBuildings
 )
 
+func ParseObjective(s string) (Objective, bool) {
+	switch s {
+	case "kill_all_enemy":
+		return KillAllEnemy, true
+	case "destroy_enemy_buildings":
+		return DestroyEnemyBuildings, true
+	default:
+		return 0, false
+	}
+}
+
 func (w *World) anyLiving(side Side) bool {
 	for i := range w.Units {
 		u := &w.Units[i]

@@ -7,7 +7,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 03 Troopers walk in file
 - [x] 04 Machine guns, death, friendly-fire rules
 - [x] 05 Enemy grunts + kill-all
-- [ ] 06 Mission 1 playable (data + tiny jungle)
+- [x] 06 Mission 1 playable (data + tiny jungle)
 - [ ] 07 Names, ranks, recruit pool
 - [ ] 08 Boot Hill, briefing, fail/retry
 - [ ] 09 Mission complete: promotions, +15, save/load
@@ -44,3 +44,7 @@ Verify: hold right (or Ctrl) to hose MG fire. The red dummy dies in one hit and 
 ### Chunk 05 done
 Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/objectives.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/app/scenes.go`.
 Verify: 2 greens vs 3 reds. Reds shoot if you enter range, otherwise wander in if close. Kill all three → PHASE COMPLETE. Lose both men → PHASE FAILED. Click/Enter returns to title. No campaign or maps yet.
+
+### Chunk 06 done
+Files: `internal/sim/map.go`, `internal/sim/map_test.go`, `internal/sim/move.go`, `internal/sim/world.go`, `internal/sim/ai.go`, `internal/sim/objectives.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`, `data/missions/campaign.json`, `data/missions/m01p01.json`.
+Verify: `go run ./cmd/fannon` (or `-skip-title`). Mission 1 jungle, 2 men, 3 isolated grunts, trees block walking (slide around). Kill all → PHASE COMPLETE. Stand in the open and you can lose. No Boot Hill/names yet.

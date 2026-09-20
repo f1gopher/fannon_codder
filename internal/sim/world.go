@@ -18,13 +18,14 @@ type World struct {
 	AI          bool
 	Status      Status
 	Objectives  []Objective
+	Map         Map
 	nextID      int
 	rng         *rand.Rand
 }
 
-// NewDemoWorld is the Chunk 03 sandbox: two player troopers, one screen of grass.
-func NewDemoWorld() *World {
-	w := &World{
+// NewEmpty is a playable blank world (no units, no tiles).
+func NewEmpty() *World {
+	return &World{
 		Camera: Camera{
 			ViewW: 320,
 			ViewH: 256,
@@ -38,6 +39,11 @@ func NewDemoWorld() *World {
 		nextID:     1,
 		rng:        newRNG(),
 	}
+}
+
+// NewDemoWorld is an empty-field 2v3 used by older tests.
+func NewDemoWorld() *World {
+	w := NewEmpty()
 	w.SpawnPlayerSquad(SquadSnake, []Vec2{
 		{X: 80, Y: 128},
 		{X: 80 - FileSpacing, Y: 128},
@@ -154,7 +160,7 @@ func (w *World) stepSquad(s *Squad, dt float64) {
 		s.LeaderID = leader.ID
 	}
 	if s.HasDest {
-		arrived := steerToward(leader, s.DestX, s.DestY, WalkSpeed, dt, ArrivalRadius)
+		arrived := w.steerToward(leader, s.DestX, s.DestY, WalkSpeed, dt, ArrivalRadius)
 		if arrived {
 			s.HasDest = false
 		}
@@ -173,6 +179,6 @@ func (w *World) stepSquad(s *Squad, dt float64) {
 			continue
 		}
 		target, _ := trailPoint(Vec2{X: leader.X, Y: leader.Y}, s.Trail, FileSpacing*float64(i))
-		steerToward(u, target.X, target.Y, WalkSpeed, dt, FollowerArrive)
+		w.steerToward(u, target.X, target.Y, WalkSpeed, dt, FollowerArrive)
 	}
 }

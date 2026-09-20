@@ -49,7 +49,7 @@ func (w *World) stepAI(dt float64) {
 			continue
 		}
 		if dist <= EnemyApproach {
-			steerToward(u, px, py, EnemyWalkSpeed, dt, ArrivalRadius)
+			w.steerToward(u, px, py, EnemyWalkSpeed, dt, ArrivalRadius)
 			continue
 		}
 		u.VX = 0

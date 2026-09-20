@@ -15,33 +15,60 @@ func hypot(dx, dy float64) float64 {
 	return math.Hypot(dx, dy)
 }
 
-// steerToward walks u toward (tx,ty). Reports whether it is inside arrival.
-func steerToward(u *Unit, tx, ty, speed, dt, arrival float64) bool {
+const unitHalf = float64(UnitSize) / 2
+
+// steerToward walks u toward (tx,ty), sliding along solid tiles.
+// Reports whether it is inside arrival and the dest is standable.
+func (w *World) steerToward(u *Unit, tx, ty, speed, dt, arrival float64) bool {
 	dx := tx - u.X
 	dy := ty - u.Y
 	dist := hypot(dx, dy)
 	if dist <= arrival {
-		u.X = tx
-		u.Y = ty
+		if w.walkableUnit(tx, ty) {
+			u.X = tx
+			u.Y = ty
+			u.VX = 0
+			u.VY = 0
+			return true
+		}
 		u.VX = 0
 		u.VY = 0
-		return true
+		return false
 	}
 	u.Facing = math.Atan2(dy, dx)
 	step := speed * dt
-	if step >= dist {
-		u.X = tx
-		u.Y = ty
-		u.VX = 0
-		u.VY = 0
-		return dist <= arrival
+	if step > dist {
+		step = dist
 	}
 	nx, ny := dx/dist, dy/dist
 	u.VX = nx * speed
 	u.VY = ny * speed
-	u.X += u.VX * dt
-	u.Y += u.VY * dt
+	w.slide(u, nx*step, ny*step)
 	return false
+}
+
+func (w *World) walkableUnit(x, y float64) bool {
+	return w.Map.Walkable(x, y, unitHalf)
+}
+
+func (w *World) slide(u *Unit, dx, dy float64) {
+	nx, ny := u.X+dx, u.Y+dy
+	if w.walkableUnit(nx, ny) {
+		u.X, u.Y = nx, ny
+		return
+	}
+	if w.walkableUnit(nx, u.Y) {
+		u.X = nx
+		u.VY = 0
+		return
+	}
+	if w.walkableUnit(u.X, ny) {
+		u.Y = ny
+		u.VX = 0
+		return
+	}
+	u.VX = 0
+	u.VY = 0
 }
 
 func recordTrail(s *Squad, p Vec2) {

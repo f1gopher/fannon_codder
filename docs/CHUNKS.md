@@ -13,7 +13,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 09 Mission complete: promotions, +15, save/load
 - [x] 10 Rank gun stats + HUD ammo icons
 - [x] 11 Tilemaps, scrolling, cover
-- [ ] 12 Water, swimming, bridges
+- [x] 12 Water, swimming, bridges
 - [ ] 13 Split squads (Snake / Eagle / Panther)
 - [ ] 14 Buildings, spawners, grenades, crates
 - [ ] 15 Mission 2 content
@@ -68,3 +68,7 @@ Verify: HUD shows G0 and R0. A Corporal’s MG range/RoF beat a Private (`go tes
 ### Chunk 11 done
 Files: `internal/sim/los.go`, `internal/sim/los_test.go`, `internal/sim/combat.go`, `internal/sim/combat_test.go`, `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/world.go`, `internal/sim/camera_test.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/render/tiles.go`, `cmd/fannon/main.go`.
 Verify: `go test ./internal/sim`. `go run ./cmd/fannon -cover` — 40×30 jungle, tree wall on the first screen. Pointer at the edge pans. Hose the wall: the east grunt lives until you walk south around the trees. Water still not in.
+
+### Chunk 12 done
+Files: `internal/sim/water.go`, `internal/sim/water_test.go`, `internal/sim/map.go`, `internal/sim/move.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/world.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`.
+Verify: `go test ./internal/sim`. `go run ./cmd/fannon -river` — river with a brown bridge. Swimmers in deep water cannot fire (hose them from the bank). Wading shallow is slow but you can still shoot. Crossing the bridge is full speed. No grenades.

@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/input"
+	"fannon-codder/internal/render"
 	"fannon-codder/internal/sim"
 )
 
@@ -51,20 +52,13 @@ func (t *Title) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, "FANNON CODDER\n\nClick or press Enter")
 }
 
-// Battle is an empty green field with a camera (no units yet).
+// Battle is a green field with a two-man squad (Chunk 03).
 type Battle struct {
-	cam sim.Camera
+	world *sim.World
 }
 
 func NewBattle() *Battle {
-	return &Battle{
-		cam: sim.Camera{
-			ViewW: ScreenWidth,
-			ViewH: ScreenHeight,
-			MapW:  ScreenWidth,
-			MapH:  ScreenHeight,
-		},
-	}
+	return &Battle{world: sim.NewDemoWorld()}
 }
 
 func (b *Battle) Enter() {}
@@ -72,10 +66,21 @@ func (b *Battle) Leave() {}
 
 func (b *Battle) Update(h Host) error {
 	p := h.Pointer()
-	b.cam.ScrollToward(p.X, p.Y, ScreenWidth, ScreenHeight, 1.0/TPS)
+	wx := p.X + b.world.Camera.X
+	wy := p.Y + b.world.Camera.Y
+	if p.LeftDown {
+		b.world.CommandMove(wx, wy, true)
+	} else if p.Left {
+		if s := b.world.ActiveSquad(); s != nil && s.HasDest {
+			b.world.CommandMove(wx, wy, false)
+		}
+	}
+	b.world.Camera.ScrollToward(p.X, p.Y, ScreenWidth, ScreenHeight, 1.0/TPS)
+	b.world.Step(1.0 / TPS)
 	return nil
 }
 
 func (b *Battle) Draw(screen *ebiten.Image) {
 	screen.Fill(battleColor)
+	render.Units(screen, b.world)
 }

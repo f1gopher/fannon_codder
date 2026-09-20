@@ -4,7 +4,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 
 - [x] 01 Bootstrap
 - [x] 02 Scenes + pointer + camera shell
-- [ ] 03 Troopers walk in file
+- [x] 03 Troopers walk in file
 - [ ] 04 Machine guns, death, friendly-fire rules
 - [ ] 05 Enemy grunts + kill-all
 - [ ] 06 Mission 1 playable (data + tiny jungle)
@@ -32,3 +32,7 @@ Verify: `go test ./...` then `go run ./cmd/fannon`. Grey 320×256 playfield, “
 ### Chunk 02 done
 Files: `internal/app/game.go`, `internal/app/scenes.go`, `internal/input/pointer.go`, `internal/input/pointer_test.go`, `internal/sim/camera.go`, `internal/sim/camera_test.go`, `internal/render/pointer.go`.
 Verify: title screen → click or Enter → green field. OS cursor hidden. Move the white arrow; hold right mouse for a crosshair. No units or shooting.
+
+### Chunk 03 done
+Files: `internal/sim/world.go`, `internal/sim/unit.go`, `internal/sim/squad.go`, `internal/sim/move.go`, `internal/sim/move_test.go`, `internal/render/units.go`, `internal/app/scenes.go`.
+Verify: after the title, two green squares. Left-click: leader walks there, second man follows in file and they stop without stacking. `go test ./internal/sim`. No guns yet.

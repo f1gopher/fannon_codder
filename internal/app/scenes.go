@@ -26,6 +26,7 @@ type Scene interface {
 type Host interface {
 	Pointer() input.Pointer
 	Switch(Scene)
+	Progress() *Progress
 }
 
 var (
@@ -44,7 +45,7 @@ func (t *Title) Leave() {}
 func (t *Title) Update(h Host) error {
 	p := h.Pointer()
 	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-		h.Switch(NewBattle())
+		h.Switch(NewBootHill(h.Progress()))
 	}
 	return nil
 }
@@ -54,24 +55,46 @@ func (t *Title) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, "FANNON CODDER\n\nClick or press Enter")
 }
 
-// Battle is a green field with a two-man squad (Chunk 03).
+// Battle is one phase on the map.
 type Battle struct {
+	prog      *Progress
 	world     *sim.World
 	remaining int
+	deployed  []campaign.Soldier
+	unitIDs   []int
+	settled   bool
 }
 
-func NewBattle() *Battle {
-	w, err := data.LoadFirstWorld()
-	if err != nil {
+func NewBattle(prog *Progress) *Battle {
+	var (
+		w   *sim.World
+		err error
+	)
+	if prog.Phase != nil {
+		w, err = prog.Phase.World()
+	} else {
+		w, err = data.LoadFirstWorld()
+	}
+	if err != nil || w == nil {
 		w = sim.NewDemoWorld()
 	}
-	pool := campaign.NewGamePool()
-	n := 0
-	if s := w.ActiveSquad(); s != nil {
+	n := prog.DeployCount()
+	if s := w.ActiveSquad(); s != nil && len(s.MemberIDs) < n {
 		n = len(s.MemberIDs)
 	}
-	nameSquad(w, pool.Deploy(n))
-	return &Battle{world: w, remaining: pool.Remaining()}
+	men := prog.Pool.Deploy(n)
+	nameSquad(w, men)
+	ids := []int{}
+	if s := w.ActiveSquad(); s != nil {
+		ids = append(ids, s.MemberIDs...)
+	}
+	return &Battle{
+		prog:      prog,
+		world:     w,
+		remaining: prog.Pool.Remaining(),
+		deployed:  men,
+		unitIDs:   ids,
+	}
 }
 
 func nameSquad(w *sim.World, men []campaign.Soldier) {
@@ -98,9 +121,15 @@ func (b *Battle) Leave() {}
 func (b *Battle) Update(h Host) error {
 	p := h.Pointer()
 	if b.world.Status != sim.Playing {
+		b.settleOnce()
 		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-			h.Switch(NewTitle())
+			b.leaveBattle(h, b.world.Status == sim.Won)
 		}
+		return nil
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		b.settleOnce()
+		b.leaveBattle(h, false)
 		return nil
 	}
 	wx := p.X + b.world.Camera.X
@@ -119,6 +148,38 @@ func (b *Battle) Update(h Host) error {
 	b.world.Camera.ScrollToward(p.X, p.Y, ScreenWidth, ScreenHeight, 1.0/TPS)
 	b.world.Step(1.0 / TPS)
 	return nil
+}
+
+func (b *Battle) settleOnce() {
+	if b.settled {
+		return
+	}
+	b.settled = true
+	graves, survivors := b.tally()
+	b.prog.Graves += graves
+	b.prog.Pool.Return(survivors)
+	b.remaining = b.prog.Pool.Remaining()
+}
+
+func (b *Battle) tally() (graves int, survivors []campaign.Soldier) {
+	for i, id := range b.unitIDs {
+		u := b.world.Unit(id)
+		if i >= len(b.deployed) || u == nil || !u.Living() {
+			graves++
+			continue
+		}
+		survivors = append(survivors, b.deployed[i])
+	}
+	return graves, survivors
+}
+
+func (b *Battle) leaveBattle(h Host, won bool) {
+	if won {
+		b.prog.OnPhaseWon()
+	} else {
+		b.prog.MarkGameOverIfNeeded()
+	}
+	h.Switch(NewBootHill(b.prog))
 }
 
 func (b *Battle) Draw(screen *ebiten.Image) {

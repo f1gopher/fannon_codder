@@ -52,6 +52,42 @@ func TestLoadNamesHasSensibleHeadAndLength(t *testing.T) {
 	}
 }
 
+func TestWipeThenNextTwoNames(t *testing.T) {
+	p := NewGamePoolNames(append([]string{"Jools", "Jops", "Stoo", "Jon"}, extraPrivates(11)...))
+	first := p.Deploy(2)
+	if first[0].Name != "Jools" {
+		t.Fatal(first[0].Name)
+	}
+	next := p.Deploy(2)
+	if next[0].Name != "Stoo" || next[1].Name != "Jon" {
+		t.Fatalf("got %v, want Stoo, Jon", namesOf(next))
+	}
+	if p.Remaining() != 11 {
+		t.Fatalf("remaining=%d, want 11", p.Remaining())
+	}
+}
+
+func extraPrivates(n int) []string {
+	out := make([]string, n)
+	for i := 0; i < n; i++ {
+		out[i] = "Rec" + string(rune('A'+i))
+	}
+	return out
+}
+
+func TestReturnSurvivorsToFront(t *testing.T) {
+	p := NewGamePool()
+	men := p.Deploy(2)
+	p.Return(men[1:]) // Jops lives
+	if p.Remaining() != 14 {
+		t.Fatalf("remaining=%d, want 14", p.Remaining())
+	}
+	again := p.Deploy(1)
+	if again[0].Name != "Jops" {
+		t.Fatalf("survivor should be eligible immediately, got %s", again[0].Name)
+	}
+}
+
 func namesOf(s []Soldier) []string {
 	out := make([]string, len(s))
 	for i := range s {

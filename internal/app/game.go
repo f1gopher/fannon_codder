@@ -22,13 +22,14 @@ type Game struct {
 	next    Scene
 	tracker input.Tracker
 	pointer input.Pointer
+	prog    *Progress
 }
 
 func New(skipTitle bool) *Game {
 	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	g := &Game{}
+	g := &Game{prog: NewProgress()}
 	if skipTitle {
-		g.scene = NewBattle()
+		g.scene = NewBootHill(g.prog)
 	} else {
 		g.scene = NewTitle()
 	}
@@ -37,6 +38,8 @@ func New(skipTitle bool) *Game {
 }
 
 func (g *Game) Pointer() input.Pointer { return g.pointer }
+
+func (g *Game) Progress() *Progress { return g.prog }
 
 func (g *Game) Switch(s Scene) { g.next = s }
 

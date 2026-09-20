@@ -65,6 +65,14 @@ func (p *Pool) Deploy(n int) []Soldier {
 	return out
 }
 
+// Return puts survivors back at the front of the unused queue.
+func (p *Pool) Return(men []Soldier) {
+	if p == nil || len(men) == 0 {
+		return
+	}
+	p.Recruits = append(append([]Soldier{}, men...), p.Recruits...)
+}
+
 func (p *Pool) pickIndex() int {
 	best := 0
 	for i := 1; i < len(p.Recruits); i++ {

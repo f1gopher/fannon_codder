@@ -76,7 +76,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.scene.Draw(screen)
 	}
 	kind := render.PointerArrow
-	if g.pointer.Right {
+	if g.pointer.Right ||
+		ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
+		ebiten.IsKeyPressed(ebiten.KeyControlRight) {
 		kind = render.PointerCrosshair
 	}
 	render.Pointer(screen, g.pointer.X, g.pointer.Y, kind)

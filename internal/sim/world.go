@@ -1,15 +1,22 @@
 package sim
 
+import "math/rand/v2"
+
 const (
 	UnitSize = 8
 )
 
 // World is the battle simulation. No Ebitengine types.
 type World struct {
-	Camera Camera
-	Units  []Unit
-	Squads []Squad
-	nextID int
+	Camera      Camera
+	Units       []Unit
+	Squads      []Squad
+	Projectiles []Projectile
+	AimX, AimY  float64
+	Firing      bool
+	Spread      float64
+	nextID      int
+	rng         *rand.Rand
 }
 
 // NewDemoWorld is the Chunk 03 sandbox: two player troopers, one screen of grass.
@@ -21,12 +28,16 @@ func NewDemoWorld() *World {
 			MapW:  320,
 			MapH:  256,
 		},
+		Spread: MGSpread,
 		nextID: 1,
+		rng:    newRNG(),
 	}
 	w.SpawnPlayerSquad(SquadSnake, []Vec2{
 		{X: 80, Y: 128},
 		{X: 80 - FileSpacing, Y: 128},
 	})
+	// Stationary dummy so MG can be verified (no AI this chunk).
+	w.SpawnUnit(SideEnemy, Vec2{X: 160, Y: 100})
 	return w
 }
 
@@ -51,6 +62,23 @@ func (w *World) SpawnPlayerSquad(id SquadID, positions []Vec2) *Squad {
 	}
 	w.Squads = append(w.Squads, s)
 	return &w.Squads[len(w.Squads)-1]
+}
+
+// SpawnUnit adds a lone trooper (dummy, later enemies) and returns it.
+func (w *World) SpawnUnit(side Side, p Vec2) *Unit {
+	if w.rng == nil {
+		w.rng = newRNG()
+	}
+	u := Unit{
+		ID:   w.nextID,
+		Side: side,
+		HP:   Alive,
+		X:    p.X,
+		Y:    p.Y,
+	}
+	w.nextID++
+	w.Units = append(w.Units, u)
+	return &w.Units[len(w.Units)-1]
 }
 
 func (w *World) Unit(id int) *Unit {
@@ -92,7 +120,7 @@ func (w *World) CommandMove(x, y float64, newOrder bool) {
 	}
 }
 
-// Step advances movement by dt seconds.
+// Step advances movement and combat by dt seconds.
 func (w *World) Step(dt float64) {
 	if dt <= 0 {
 		return
@@ -100,12 +128,21 @@ func (w *World) Step(dt float64) {
 	for i := range w.Squads {
 		w.stepSquad(&w.Squads[i], dt)
 	}
+	w.stepFire(dt)
+	w.stepProjectiles(dt)
 }
 
 func (w *World) stepSquad(s *Squad, dt float64) {
 	leader := w.Unit(s.LeaderID)
 	if leader == nil || !leader.Living() {
-		return
+		if len(s.MemberIDs) == 0 {
+			return
+		}
+		leader = w.Unit(s.MemberIDs[0])
+		if leader == nil || !leader.Living() {
+			return
+		}
+		s.LeaderID = leader.ID
 	}
 	if s.HasDest {
 		arrived := steerToward(leader, s.DestX, s.DestY, WalkSpeed, dt, ArrivalRadius)

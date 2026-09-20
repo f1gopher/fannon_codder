@@ -5,7 +5,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 01 Bootstrap
 - [x] 02 Scenes + pointer + camera shell
 - [x] 03 Troopers walk in file
-- [ ] 04 Machine guns, death, friendly-fire rules
+- [x] 04 Machine guns, death, friendly-fire rules
 - [ ] 05 Enemy grunts + kill-all
 - [ ] 06 Mission 1 playable (data + tiny jungle)
 - [ ] 07 Names, ranks, recruit pool
@@ -36,3 +36,7 @@ Verify: title screen → click or Enter → green field. OS cursor hidden. Move 
 ### Chunk 03 done
 Files: `internal/sim/world.go`, `internal/sim/unit.go`, `internal/sim/squad.go`, `internal/sim/move.go`, `internal/sim/move_test.go`, `internal/render/units.go`, `internal/app/scenes.go`.
 Verify: after the title, two green squares. Left-click: leader walks there, second man follows in file and they stop without stacking. `go test ./internal/sim`. No guns yet.
+
+### Chunk 04 done
+Files: `internal/sim/combat.go`, `internal/sim/projectile.go`, `internal/sim/combat_test.go`, `internal/sim/world.go`, `internal/sim/unit.go`, `internal/render/units.go`, `internal/app/scenes.go`.
+Verify: hold right (or Ctrl) to hose MG fire. The red dummy dies in one hit and stays as a dark corpse. Shooting through your own green man does not kill him. Dead troopers drop out of the file. No enemy AI yet.

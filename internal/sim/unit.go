@@ -32,7 +32,10 @@ type Unit struct {
 	SquadID   SquadID
 	VehicleID int
 	Kills     int
+	FireCD    float64 // seconds until next MG round
 }
+
+func (u *Unit) Dead() bool { return u.HP == Dead }
 
 func (u *Unit) Living() bool {
 	return u.HP == Alive

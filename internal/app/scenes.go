@@ -75,6 +75,10 @@ func (b *Battle) Update(h Host) error {
 			b.world.CommandMove(wx, wy, false)
 		}
 	}
+	firing := p.Right ||
+		ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
+		ebiten.IsKeyPressed(ebiten.KeyControlRight)
+	b.world.SetFire(wx, wy, firing)
 	b.world.Camera.ScrollToward(p.X, p.Y, ScreenWidth, ScreenHeight, 1.0/TPS)
 	b.world.Step(1.0 / TPS)
 	return nil
@@ -83,4 +87,5 @@ func (b *Battle) Update(h Host) error {
 func (b *Battle) Draw(screen *ebiten.Image) {
 	screen.Fill(battleColor)
 	render.Units(screen, b.world)
+	render.Projectiles(screen, b.world)
 }

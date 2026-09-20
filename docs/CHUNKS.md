@@ -12,7 +12,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 08 Boot Hill, briefing, fail/retry
 - [x] 09 Mission complete: promotions, +15, save/load
 - [x] 10 Rank gun stats + HUD ammo icons
-- [ ] 11 Tilemaps, scrolling, cover
+- [x] 11 Tilemaps, scrolling, cover
 - [ ] 12 Water, swimming, bridges
 - [ ] 13 Split squads (Snake / Eagle / Panther)
 - [ ] 14 Buildings, spawners, grenades, crates
@@ -64,3 +64,7 @@ Verify: finish M1 with no deaths → Boot Hill queue 30, Cpl Jools and Cpl Jops.
 ### Chunk 10 done
 Files: `internal/sim/combat.go`, `internal/sim/combat_test.go`, `internal/sim/ai.go`, `internal/render/hud.go`.
 Verify: HUD shows G0 and R0. A Corporal’s MG range/RoF beat a Private (`go test ./internal/sim`). Enemies stay on the grunt table (70 px, 4/s). No grenades yet.
+
+### Chunk 11 done
+Files: `internal/sim/los.go`, `internal/sim/los_test.go`, `internal/sim/combat.go`, `internal/sim/combat_test.go`, `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/world.go`, `internal/sim/camera_test.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/render/tiles.go`, `cmd/fannon/main.go`.
+Verify: `go test ./internal/sim`. `go run ./cmd/fannon -cover` — 40×30 jungle, tree wall on the first screen. Pointer at the edge pans. Hose the wall: the east grunt lives until you walk south around the trees. Water still not in.

@@ -56,7 +56,7 @@ func (w *World) stepFire(dt float64) {
 	}
 	for _, id := range s.MemberIDs {
 		u := w.Unit(id)
-		if u == nil || !u.Living() {
+		if !w.CanShoot(u) {
 			continue
 		}
 		st := GunStatsFor(u.Rank)
@@ -65,22 +65,70 @@ func (w *World) stepFire(dt float64) {
 		if dx == 0 && dy == 0 {
 			dx = 1
 		}
-		u.Facing = math.Atan2(dy, dx)
-		u.FireCD -= dt
-		if u.FireCD > 0 {
+		w.shootAt(u, dx, dy, st, dt)
+	}
+}
+
+// stepInactiveFire: squads you are not controlling hold and shoot enemies in range.
+func (w *World) stepInactiveFire(dt float64) {
+	active := w.ActiveSquad()
+	for i := range w.Squads {
+		s := &w.Squads[i]
+		if active != nil && s.ID == active.ID {
 			continue
 		}
-		u.FireCD = 1.0 / st.RoF
-		ang := u.Facing
-		spread := st.Spread
-		if w.Spread == 0 {
-			spread = 0
+		for _, id := range s.MemberIDs {
+			u := w.Unit(id)
+			if !w.CanShoot(u) {
+				continue
+			}
+			st := GunStatsFor(u.Rank)
+			tx, ty, ok := w.nearestEnemy(u, st.Range)
+			if !ok {
+				continue
+			}
+			w.shootAt(u, tx-u.X, ty-u.Y, st, dt)
 		}
-		if spread > 0 {
-			ang += (w.rng.Float64()*2 - 1) * spread
-		}
-		w.spawnMG(u, ang, st.Range)
 	}
+}
+
+func (w *World) nearestEnemy(u *Unit, maxRange float64) (tx, ty float64, ok bool) {
+	best := maxRange
+	for i := range w.Units {
+		o := &w.Units[i]
+		if o.Side != SideEnemy || !o.Living() {
+			continue
+		}
+		d := hypot(o.X-u.X, o.Y-u.Y)
+		if d > best || !w.Map.HasLOS(u.X, u.Y, o.X, o.Y) {
+			continue
+		}
+		best = d
+		tx, ty = o.X, o.Y
+		ok = true
+	}
+	return tx, ty, ok
+}
+
+func (w *World) shootAt(u *Unit, dx, dy float64, st GunStats, dt float64) {
+	if dx == 0 && dy == 0 {
+		dx = 1
+	}
+	u.Facing = math.Atan2(dy, dx)
+	u.FireCD -= dt
+	if u.FireCD > 0 {
+		return
+	}
+	u.FireCD = 1.0 / st.RoF
+	ang := u.Facing
+	spread := st.Spread
+	if w.Spread == 0 {
+		spread = 0
+	}
+	if spread > 0 {
+		ang += (w.rng.Float64()*2 - 1) * spread
+	}
+	w.spawnMG(u, ang, st.Range)
 }
 
 func (w *World) spawnMG(u *Unit, ang float64, maxRange float64) {
@@ -118,7 +166,16 @@ func (w *World) stepProjectiles(dt float64) {
 		p.X += nx * step
 		p.Y += ny * step
 		p.Left -= step
+		blocked := false
+		if hx, hy, hit := w.Map.FirstSolid(x0, y0, p.X, p.Y); hit {
+			p.X, p.Y = hx, hy
+			p.Left = 0
+			blocked = true
+		}
 		w.tryHit(p, x0, y0, p.X, p.Y)
+		if blocked {
+			p.Alive = false
+		}
 		if p.Alive && p.Left > 0 {
 			out = append(out, *p)
 		}

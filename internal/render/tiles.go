@@ -9,27 +9,46 @@ import (
 )
 
 var (
-	treeFill   = color.RGBA{R: 0x1e, G: 0x5a, B: 0x1e, A: 0xff}
-	treeSprite *ebiten.Image
+	treeFill    = color.RGBA{R: 0x1e, G: 0x5a, B: 0x1e, A: 0xff}
+	shallowFill = color.RGBA{R: 0x4a, G: 0xa0, B: 0xc8, A: 0xff}
+	deepFill    = color.RGBA{R: 0x1a, G: 0x3a, B: 0x88, A: 0xff}
+	bridgeFill  = color.RGBA{R: 0x8a, G: 0x70, B: 0x40, A: 0xff}
+	tileSprites = map[sim.Tile]*ebiten.Image{}
 )
 
-func treeImage() *ebiten.Image {
-	if treeSprite == nil {
-		treeSprite = ebiten.NewImage(sim.TileSize, sim.TileSize)
-		treeSprite.Fill(treeFill)
+func tileImage(t sim.Tile) *ebiten.Image {
+	if img, ok := tileSprites[t]; ok {
+		return img
 	}
-	return treeSprite
+	var fill color.RGBA
+	switch t {
+	case sim.TileTree:
+		fill = treeFill
+	case sim.TileWaterShallow:
+		fill = shallowFill
+	case sim.TileWaterDeep:
+		fill = deepFill
+	case sim.TileBridge:
+		fill = bridgeFill
+	default:
+		return nil
+	}
+	img := ebiten.NewImage(sim.TileSize, sim.TileSize)
+	img.Fill(fill)
+	tileSprites[t] = img
+	return img
 }
 
-// Tiles draws solid tiles (trees). Grass is the scene background.
+// Tiles draws non-grass tiles. Grass is the scene background.
 func Tiles(dst *ebiten.Image, m sim.Map, cam sim.Camera) {
 	if m.W == 0 {
 		return
 	}
-	img := treeImage()
-	for ty := 0; ty < m.H; ty++ {
-		for tx := 0; tx < m.W; tx++ {
-			if m.At(tx, ty) != sim.TileTree {
+	tx0, ty0, tx1, ty1 := visibleTiles(m, cam)
+	for ty := ty0; ty < ty1; ty++ {
+		for tx := tx0; tx < tx1; tx++ {
+			img := tileImage(m.At(tx, ty))
+			if img == nil {
 				continue
 			}
 			op := &ebiten.DrawImageOptions{}
@@ -40,4 +59,37 @@ func Tiles(dst *ebiten.Image, m sim.Map, cam sim.Camera) {
 			dst.DrawImage(img, op)
 		}
 	}
+}
+
+func visibleTiles(m sim.Map, cam sim.Camera) (tx0, ty0, tx1, ty1 int) {
+	vw, vh := cam.ViewW, cam.ViewH
+	if vw <= 0 {
+		vw = 320
+	}
+	if vh <= 0 {
+		vh = 256
+	}
+	tx0 = int(cam.X) / sim.TileSize
+	ty0 = int(cam.Y) / sim.TileSize
+	if cam.X < 0 {
+		tx0 = -1
+	}
+	if cam.Y < 0 {
+		ty0 = -1
+	}
+	tx1 = int(cam.X+vw)/sim.TileSize + 2
+	ty1 = int(cam.Y+vh)/sim.TileSize + 2
+	if tx0 < 0 {
+		tx0 = 0
+	}
+	if ty0 < 0 {
+		ty0 = 0
+	}
+	if tx1 > m.W {
+		tx1 = m.W
+	}
+	if ty1 > m.H {
+		ty1 = m.H
+	}
+	return tx0, ty0, tx1, ty1
 }

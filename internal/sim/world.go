@@ -19,8 +19,12 @@ type World struct {
 	Status      Status
 	Objectives  []Objective
 	Map         Map
-	nextID      int
-	rng         *rand.Rand
+	// Selected members of the active squad will form the next split.
+	Selected     []int
+	GrenadeShare AmmoShare
+	RocketShare  AmmoShare
+	nextID       int
+	rng          *rand.Rand
 }
 
 // NewEmpty is a playable blank world (no units, no tiles).
@@ -51,6 +55,64 @@ func NewDemoWorld() *World {
 	w.SpawnUnit(SideEnemy, Vec2{X: 200, Y: 56})
 	w.SpawnUnit(SideEnemy, Vec2{X: 248, Y: 140})
 	w.SpawnUnit(SideEnemy, Vec2{X: 176, Y: 208})
+	return w
+}
+
+// NewCoverWorld is the chunk 11 debug map: larger than one screen, a tree
+// line that blocks MG, and grunts you only reach by panning / flanking.
+func NewCoverWorld() *World {
+	const W, H = 40, 30
+	tiles := make([]Tile, W*H)
+	for ty := 0; ty <= 18; ty++ {
+		tiles[ty*W+16] = TileTree
+		tiles[ty*W+17] = TileTree
+	}
+	w := NewEmpty()
+	w.Map = Map{W: W, H: H, Tiles: tiles}
+	mw, mh := w.Map.PixelSize()
+	w.Camera.MapW = mw
+	w.Camera.MapH = mh
+	start := TileCenter(4, 8)
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{
+		start,
+		{X: start.X - FileSpacing, Y: start.Y},
+	})
+	w.SpawnUnit(SideEnemy, TileCenter(24, 8)) // east of the wall, off the first screen
+	w.SpawnUnit(SideEnemy, TileCenter(6, 26)) // south, walk off the starting view
+	return w
+}
+
+// NewRiverWorld is the river sandbox: one bridge, swimmers, and three
+// troopers so a squad can be left guarding the bridge.
+func NewRiverWorld() *World {
+	const W, H = 20, 16
+	tiles := make([]Tile, W*H)
+	for x := 0; x < W; x++ {
+		tiles[4*W+x] = TileWaterShallow
+		tiles[5*W+x] = TileWaterDeep
+		tiles[6*W+x] = TileWaterDeep
+		tiles[7*W+x] = TileWaterDeep
+		tiles[8*W+x] = TileWaterShallow
+	}
+	for ty := 4; ty <= 8; ty++ {
+		tiles[ty*W+10] = TileBridge
+		tiles[ty*W+11] = TileBridge
+	}
+	w := NewEmpty()
+	w.Map = Map{W: W, H: H, Tiles: tiles}
+	mw, mh := w.Map.PixelSize()
+	w.Camera.MapW = mw
+	w.Camera.MapH = mh
+	start := TileCenter(10, 12)
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{
+		start,
+		{X: start.X - FileSpacing, Y: start.Y},
+		{X: start.X - 2*FileSpacing, Y: start.Y},
+	})
+	w.SpawnUnit(SideEnemy, TileCenter(8, 6))  // swimmer, sitting duck
+	w.SpawnUnit(SideEnemy, TileCenter(16, 6)) // swimmer
+	w.SpawnUnit(SideEnemy, TileCenter(14, 1)) // far bank
+	w.refreshTerrain()
 	return w
 }
 
@@ -138,11 +200,15 @@ func (w *World) Step(dt float64) {
 	if dt <= 0 {
 		return
 	}
+	w.pruneSquads()
 	for i := range w.Squads {
 		w.stepSquad(&w.Squads[i], dt)
 	}
+	w.stepMerge()
+	w.refreshTerrain()
 	w.stepAI(dt)
 	w.stepFire(dt)
+	w.stepInactiveFire(dt)
 	w.stepProjectiles(dt)
 	w.evaluateObjectives()
 }

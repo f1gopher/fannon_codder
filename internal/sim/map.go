@@ -1,5 +1,7 @@
 package sim
 
+import "math"
+
 const TileSize = 16
 
 // Tile is one map cell.
@@ -84,4 +86,14 @@ func TileCenter(tx, ty int) Vec2 {
 		X: float64(tx*TileSize) + float64(TileSize)/2,
 		Y: float64(ty*TileSize) + float64(TileSize)/2,
 	}
+}
+
+// TileAtPixel is the tile under a world point (unit centre). Inactive maps are grass.
+func (m *Map) TileAtPixel(x, y float64) Tile {
+	if !m.active() {
+		return TileGrass
+	}
+	tx := int(math.Floor(x / float64(TileSize)))
+	ty := int(math.Floor(y / float64(TileSize)))
+	return m.At(tx, ty)
 }

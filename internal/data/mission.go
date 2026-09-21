@@ -163,6 +163,12 @@ func parseTile(ch rune) (sim.Tile, error) {
 		return sim.TileGrass, nil
 	case 'T', '#':
 		return sim.TileTree, nil
+	case '~':
+		return sim.TileWaterShallow, nil
+	case 'W':
+		return sim.TileWaterDeep, nil
+	case 'B', '=':
+		return sim.TileBridge, nil
 	default:
 		return 0, fmt.Errorf("unknown tile %q", string(ch))
 	}

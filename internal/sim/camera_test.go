@@ -26,6 +26,18 @@ func TestScrollTowardNoOpWhenMapFits(t *testing.T) {
 	}
 }
 
+func TestCoverMapLargerThanView(t *testing.T) {
+	w := NewCoverWorld()
+	mw, mh := w.Map.PixelSize()
+	if mw <= w.Camera.ViewW || mh <= w.Camera.ViewH {
+		t.Fatalf("cover map %v×%v should exceed view %v×%v", mw, mh, w.Camera.ViewW, w.Camera.ViewH)
+	}
+	w.Camera.ScrollToward(319, 255, 320, 256, 1)
+	if w.Camera.X <= 0 || w.Camera.Y <= 0 {
+		t.Fatalf("expected pan on cover map, got (%v,%v)", w.Camera.X, w.Camera.Y)
+	}
+}
+
 func TestScrollTowardPansOnLargeMap(t *testing.T) {
 	c := Camera{ViewW: 320, ViewH: 256, MapW: 640, MapH: 512}
 	c.ScrollToward(319, 255, 320, 256, 1)

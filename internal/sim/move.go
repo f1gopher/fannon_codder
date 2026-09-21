@@ -20,6 +20,7 @@ const unitHalf = float64(UnitSize) / 2
 // steerToward walks u toward (tx,ty), sliding along solid tiles.
 // Reports whether it is inside arrival and the dest is standable.
 func (w *World) steerToward(u *Unit, tx, ty, speed, dt, arrival float64) bool {
+	speed *= w.speedMul(u)
 	dx := tx - u.X
 	dy := ty - u.Y
 	dist := hypot(dx, dy)

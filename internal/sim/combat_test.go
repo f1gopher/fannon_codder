@@ -104,6 +104,33 @@ func TestCorporalProjectileOutrangesPrivate(t *testing.T) {
 	}
 }
 
+func TestMGStoppedByTree(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 8, Y: 8}}, Vec2{X: 72, Y: 8})
+	w.Map = Map{W: 6, H: 1, Tiles: []Tile{
+		TileGrass, TileGrass, TileTree, TileTree, TileGrass, TileGrass,
+	}}
+	fireAt(w, 200, 8, 40)
+	if enemyOf(w).Living() {
+		return
+	}
+	t.Fatal("MG must not kill through a tree line")
+}
+
+func TestMGFlankAroundTreeHits(t *testing.T) {
+	// Wall in cols 2–3, rows 0–1; row 2 is open so a shot from the south is clear.
+	tiles := make([]Tile, 6*3)
+	for ty := 0; ty < 2; ty++ {
+		tiles[ty*6+2] = TileTree
+		tiles[ty*6+3] = TileTree
+	}
+	w := gunWorld([]Vec2{{X: 72, Y: 40}}, Vec2{X: 72, Y: 8})
+	w.Map = Map{W: 6, H: 3, Tiles: tiles}
+	fireAt(w, 72, 0, 40)
+	if enemyOf(w).Living() {
+		t.Fatal("flanking shot with clear LOS should kill")
+	}
+}
+
 func gunWorld(players []Vec2, dummy Vec2) *World {
 	w := &World{Spread: 0, nextID: 1, rng: newRNG()}
 	w.SpawnPlayerSquad(SquadSnake, players)

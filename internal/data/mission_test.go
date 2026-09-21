@@ -45,3 +45,24 @@ func TestLoadMission1(t *testing.T) {
 		t.Fatalf("units player=%d enemy=%d, want 2 and 3", nP, nE)
 	}
 }
+
+func TestParseWaterTiles(t *testing.T) {
+	cases := []struct {
+		ch rune
+		t  sim.Tile
+	}{
+		{'~', sim.TileWaterShallow},
+		{'W', sim.TileWaterDeep},
+		{'B', sim.TileBridge},
+		{'=', sim.TileBridge},
+	}
+	for _, c := range cases {
+		got, err := parseTile(c.ch)
+		if err != nil {
+			t.Fatalf("parse %q: %v", string(c.ch), err)
+		}
+		if got != c.t {
+			t.Fatalf("parse %q = %v, want %v", string(c.ch), got, c.t)
+		}
+	}
+}

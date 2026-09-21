@@ -9,7 +9,7 @@ const (
 	EnemyApproach  = 140.0
 )
 
-// stepAI: shoot if a player is in range (LOS always open until trees);
+// stepAI: shoot if a player is in range and has LOS (trees block);
 // otherwise walk slowly toward a nearby player; else idle.
 func (w *World) stepAI(dt float64) {
 	if !w.AI {
@@ -28,7 +28,7 @@ func (w *World) stepAI(dt float64) {
 			continue
 		}
 		dist := hypot(px-u.X, py-u.Y)
-		if dist <= EnemyMGRange {
+		if dist <= EnemyMGRange && w.CanShoot(u) && w.Map.HasLOS(u.X, u.Y, px, py) {
 			u.VX = 0
 			u.VY = 0
 			dx, dy := px-u.X, py-u.Y

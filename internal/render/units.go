@@ -9,12 +9,14 @@ import (
 )
 
 var (
-	playerFill  = color.RGBA{R: 0x40, G: 0xc8, B: 0x40, A: 0xff}
-	enemyFill   = color.RGBA{R: 0xc8, G: 0x30, B: 0x30, A: 0xff}
-	corpseFill  = color.RGBA{R: 0x50, G: 0x30, B: 0x30, A: 0xff}
-	playerDead  = color.RGBA{R: 0x20, G: 0x50, B: 0x20, A: 0xff}
-	tracerFill  = color.RGBA{R: 0xff, G: 0xff, B: 0xa0, A: 0xff}
-	spriteCache = map[color.RGBA]*ebiten.Image{}
+	playerFill   = color.RGBA{R: 0x40, G: 0xc8, B: 0x40, A: 0xff}
+	enemyFill    = color.RGBA{R: 0xc8, G: 0x30, B: 0x30, A: 0xff}
+	playerSwim   = color.RGBA{R: 0x28, G: 0x88, B: 0x70, A: 0xff}
+	enemySwim    = color.RGBA{R: 0x88, G: 0x28, B: 0x58, A: 0xff}
+	corpseFill   = color.RGBA{R: 0x50, G: 0x30, B: 0x30, A: 0xff}
+	playerDead   = color.RGBA{R: 0x20, G: 0x50, B: 0x20, A: 0xff}
+	tracerFill   = color.RGBA{R: 0xff, G: 0xff, B: 0xa0, A: 0xff}
+	spriteCache  = map[color.RGBA]*ebiten.Image{}
 	tracerSprite *ebiten.Image
 )
 
@@ -36,9 +38,32 @@ func unitColor(u *sim.Unit) color.RGBA {
 		return corpseFill
 	}
 	if u.Side == sim.SideEnemy {
+		if u.InWater {
+			return enemySwim
+		}
 		return enemyFill
 	}
-	return playerFill
+	return squadFill(u.SquadID, u.InWater)
+}
+
+func squadFill(id sim.SquadID, swim bool) color.RGBA {
+	switch id {
+	case sim.SquadEagle:
+		if swim {
+			return color.RGBA{R: 0x28, G: 0x48, B: 0x88, A: 0xff}
+		}
+		return color.RGBA{R: 0x48, G: 0x88, B: 0xe8, A: 0xff}
+	case sim.SquadPanther:
+		if swim {
+			return color.RGBA{R: 0x88, G: 0x58, B: 0x20, A: 0xff}
+		}
+		return color.RGBA{R: 0xe0, G: 0xa0, B: 0x30, A: 0xff}
+	default:
+		if swim {
+			return playerSwim
+		}
+		return playerFill
+	}
 }
 
 // Units draws placeholder troopers in screen space (world minus camera).

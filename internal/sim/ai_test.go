@@ -79,6 +79,17 @@ func TestDemoHasThreeGrunts(t *testing.T) {
 	}
 }
 
+func TestEnemyDoesNotShootThroughTree(t *testing.T) {
+	w := aiWorld(Vec2{X: 8, Y: 8}, Vec2{X: 72, Y: 8})
+	w.Map = Map{W: 6, H: 1, Tiles: []Tile{
+		TileGrass, TileGrass, TileTree, TileTree, TileGrass, TileGrass,
+	}}
+	w.Step(1.0 / 60)
+	if len(w.Projectiles) != 0 {
+		t.Fatal("grunt in range but blocked by trees must not fire")
+	}
+}
+
 func aiWorld(player, enemy Vec2) *World {
 	w := &World{Spread: 0, nextID: 1, rng: newRNG(), AI: true}
 	w.SpawnPlayerSquad(SquadSnake, []Vec2{player})

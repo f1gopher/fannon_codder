@@ -63,6 +63,7 @@ type Battle struct {
 	deployed  []campaign.Soldier
 	unitIDs   []int
 	settled   bool
+	sandbox   bool
 }
 
 func NewBattle(prog *Progress) *Battle {
@@ -78,22 +79,61 @@ func NewBattle(prog *Progress) *Battle {
 	if err != nil || w == nil {
 		w = sim.NewDemoWorld()
 	}
+	return battleFromWorld(prog, w, false)
+}
+
+// NewCoverBattle is the chunk 11 sandbox: oversized map, tree cover, scrolling.
+func NewCoverBattle(prog *Progress) *Battle {
+	return battleFromWorld(prog, sim.NewCoverWorld(), true)
+}
+
+// NewRiverBattle is the chunk 12 sandbox: river, bridge, swimmers.
+func NewRiverBattle(prog *Progress) *Battle {
+	return battleFromWorld(prog, sim.NewRiverWorld(), true)
+}
+
+func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
+	ids := []int{}
+	if s := w.ActiveSquad(); s != nil {
+		ids = append(ids, s.MemberIDs...)
+	}
+	if sandbox {
+		nameCoverSquad(w)
+		return &Battle{
+			prog:      prog,
+			world:     w,
+			remaining: 13,
+			unitIDs:   ids,
+			sandbox:   true,
+		}
+	}
 	n := prog.DeployCount()
 	if s := w.ActiveSquad(); s != nil && len(s.MemberIDs) < n {
 		n = len(s.MemberIDs)
 	}
 	men := prog.Pool.Deploy(n)
 	nameSquad(w, men)
-	ids := []int{}
-	if s := w.ActiveSquad(); s != nil {
-		ids = append(ids, s.MemberIDs...)
-	}
 	return &Battle{
 		prog:      prog,
 		world:     w,
 		remaining: prog.Pool.Remaining(),
 		deployed:  men,
 		unitIDs:   ids,
+	}
+}
+
+func nameCoverSquad(w *sim.World) {
+	names := []string{"Jools", "Jops", "Stoo"}
+	s := w.ActiveSquad()
+	if s == nil {
+		return
+	}
+	for i, id := range s.MemberIDs {
+		u := w.Unit(id)
+		if u == nil || i >= len(names) {
+			continue
+		}
+		u.Name = names[i]
 	}
 }
 
@@ -132,20 +172,53 @@ func (b *Battle) Update(h Host) error {
 		b.leaveBattle(h, false)
 		return nil
 	}
+	if inpututil.IsKeyJustPressed(ebiten.Key1) {
+		b.world.SetActiveSquad(sim.SquadSnake)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key2) {
+		b.world.SetActiveSquad(sim.SquadEagle)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.Key3) {
+		b.world.SetActiveSquad(sim.SquadPanther)
+	}
 	wx := p.X + b.world.Camera.X
 	wy := p.Y + b.world.Camera.Y
-	if p.LeftDown {
+	onHUD := p.X < float64(render.HUDWidth)
+	if p.LeftDown && onHUD {
+		kind, id := render.HitHUD(b.world, p.X, p.Y)
+		switch kind {
+		case render.HitSplit:
+			b.world.Split()
+		case render.HitGrenade:
+			b.world.CycleGrenadeShare()
+		case render.HitRocket:
+			b.world.CycleRocketShare()
+		case render.HitMember:
+			b.world.ToggleSelect(id)
+		case render.HitSquad:
+			b.world.SetActiveSquad(sim.SquadID(id))
+		}
+	} else if p.LeftDown {
 		b.world.CommandMove(wx, wy, true)
-	} else if p.Left {
+	} else if p.Left && !onHUD {
 		if s := b.world.ActiveSquad(); s != nil && s.HasDest {
 			b.world.CommandMove(wx, wy, false)
 		}
 	}
-	firing := p.Right ||
-		ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
-		ebiten.IsKeyPressed(ebiten.KeyControlRight)
-	b.world.SetFire(wx, wy, firing)
-	b.world.Camera.ScrollToward(p.X, p.Y, ScreenWidth, ScreenHeight, 1.0/TPS)
+	if onHUD {
+		b.world.SetFire(b.world.AimX, b.world.AimY, false)
+	} else {
+		firing := p.Right ||
+			ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
+			ebiten.IsKeyPressed(ebiten.KeyControlRight)
+		b.world.SetFire(wx, wy, firing)
+		// The strip covers the left edge, so pan from the playfield beside it.
+		b.world.Camera.ScrollToward(
+			p.X-float64(render.HUDWidth), p.Y,
+			ScreenWidth-render.HUDWidth, ScreenHeight,
+			1.0/TPS,
+		)
+	}
 	b.world.Step(1.0 / TPS)
 	return nil
 }
@@ -155,6 +228,9 @@ func (b *Battle) settleOnce(won bool) {
 		return
 	}
 	b.settled = true
+	if b.sandbox {
+		return
+	}
 	graves, survivors := b.tally()
 	if won {
 		for i := range survivors {
@@ -179,6 +255,10 @@ func (b *Battle) tally() (graves int, survivors []campaign.Soldier) {
 }
 
 func (b *Battle) leaveBattle(h Host, won bool) {
+	if b.sandbox {
+		h.Switch(NewTitle())
+		return
+	}
 	if won {
 		b.prog.OnPhaseWon()
 	} else {

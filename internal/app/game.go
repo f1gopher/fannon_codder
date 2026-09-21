@@ -37,6 +37,24 @@ func New(skipTitle bool) *Game {
 	return g
 }
 
+// NewCover starts the oversized tree-cover sandbox (chunk 11).
+func NewCover() *Game {
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	g := &Game{prog: NewProgress()}
+	g.scene = NewCoverBattle(g.prog)
+	g.scene.Enter()
+	return g
+}
+
+// NewRiver starts the river/bridge sandbox (chunk 12).
+func NewRiver() *Game {
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	g := &Game{prog: NewProgress()}
+	g.scene = NewRiverBattle(g.prog)
+	g.scene.Enter()
+	return g
+}
+
 func (g *Game) Pointer() input.Pointer { return g.pointer }
 
 func (g *Game) Progress() *Progress { return g.prog }

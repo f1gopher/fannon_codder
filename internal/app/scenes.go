@@ -32,6 +32,7 @@ type Host interface {
 var (
 	titleColor  = color.RGBA{R: 0x20, G: 0x20, B: 0x20, A: 0xff}
 	battleColor = color.RGBA{R: 0x3a, G: 0x8f, B: 0x3a, A: 0xff}
+	snowColor   = color.RGBA{R: 0xe6, G: 0xec, B: 0xf0, A: 0xff}
 )
 
 // Title is the click-through splash.
@@ -289,8 +290,15 @@ func (b *Battle) leaveBattle(h Host, won bool) {
 	h.Switch(NewBootHill(b.prog))
 }
 
+func (b *Battle) battlefieldColor() color.Color {
+	if !b.sandbox && b.prog != nil && b.prog.Phase != nil && b.prog.Phase.Terrain == "arctic" {
+		return snowColor
+	}
+	return battleColor
+}
+
 func (b *Battle) Draw(screen *ebiten.Image) {
-	screen.Fill(battleColor)
+	screen.Fill(b.battlefieldColor())
 	render.Tiles(screen, b.world.Map, b.world.Camera)
 	render.Solids(screen, b.world)
 	render.Units(screen, b.world)

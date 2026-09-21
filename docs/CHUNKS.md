@@ -18,7 +18,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 14 Buildings, spawners, grenades, crates
 - [x] 15 Mission 2 content
 - [x] 16 HUD finish + overview map
-- [ ] 17 Mission 3 (ice, cliffs, grenade economy)
+- [x] 17 Mission 3 (ice, cliffs, grenade economy)
 - [ ] 18 Civilians, quicksand, mines
 - [ ] 19 Mission 4 content + free grenades
 - [ ] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
@@ -88,3 +88,7 @@ Verify: `go test ./...`. Fresh game: M1 (2 men) → Boot Hill queue 30, Jools an
 ### Chunk 16 done
 Files: `internal/render/hud.go`, `internal/render/hud_test.go`, `internal/render/overview.go`, `internal/sim/grenade.go`, `internal/sim/special_test.go`, `internal/sim/world.go`, `internal/app/scenes.go`.
 Verify: `go test ./...`. In battle the left strip shows the troop colour, G and R counts (white border on the selected special; grenades start selected), a foot icon, ranks and names, and a green bar on the active squad. Click G or R to select that special; with names highlighted, the same click still cycles split share. C toggles the special. Bazooka selected does not spend grenades. M at the bottom of the panel toggles a schematic of the whole map (tiles, hut, crate, unit dots, view box). Click the map to close it. Split still works.
+
+### Chunk 17 done
+Files: `internal/sim/map.go`, `internal/sim/move.go`, `internal/sim/cliff_test.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/overview.go`, `internal/app/scenes.go`, `internal/app/progress_test.go`, `data/missions/campaign.json`, `data/missions/m03p01.json`.
+Verify: `go test ./...`. After Mission 2, Boot Hill opens Mission 3 “Blast It's Cold” (deploy 4, snow field). Ice walks at grass speed. A cliff row is one-way: walk south to drop, the grey ramp on the west is the way back up. Four door huts, two crates (8 grenades). Pick the crates up before you shoot; hosing them explodes the grenades and the phase cannot be finished. One grenade per hut is enough if you do not waste the boxes. Mission 4 is still the stub.

@@ -17,6 +17,7 @@ const (
 	TileCliff
 	TileBridge
 	TileMine
+	TileRamp // walkable slope; the way up a cliff
 )
 
 // Map is a tile grid in world pixels (tile size 16).

@@ -61,6 +61,9 @@ func (w *World) slide(u *Unit, dx, dy float64) {
 		u.X, u.Y = nx, ny
 		return
 	}
+	if w.tryCliffDrop(u, nx, ny) {
+		return
+	}
 	if w.walkableUnit(nx, u.Y) {
 		u.X = nx
 		u.VY = 0
@@ -73,6 +76,53 @@ func (w *World) slide(u *Unit, dx, dy float64) {
 	}
 	u.VX = 0
 	u.VY = 0
+}
+
+// tryCliffDrop lands a unit on the south side of a cliff it is stepping off.
+// The face stays solid from below; TileRamp is the way back up.
+func (w *World) tryCliffDrop(u *Unit, nx, ny float64) bool {
+	if ny <= u.Y || !w.Map.active() {
+		return false
+	}
+	tx0, ty0, tx1, ty1 := footprintTiles(nx, ny, unitHalf)
+	for ty := ty0; ty <= ty1; ty++ {
+		top := float64(ty * TileSize)
+		if u.Y+unitHalf > top+1 {
+			continue
+		}
+		for tx := tx0; tx <= tx1; tx++ {
+			if w.Map.At(tx, ty) != TileCliff {
+				continue
+			}
+			landX := float64(tx*TileSize) + float64(TileSize)/2
+			landY := float64((ty+1)*TileSize) + unitHalf + 0.5
+			if !w.walkableUnit(landX, landY) {
+				continue
+			}
+			u.X, u.Y = landX, landY
+			u.VX, u.VY = 0, 0
+			return true
+		}
+	}
+	return false
+}
+
+func footprintTiles(x, y, half float64) (tx0, ty0, tx1, ty1 int) {
+	x0 := int(x - half)
+	y0 := int(y - half)
+	x1 := int(x + half - 0.001)
+	y1 := int(y + half - 0.001)
+	tx0 = x0 / TileSize
+	ty0 = y0 / TileSize
+	tx1 = x1 / TileSize
+	ty1 = y1 / TileSize
+	if x0 < 0 {
+		tx0 = -1
+	}
+	if y0 < 0 {
+		ty0 = -1
+	}
+	return tx0, ty0, tx1, ty1
 }
 
 func recordTrail(s *Squad, p Vec2) {

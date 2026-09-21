@@ -13,6 +13,9 @@ var (
 	shallowFill = color.RGBA{R: 0x4a, G: 0xa0, B: 0xc8, A: 0xff}
 	deepFill    = color.RGBA{R: 0x1a, G: 0x3a, B: 0x88, A: 0xff}
 	bridgeFill  = color.RGBA{R: 0x8a, G: 0x70, B: 0x40, A: 0xff}
+	iceFill     = color.RGBA{R: 0xd4, G: 0xe6, B: 0xf0, A: 0xff}
+	cliffFill   = color.RGBA{R: 0x4a, G: 0x50, B: 0x58, A: 0xff}
+	rampFill    = color.RGBA{R: 0x9a, G: 0xa6, B: 0xb0, A: 0xff}
 	tileSprites = map[sim.Tile]*ebiten.Image{}
 )
 
@@ -30,6 +33,12 @@ func tileImage(t sim.Tile) *ebiten.Image {
 		fill = deepFill
 	case sim.TileBridge:
 		fill = bridgeFill
+	case sim.TileIce:
+		fill = iceFill
+	case sim.TileCliff:
+		fill = cliffFill
+	case sim.TileRamp:
+		fill = rampFill
 	default:
 		return nil
 	}

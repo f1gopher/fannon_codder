@@ -250,6 +250,70 @@ func tileDist(ax, ay, bx, by int) float64 {
 	return math.Hypot(float64(ax-bx)*16, float64(ay-by)*16)
 }
 
+func TestMission3IcePhase(t *testing.T) {
+	p := mustPhase(t, "m03p01.json")
+	if p.Mission != 3 || p.Phase != 1 || p.Deploy != 4 || p.Terrain != "arctic" {
+		t.Fatalf("mission/phase/deploy/terrain = %d/%d/%d/%q", p.Mission, p.Phase, p.Deploy, p.Terrain)
+	}
+	if p.Title != "Blast It's Cold" {
+		t.Fatal(p.Title)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	ice, cliffs, ramps := 0, 0, 0
+	for y := 0; y < w.Map.H; y++ {
+		for x := 0; x < w.Map.W; x++ {
+			switch w.Map.At(x, y) {
+			case sim.TileIce:
+				ice++
+			case sim.TileCliff:
+				cliffs++
+			case sim.TileRamp:
+				ramps++
+			}
+		}
+	}
+	if ice == 0 || cliffs == 0 || ramps == 0 {
+		t.Fatalf("ice=%d cliff=%d ramp=%d", ice, cliffs, ramps)
+	}
+	doors := 0
+	for i := range w.Buildings {
+		if w.Buildings[i].HasDoor {
+			doors++
+		}
+	}
+	if doors != 4 {
+		t.Fatalf("door huts=%d, want 4", doors)
+	}
+	grenades := 0
+	for i := range w.Pickups {
+		pk := &w.Pickups[i]
+		grenades += pk.Amount
+		if w.Map.TileAtPixel(pk.X, pk.Y) == sim.TileCliff {
+			t.Fatal("crate on a cliff")
+		}
+		for bi := range w.Buildings {
+			b := &w.Buildings[bi]
+			d := math.Hypot(pk.X-(b.X+b.W/2), pk.Y-(b.Y+b.H/2))
+			if d <= sim.GrenadeRadius {
+				t.Fatalf("crate %d is inside hut %d blast (dist=%v); shooting the hut would waste it", i, bi, d)
+			}
+		}
+	}
+	if len(w.Pickups) != 2 || grenades != 8 {
+		t.Fatalf("want 2 crates / 8 grenades, got %d pickups / %d grenades", len(w.Pickups), grenades)
+	}
+	objs := map[sim.Objective]bool{}
+	for _, o := range w.Objectives {
+		objs[o] = true
+	}
+	if !objs[sim.KillAllEnemy] || !objs[sim.DestroyEnemyBuildings] {
+		t.Fatalf("objectives=%v", w.Objectives)
+	}
+	assertSpawnSurvives(t, w)
+}
+
 func TestParseWaterTiles(t *testing.T) {
 	cases := []struct {
 		ch rune
@@ -259,6 +323,9 @@ func TestParseWaterTiles(t *testing.T) {
 		{'W', sim.TileWaterDeep},
 		{'B', sim.TileBridge},
 		{'=', sim.TileBridge},
+		{'I', sim.TileIce},
+		{'C', sim.TileCliff},
+		{'R', sim.TileRamp},
 	}
 	for _, c := range cases {
 		got, err := parseTile(c.ch)

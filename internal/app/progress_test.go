@@ -43,7 +43,7 @@ func TestCleanMission1ThenMission2Shows27(t *testing.T) {
 		t.Fatalf("M1 survivors should deploy first as corporals, got %d", cpls)
 	}
 
-	// Both Mission 2 phases, no deaths: +2 ranks, then the Mission 3 stub.
+	// Both Mission 2 phases, no deaths: +2 ranks, then Mission 3.
 	for i := range m2 {
 		m2[i].PhasesThisMission++
 	}
@@ -58,8 +58,11 @@ func TestCleanMission1ThenMission2Shows27(t *testing.T) {
 	}
 	p.Pool.Return(m2b)
 	p.OnPhaseWon()
-	if p.MissionsCompleted != 2 || !p.AwaitingStub {
+	if p.MissionsCompleted != 2 || p.AwaitingStub {
 		t.Fatalf("after M2: completed=%d stub=%v", p.MissionsCompleted, p.AwaitingStub)
+	}
+	if p.Phase == nil || p.Phase.Mission != 3 || p.DeployCount() != 4 {
+		t.Fatalf("Mission 3 not armed: %+v deploy=%d", p.Phase, p.DeployCount())
 	}
 	if p.Pool.Remaining() != 45 {
 		t.Fatalf("pool after clean M2=%d, want 45", p.Pool.Remaining())
@@ -78,8 +81,17 @@ func TestCleanMission1ThenMission2Shows27(t *testing.T) {
 	}
 	q := NewProgress()
 	q.ApplySave(p.ToSave())
-	if !q.AwaitingStub || q.MissionsCompleted != 2 || q.Phase != nil {
-		t.Fatal("a finished Mission 2 save should still wait on Mission 3")
+	if q.AwaitingStub || q.Phase == nil || q.Phase.Mission != 3 {
+		t.Fatal("a finished Mission 2 save should open Mission 3")
+	}
+	m3 := p.Pool.Deploy(p.DeployCount())
+	for i := range m3 {
+		m3[i].PhasesThisMission++
+	}
+	p.Pool.Return(m3)
+	p.OnPhaseWon()
+	if p.MissionsCompleted != 3 || !p.AwaitingStub || p.Phase != nil {
+		t.Fatalf("after M3: completed=%d stub=%v phase=%v", p.MissionsCompleted, p.AwaitingStub, p.Phase)
 	}
 }
 

@@ -28,7 +28,7 @@ func (w *World) stepAI(dt float64) {
 			continue
 		}
 		dist := hypot(px-u.X, py-u.Y)
-		if dist <= EnemyMGRange && w.CanShoot(u) && w.Map.HasLOS(u.X, u.Y, px, py) {
+		if dist <= EnemyMGRange && w.CanShoot(u) && w.lineClear(u.X, u.Y, px, py) {
 			u.VX = 0
 			u.VY = 0
 			dx, dy := px-u.X, py-u.Y

@@ -16,16 +16,35 @@ type Campaign struct {
 
 // Phase is one mission phase loaded from JSON.
 type Phase struct {
-	Mission     int       `json:"mission"`
-	Phase       int       `json:"phase"`
-	Title       string    `json:"title"`
-	Briefing    string    `json:"briefing"`
-	Deploy      int       `json:"deploy"`
-	Terrain     string    `json:"terrain"`
-	Map         Tilemap   `json:"map"`
-	PlayerStart [2]int    `json:"playerStart"`
-	Enemies     []Enemy   `json:"enemies"`
-	Objectives  []string  `json:"objectives"`
+	Mission     int            `json:"mission"`
+	Phase       int            `json:"phase"`
+	Title       string         `json:"title"`
+	Briefing    string         `json:"briefing"`
+	Deploy      int            `json:"deploy"`
+	Terrain     string         `json:"terrain"`
+	Map         Tilemap        `json:"map"`
+	PlayerStart [2]int         `json:"playerStart"`
+	Enemies     []Enemy        `json:"enemies"`
+	Buildings   []BuildingSpec `json:"buildings"`
+	Pickups     []PickupSpec   `json:"pickups"`
+	Objectives  []string       `json:"objectives"`
+}
+
+// BuildingSpec is a hut in tile coordinates (top-left). Door huts spawn grunts.
+type BuildingSpec struct {
+	X     int     `json:"x"`
+	Y     int     `json:"y"`
+	W     int     `json:"w"`
+	H     int     `json:"h"`
+	Door  bool    `json:"door"`
+	Spawn float64 `json:"spawn"`
+}
+
+// PickupSpec is a crate. Kind "grenades" is four grenades.
+type PickupSpec struct {
+	X    int    `json:"x"`
+	Y    int    `json:"y"`
+	Kind string `json:"kind"`
 }
 
 type Tilemap struct {
@@ -130,6 +149,17 @@ func (p *Phase) World() (*sim.World, error) {
 
 	for _, e := range p.Enemies {
 		w.SpawnUnit(sim.SideEnemy, sim.TileCenter(e.X, e.Y))
+	}
+	for _, b := range p.Buildings {
+		w.AddBuilding(b.X, b.Y, b.W, b.H, b.Door, b.Spawn)
+	}
+	for _, pk := range p.Pickups {
+		switch pk.Kind {
+		case "grenade", "grenades":
+			w.AddGrenadeCrate(sim.TileCenter(pk.X, pk.Y))
+		default:
+			return nil, fmt.Errorf("unknown pickup %q", pk.Kind)
+		}
 	}
 	return w, nil
 }

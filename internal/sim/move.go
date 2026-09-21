@@ -49,7 +49,10 @@ func (w *World) steerToward(u *Unit, tx, ty, speed, dt, arrival float64) bool {
 }
 
 func (w *World) walkableUnit(x, y float64) bool {
-	return w.Map.Walkable(x, y, unitHalf)
+	if !w.Map.Walkable(x, y, unitHalf) {
+		return false
+	}
+	return !w.unitHitsBuilding(x, y, unitHalf)
 }
 
 func (w *World) slide(u *Unit, dx, dy float64) {

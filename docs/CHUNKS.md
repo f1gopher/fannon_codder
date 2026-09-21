@@ -15,7 +15,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 11 Tilemaps, scrolling, cover
 - [x] 12 Water, swimming, bridges
 - [x] 13 Split squads (Snake / Eagle / Panther)
-- [ ] 14 Buildings, spawners, grenades, crates
+- [x] 14 Buildings, spawners, grenades, crates
 - [ ] 15 Mission 2 content
 - [ ] 16 HUD finish + overview map
 - [ ] 17 Mission 3 (ice, cliffs, grenade economy)
@@ -76,3 +76,7 @@ Verify: `go test ./internal/sim`. `go run ./cmd/fannon -river` — river with a 
 ### Chunk 13 done
 Files: `internal/sim/squad.go`, `internal/sim/split.go`, `internal/sim/squad_test.go`, `internal/sim/combat.go`, `internal/sim/world.go`, `internal/sim/water_test.go`, `internal/render/hud.go`, `internal/render/hud_test.go`, `internal/render/units.go`, `internal/app/scenes.go`.
 Verify: `go test ./...`. `go run ./cmd/fannon -river` — three troopers (green Snake). Click a name (olive bar), click the logo or the `>S` row to peel him off as blue Eagle. He holds and shoots; walk the others across the bridge. Keys `1`/`2`/`3` or click a squad's block to switch. Walk onto the other squad to merge under whoever is active. G/R icons cycle the split share: no outline = none, open outline = half, full outline = all (counts stay 0). No grenades.
+
+### Chunk 14 done
+Files: `internal/sim/building.go`, `internal/sim/grenade.go`, `internal/sim/grenade_test.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/move.go`, `internal/sim/objectives.go`, `internal/sim/world.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/props.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`.
+Verify: `go test ./...`. `go run ./cmd/fannon -hut` — brown door hut spewing reds, grey G crate off to the west. Walk onto the crate (G4). Right-hold + left click, or Space, throws; the leader only, and it arcs over trees. One grenade on the hut destroys it (MG does not). Shoot the crate and it explodes, killing whoever is in the blast, including friendlies. Kill the remaining reds → PHASE COMPLETE. Phase stays open while the door hut stands. Doorless huts are not an objective. No bazookas.

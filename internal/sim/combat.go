@@ -100,7 +100,7 @@ func (w *World) nearestEnemy(u *Unit, maxRange float64) (tx, ty float64, ok bool
 			continue
 		}
 		d := hypot(o.X-u.X, o.Y-u.Y)
-		if d > best || !w.Map.HasLOS(u.X, u.Y, o.X, o.Y) {
+		if d > best || !w.lineClear(u.X, u.Y, o.X, o.Y) {
 			continue
 		}
 		best = d
@@ -172,7 +172,15 @@ func (w *World) stepProjectiles(dt float64) {
 			p.Left = 0
 			blocked = true
 		}
+		if hx, hy, hit := w.buildingHit(x0, y0, p.X, p.Y); hit {
+			p.X, p.Y = hx, hy
+			p.Left = 0
+			blocked = true
+		}
 		w.tryHit(p, x0, y0, p.X, p.Y)
+		if p.Alive {
+			w.tryHitCrate(p, x0, y0, p.X, p.Y)
+		}
 		if blocked {
 			p.Alive = false
 		}

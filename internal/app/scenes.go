@@ -92,6 +92,11 @@ func NewRiverBattle(prog *Progress) *Battle {
 	return battleFromWorld(prog, sim.NewRiverWorld(), true)
 }
 
+// NewHutBattle is the chunk 14 sandbox: a spawner hut and a grenade crate.
+func NewHutBattle(prog *Progress) *Battle {
+	return battleFromWorld(prog, sim.NewHutWorld(), true)
+}
+
 func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	ids := []int{}
 	if s := w.ActiveSquad(); s != nil {
@@ -184,6 +189,10 @@ func (b *Battle) Update(h Host) error {
 	wx := p.X + b.world.Camera.X
 	wy := p.Y + b.world.Camera.Y
 	onHUD := p.X < float64(render.HUDWidth)
+	// Right-held + left click, or Space: leader grenade. Not a move order.
+	if !onHUD && (p.ChordGrenade || inpututil.IsKeyJustPressed(ebiten.KeySpace)) {
+		b.world.ThrowGrenade(wx, wy)
+	}
 	if p.LeftDown && onHUD {
 		kind, id := render.HitHUD(b.world, p.X, p.Y)
 		switch kind {
@@ -198,7 +207,7 @@ func (b *Battle) Update(h Host) error {
 		case render.HitSquad:
 			b.world.SetActiveSquad(sim.SquadID(id))
 		}
-	} else if p.LeftDown {
+	} else if p.LeftDown && !p.ChordGrenade {
 		b.world.CommandMove(wx, wy, true)
 	} else if p.Left && !onHUD {
 		if s := b.world.ActiveSquad(); s != nil && s.HasDest {
@@ -270,8 +279,10 @@ func (b *Battle) leaveBattle(h Host, won bool) {
 func (b *Battle) Draw(screen *ebiten.Image) {
 	screen.Fill(battleColor)
 	render.Tiles(screen, b.world.Map, b.world.Camera)
+	render.Solids(screen, b.world)
 	render.Units(screen, b.world)
 	render.Projectiles(screen, b.world)
+	render.Grenades(screen, b.world)
 	render.HUD(screen, b.world, b.remaining)
 	switch b.world.Status {
 	case sim.Won:

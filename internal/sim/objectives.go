@@ -47,14 +47,18 @@ func (w *World) evaluateObjectives() {
 		w.Firing = false
 		return
 	}
-	needKill := false
 	for _, o := range w.Objectives {
-		if o == KillAllEnemy {
-			needKill = true
+		switch o {
+		case KillAllEnemy:
+			if w.anyLiving(SideEnemy) {
+				return
+			}
+		case DestroyEnemyBuildings:
+			if w.anyDoorBuilding() {
+				return
+			}
 		}
 	}
-	if needKill && !w.anyLiving(SideEnemy) {
-		w.Status = Won
-		w.Firing = false
-	}
+	w.Status = Won
+	w.Firing = false
 }

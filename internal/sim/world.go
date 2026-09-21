@@ -12,6 +12,10 @@ type World struct {
 	Units       []Unit
 	Squads      []Squad
 	Projectiles []Projectile
+	Buildings   []Building
+	Pickups     []Pickup
+	Grenades    []Grenade
+	Explosions  []Explosion
 	AimX, AimY  float64
 	Firing      bool
 	Spread      float64
@@ -116,6 +120,31 @@ func NewRiverWorld() *World {
 	return w
 }
 
+// NewHutWorld is the chunk 14 sandbox: a door hut, a grenade crate, and reds.
+func NewHutWorld() *World {
+	const W, H = 20, 16
+	tiles := make([]Tile, W*H)
+	for _, p := range [][2]int{{8, 6}, {9, 6}, {8, 7}} {
+		tiles[p[1]*W+p[0]] = TileTree
+	}
+	w := NewEmpty()
+	w.Map = Map{W: W, H: H, Tiles: tiles}
+	mw, mh := w.Map.PixelSize()
+	w.Camera.MapW = mw
+	w.Camera.MapH = mh
+	w.Objectives = []Objective{KillAllEnemy, DestroyEnemyBuildings}
+	start := TileCenter(6, 12)
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{
+		start,
+		{X: start.X - FileSpacing, Y: start.Y},
+	})
+	w.AddDoorHut(13, 3)
+	w.AddGrenadeCrate(TileCenter(10, 9))
+	w.SpawnUnit(SideEnemy, w.Buildings[0].DoorSpawn())
+	w.refreshTerrain()
+	return w
+}
+
 // SpawnPlayerSquad adds a player squad. The first position is the leader.
 func (w *World) SpawnPlayerSquad(id SquadID, positions []Vec2) *Squad {
 	s := Squad{ID: id, Active: len(w.Squads) == 0}
@@ -205,11 +234,15 @@ func (w *World) Step(dt float64) {
 		w.stepSquad(&w.Squads[i], dt)
 	}
 	w.stepMerge()
+	w.stepPickups()
 	w.refreshTerrain()
 	w.stepAI(dt)
 	w.stepFire(dt)
 	w.stepInactiveFire(dt)
 	w.stepProjectiles(dt)
+	w.stepGrenades(dt)
+	w.stepSpawners(dt)
+	w.stepBlasts(dt)
 	w.evaluateObjectives()
 }
 

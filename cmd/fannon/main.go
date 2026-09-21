@@ -13,6 +13,7 @@ func main() {
 	skipTitle := flag.Bool("skip-title", false, "jump straight into mission 1")
 	cover := flag.Bool("cover", false, "debug oversized map: scrolling + tree LOS")
 	river := flag.Bool("river", false, "debug river + bridge (water, swimming)")
+	hut := flag.Bool("hut", false, "debug spawner hut + grenade crate")
 	flag.Parse()
 
 	ebiten.SetWindowTitle("Fannon Codder")
@@ -22,6 +23,8 @@ func main() {
 
 	var game *app.Game
 	switch {
+	case *hut:
+		game = app.NewHut()
 	case *river:
 		game = app.NewRiver()
 	case *cover:

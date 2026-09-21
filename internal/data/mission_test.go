@@ -46,6 +46,37 @@ func TestLoadMission1(t *testing.T) {
 	}
 }
 
+func TestPhaseLoadsHutAndCrate(t *testing.T) {
+	rows := make([]string, 8)
+	for i := range rows {
+		rows[i] = "........"
+	}
+	p := &Phase{
+		Deploy:      1,
+		PlayerStart: [2]int{1, 6},
+		Map:         Tilemap{W: 8, H: 8, Tiles: rows},
+		Buildings:   []BuildingSpec{{X: 4, Y: 1, Door: true, Spawn: 3}},
+		Pickups:     []PickupSpec{{X: 2, Y: 5, Kind: "grenades"}},
+		Objectives:  []string{"kill_all_enemy", "destroy_enemy_buildings"},
+	}
+	w, err := p.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(w.Buildings) != 1 || !w.Buildings[0].HasDoor {
+		t.Fatal("expected a door hut")
+	}
+	if w.Buildings[0].SpawnEvery != 3 {
+		t.Fatalf("spawn=%v", w.Buildings[0].SpawnEvery)
+	}
+	if len(w.Pickups) != 1 || w.Pickups[0].Amount != sim.CrateAmount {
+		t.Fatal("expected a 4-grenade crate")
+	}
+	if len(w.Objectives) != 2 {
+		t.Fatalf("objectives=%d", len(w.Objectives))
+	}
+}
+
 func TestParseWaterTiles(t *testing.T) {
 	cases := []struct {
 		ch rune

@@ -55,6 +55,15 @@ func NewRiver() *Game {
 	return g
 }
 
+// NewHut starts the spawner-hut and grenade-crate sandbox (chunk 14).
+func NewHut() *Game {
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	g := &Game{prog: NewProgress()}
+	g.scene = NewHutBattle(g.prog)
+	g.scene.Enter()
+	return g
+}
+
 func (g *Game) Pointer() input.Pointer { return g.pointer }
 
 func (g *Game) Progress() *Progress { return g.prog }

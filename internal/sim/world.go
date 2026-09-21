@@ -27,6 +27,7 @@ type World struct {
 	Selected     []int
 	GrenadeShare AmmoShare
 	RocketShare  AmmoShare
+	Special      Special
 	nextID       int
 	rng          *rand.Rand
 }

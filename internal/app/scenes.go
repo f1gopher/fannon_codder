@@ -64,6 +64,7 @@ type Battle struct {
 	unitIDs   []int
 	settled   bool
 	sandbox   bool
+	mapOpen   bool
 }
 
 func NewBattle(prog *Progress) *Battle {
@@ -191,11 +192,14 @@ func (b *Battle) Update(h Host) error {
 	if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		b.world.SetActiveSquad(sim.SquadPanther)
 	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		b.world.ToggleSpecial()
+	}
 	wx := p.X + b.world.Camera.X
 	wy := p.Y + b.world.Camera.Y
 	onHUD := p.X < float64(render.HUDWidth)
-	// Right-held + left click, or Space: leader grenade. Not a move order.
-	if !onHUD && (p.ChordGrenade || inpututil.IsKeyJustPressed(ebiten.KeySpace)) {
+	// Right-held + left click, or Space: leader's selected special. Not a move order.
+	if !onHUD && !b.mapOpen && (p.ChordGrenade || inpututil.IsKeyJustPressed(ebiten.KeySpace)) {
 		b.world.ThrowGrenade(wx, wy)
 	}
 	if p.LeftDown && onHUD {
@@ -204,22 +208,26 @@ func (b *Battle) Update(h Host) error {
 		case render.HitSplit:
 			b.world.Split()
 		case render.HitGrenade:
-			b.world.CycleGrenadeShare()
+			b.world.UseAmmoIcon(sim.SpecialGrenade)
 		case render.HitRocket:
-			b.world.CycleRocketShare()
+			b.world.UseAmmoIcon(sim.SpecialRocket)
 		case render.HitMember:
 			b.world.ToggleSelect(id)
 		case render.HitSquad:
 			b.world.SetActiveSquad(sim.SquadID(id))
+		case render.HitMap:
+			b.mapOpen = !b.mapOpen
 		}
+	} else if p.LeftDown && b.mapOpen {
+		b.mapOpen = false
 	} else if p.LeftDown && !p.ChordGrenade {
 		b.world.CommandMove(wx, wy, true)
-	} else if p.Left && !onHUD {
+	} else if p.Left && !onHUD && !b.mapOpen {
 		if s := b.world.ActiveSquad(); s != nil && s.HasDest {
 			b.world.CommandMove(wx, wy, false)
 		}
 	}
-	if onHUD {
+	if onHUD || b.mapOpen {
 		b.world.SetFire(b.world.AimX, b.world.AimY, false)
 	} else {
 		firing := p.Right ||
@@ -288,6 +296,9 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	render.Units(screen, b.world)
 	render.Projectiles(screen, b.world)
 	render.Grenades(screen, b.world)
+	if b.mapOpen {
+		render.Overview(screen, b.world)
+	}
 	render.HUD(screen, b.world, b.remaining)
 	switch b.world.Status {
 	case sim.Won:

@@ -57,9 +57,45 @@ func (w *World) AddGrenadeCrate(p Vec2) {
 	})
 }
 
+// Special is the weapon a chord or Space uses. Bazookas arrive later.
+type Special int
+
+const (
+	SpecialGrenade Special = iota
+	SpecialRocket
+)
+
+// UseAmmoIcon clicks the grenade or rocket count.
+// Highlighted men cycle how much of that ammo a split takes.
+// With nobody highlighted, the click selects that special.
+func (w *World) UseAmmoIcon(kind Special) {
+	if len(w.Selected) > 0 {
+		if kind == SpecialRocket {
+			w.CycleRocketShare()
+		} else {
+			w.CycleGrenadeShare()
+		}
+		return
+	}
+	w.Special = kind
+}
+
+// ToggleSpecial flips grenade and bazooka (the C key).
+func (w *World) ToggleSpecial() {
+	if w.Special == SpecialRocket {
+		w.Special = SpecialGrenade
+		return
+	}
+	w.Special = SpecialRocket
+}
+
 // ThrowGrenade sends the active leader's grenade toward (x, y).
 // Right-held + left click, or Space. Deep water cannot throw. Leader only.
+// A selected bazooka does not spend grenades.
 func (w *World) ThrowGrenade(x, y float64) bool {
+	if w.Special != SpecialGrenade {
+		return false
+	}
 	s := w.ActiveSquad()
 	if s == nil || s.Grenades <= 0 {
 		return false

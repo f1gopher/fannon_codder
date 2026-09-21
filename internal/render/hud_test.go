@@ -59,3 +59,16 @@ func TestHitHUDSplitSwitchAndAmmo(t *testing.T) {
 		t.Fatal("eagle squad missing from the HUD")
 	}
 }
+
+func TestHitHUDMapIcon(t *testing.T) {
+	w := sim.NewEmpty()
+	w.SpawnPlayerSquad(sim.SquadSnake, []sim.Vec2{{}})
+	kind, _ := HitHUD(w, 4, 242)
+	if kind != HitMap {
+		t.Fatalf("map icon hit = %v", kind)
+	}
+	kind, _ = HitHUD(w, 4, 20)
+	if kind != HitGrenade {
+		t.Fatalf("grenade hit = %v", kind)
+	}
+}

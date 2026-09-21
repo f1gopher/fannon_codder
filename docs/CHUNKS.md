@@ -17,7 +17,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 13 Split squads (Snake / Eagle / Panther)
 - [x] 14 Buildings, spawners, grenades, crates
 - [x] 15 Mission 2 content
-- [ ] 16 HUD finish + overview map
+- [x] 16 HUD finish + overview map
 - [ ] 17 Mission 3 (ice, cliffs, grenade economy)
 - [ ] 18 Civilians, quicksand, mines
 - [ ] 19 Mission 4 content + free grenades
@@ -84,3 +84,7 @@ Verify: `go test ./...`. `go run ./cmd/fannon -hut` — brown door hut spewing r
 ### Chunk 15 done
 Files: `data/missions/campaign.json`, `data/missions/m02p01.json`, `data/missions/m02p02.json`, `internal/data/mission_test.go`, `internal/app/progress.go`, `internal/app/progress_test.go`, `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/stub.go`, `internal/sim/camera.go`, `internal/sim/camera_test.go`.
 Verify: `go test ./...`. Fresh game: M1 (2 men) → Boot Hill queue 30, Jools and Jops corporals → M2 deploys 3, HUD remaining 27. Phase 1 “Bridge Over the River Pie”: scrolling river, one bridge, trees, a swimmer near spawn, 16 grunts, kill-all. Phase 2 “Trash Enemy HQ”: mostly water, one door hut, grenade crate on the grass beside it (outside the blast), kill-all + destroy the hut. Both phases survived → those men +2 ranks, +15 recruits, then the Mission 3 stub. An old save that was stuck on the Mission 2 stub loads phase 1 instead. Camera starts centred on the squad.
+
+### Chunk 16 done
+Files: `internal/render/hud.go`, `internal/render/hud_test.go`, `internal/render/overview.go`, `internal/sim/grenade.go`, `internal/sim/special_test.go`, `internal/sim/world.go`, `internal/app/scenes.go`.
+Verify: `go test ./...`. In battle the left strip shows the troop colour, G and R counts (white border on the selected special; grenades start selected), a foot icon, ranks and names, and a green bar on the active squad. Click G or R to select that special; with names highlighted, the same click still cycles split share. C toggles the special. Bazooka selected does not spend grenades. M at the bottom of the panel toggles a schematic of the whole map (tiles, hut, crate, unit dots, view box). Click the map to close it. Split still works.

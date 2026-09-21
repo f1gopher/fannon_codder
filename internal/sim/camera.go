@@ -10,9 +10,17 @@ const (
 
 // Camera is the world-space top-left of the visible playfield.
 type Camera struct {
-	X, Y             float64
-	ViewW, ViewH     float64
-	MapW, MapH       float64
+	X, Y         float64
+	ViewW, ViewH float64
+	MapW, MapH   float64
+}
+
+// CenterOn puts (x, y) in the middle of the view, then clamps.
+// A map that fits the screen stays pinned at 0,0.
+func (c *Camera) CenterOn(x, y float64) {
+	c.X = x - c.ViewW/2
+	c.Y = y - c.ViewH/2
+	c.Clamp()
 }
 
 // Clamp keeps the view inside the map. A map smaller than the view pins to 0,0.

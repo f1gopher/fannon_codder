@@ -128,7 +128,7 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 	case b.prog.GameOver:
 		ebitenutil.DebugPrintAt(screen, "GAME OVER — no recruits left", 8, 88)
 	case b.prog.AwaitingStub:
-		ebitenutil.DebugPrintAt(screen, "MISSION COMPLETE  Click for Mission 2 stub", 8, 88)
+		ebitenutil.DebugPrintAt(screen, "MISSION COMPLETE  Click — later missions", 8, 88)
 	default:
 		ebitenutil.DebugPrintAt(screen, "Click or Enter to start", 8, 88)
 	}

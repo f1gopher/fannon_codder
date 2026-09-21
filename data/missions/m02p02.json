@@ -1,0 +1,82 @@
+{
+  "mission": 2,
+  "phase": 2,
+  "title": "Trash Enemy HQ",
+  "briefing": "With 3 soldiers you must destroy the HQ and kill all enemy",
+  "deploy": 3,
+  "terrain": "jungle",
+  "map": {
+    "w": 32,
+    "h": 20,
+    "tiles": [
+      "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWW~~~~~~~~~~WWWWWWW",
+      "WWW~~~~~WWWWWW~..........~WWWWWW",
+      "WW~.....~WWWWW~..T.......~WWWWWW",
+      "WW~.....~WWWWW~........T.~WWWWWW",
+      "WW~.....~WWWWW~..........~WWWWWW",
+      "WWW~~~~~WWWWWW~..........~WWWWWW",
+      "WWWWWWWWWWWWWW~.....T....~WWWWWW",
+      "WWWWWWWWWWWWWW~..........~WWWWWW",
+      "WWWWWWWWWW~~~~~~~~~~~~~~~WWWWWWW",
+      "WWWWWWWWWW~~~~~~~WWWWWWWWWWWWWWW",
+      "WWWW~~~~~~~~~~~~~WWWWWWWWWWWWWWW",
+      "WWW~.........~WWWWWWWWWWWWWWWWWW",
+      "WWW~....TT...~WWWWWWWWWWWWWWWWWW",
+      "WWW~.........~WWWWWWWWWWWWWWWWWW",
+      "WWW~.........~WWWWWWWWWWWWWWWWWW"
+    ]
+  },
+  "playerStart": [
+    7,
+    18
+  ],
+  "enemies": [
+    {
+      "x": 16,
+      "y": 12,
+      "kind": "grunt"
+    },
+    {
+      "x": 8,
+      "y": 14,
+      "kind": "grunt"
+    },
+    {
+      "x": 22,
+      "y": 7,
+      "kind": "grunt"
+    },
+    {
+      "x": 21,
+      "y": 12,
+      "kind": "grunt"
+    }
+  ],
+  "buildings": [
+    {
+      "x": 18,
+      "y": 8,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    }
+  ],
+  "pickups": [
+    {
+      "x": 16,
+      "y": 11,
+      "kind": "grenades"
+    }
+  ],
+  "vehicles": [],
+  "objectives": [
+    "kill_all_enemy",
+    "destroy_enemy_buildings"
+  ]
+}

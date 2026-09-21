@@ -26,6 +26,22 @@ func TestScrollTowardNoOpWhenMapFits(t *testing.T) {
 	}
 }
 
+func TestCenterOnLeaderClampsWhenMapFits(t *testing.T) {
+	c := Camera{ViewW: 320, ViewH: 256, MapW: 320, MapH: 256}
+	c.CenterOn(200, 200)
+	if c.X != 0 || c.Y != 0 {
+		t.Fatalf("one-screen map stays pinned, got (%v,%v)", c.X, c.Y)
+	}
+}
+
+func TestCenterOnLargeMap(t *testing.T) {
+	c := Camera{ViewW: 320, ViewH: 256, MapW: 640, MapH: 512}
+	c.CenterOn(400, 300)
+	if c.X != 240 || c.Y != 172 {
+		t.Fatalf("got (%v,%v), want (240,172)", c.X, c.Y)
+	}
+}
+
 func TestCoverMapLargerThanView(t *testing.T) {
 	w := NewCoverWorld()
 	mw, mh := w.Map.PixelSize()

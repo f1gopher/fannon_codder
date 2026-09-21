@@ -7,15 +7,15 @@ import (
 
 // Progress is the campaign loop shared by Boot Hill, briefing, and battle.
 type Progress struct {
-	Pool               *campaign.Pool
-	Graves             int
-	PhaseIndex         int
-	MissionsCompleted  int
-	Campaign           *data.Campaign
-	Phase              *data.Phase
-	GameOver           bool
-	AwaitingStub       bool // next mission has no map yet
-	SaveNotice         string
+	Pool              *campaign.Pool
+	Graves            int
+	PhaseIndex        int
+	MissionsCompleted int
+	Campaign          *data.Campaign
+	Phase             *data.Phase
+	GameOver          bool
+	AwaitingStub      bool // next mission has no map yet
+	SaveNotice        string
 }
 
 func NewProgress() *Progress {
@@ -117,7 +117,11 @@ func (p *Progress) ApplySave(s campaign.SaveGame) {
 	p.AwaitingStub = s.AwaitingStub
 	p.Pool = campaign.RestorePool(s.Recruits, s.NextName)
 	p.reloadPhase()
-	if p.Phase == nil && p.MissionsCompleted > 0 {
+	// A save from before Mission 2 existed flagged the stub even though
+	// phase index 1 is now a real map. Trust the loaded phase.
+	if p.Phase != nil {
+		p.AwaitingStub = false
+	} else if p.MissionsCompleted > 0 {
 		p.AwaitingStub = true
 	}
 }

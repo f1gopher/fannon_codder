@@ -33,7 +33,7 @@ func (s *MissionStub) Draw(screen *ebiten.Image) {
 	screen.Fill(stubBG)
 	n := s.prog.MissionsCompleted + 1
 	ebitenutil.DebugPrint(screen, fmt.Sprintf(
-		"MISSION %d\n\nNot implemented yet.\nMaps continue from chunk 11+.\n\nQueue %d  (FAQ: 27 remaining after M2 deploys 3)\n\nClick or Enter — Boot Hill",
+		"MISSION %d\n\nNot implemented yet.\n\nQueue %d\n\nClick or Enter — Boot Hill",
 		n, s.prog.Pool.Remaining(),
 	))
 }

@@ -98,6 +98,11 @@ func NewHutBattle(prog *Progress) *Battle {
 }
 
 func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
+	if s := w.ActiveSquad(); s != nil {
+		if l := w.Unit(s.LeaderID); l != nil {
+			w.Camera.CenterOn(l.X, l.Y)
+		}
+	}
 	ids := []int{}
 	if s := w.ActiveSquad(); s != nil {
 		ids = append(ids, s.MemberIDs...)

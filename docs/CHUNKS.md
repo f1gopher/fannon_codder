@@ -16,7 +16,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 12 Water, swimming, bridges
 - [x] 13 Split squads (Snake / Eagle / Panther)
 - [x] 14 Buildings, spawners, grenades, crates
-- [ ] 15 Mission 2 content
+- [x] 15 Mission 2 content
 - [ ] 16 HUD finish + overview map
 - [ ] 17 Mission 3 (ice, cliffs, grenade economy)
 - [ ] 18 Civilians, quicksand, mines
@@ -80,3 +80,7 @@ Verify: `go test ./...`. `go run ./cmd/fannon -river` — three troopers (green 
 ### Chunk 14 done
 Files: `internal/sim/building.go`, `internal/sim/grenade.go`, `internal/sim/grenade_test.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/move.go`, `internal/sim/objectives.go`, `internal/sim/world.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/props.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`.
 Verify: `go test ./...`. `go run ./cmd/fannon -hut` — brown door hut spewing reds, grey G crate off to the west. Walk onto the crate (G4). Right-hold + left click, or Space, throws; the leader only, and it arcs over trees. One grenade on the hut destroys it (MG does not). Shoot the crate and it explodes, killing whoever is in the blast, including friendlies. Kill the remaining reds → PHASE COMPLETE. Phase stays open while the door hut stands. Doorless huts are not an objective. No bazookas.
+
+### Chunk 15 done
+Files: `data/missions/campaign.json`, `data/missions/m02p01.json`, `data/missions/m02p02.json`, `internal/data/mission_test.go`, `internal/app/progress.go`, `internal/app/progress_test.go`, `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/stub.go`, `internal/sim/camera.go`, `internal/sim/camera_test.go`.
+Verify: `go test ./...`. Fresh game: M1 (2 men) → Boot Hill queue 30, Jools and Jops corporals → M2 deploys 3, HUD remaining 27. Phase 1 “Bridge Over the River Pie”: scrolling river, one bridge, trees, a swimmer near spawn, 16 grunts, kill-all. Phase 2 “Trash Enemy HQ”: mostly water, one door hut, grenade crate on the grass beside it (outside the blast), kill-all + destroy the hut. Both phases survived → those men +2 ranks, +15 recruits, then the Mission 3 stub. An old save that was stuck on the Mission 2 stub loads phase 1 instead. Camera starts centred on the squad.

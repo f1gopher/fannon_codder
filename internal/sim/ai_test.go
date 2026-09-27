@@ -284,6 +284,139 @@ func TestEnemyDoesNotShootThroughTree(t *testing.T) {
 	}
 }
 
+func TestGruntFiresThreeRoundBurstThenPauses(t *testing.T) {
+	if got := GunStatsFor(0).Spread; got != 0.12 {
+		t.Fatalf("private spread %v, want 0.12", got)
+	}
+	// Spread 0 is the test default. The enemy cone must still open.
+	w := aiWorld(Vec2{X: 40, Y: 0}, Vec2{X: 0, Y: 0})
+	if w.Spread != 0 {
+		t.Fatal("fixture should zero the player cone")
+	}
+	e := enemyOf(w)
+	var angs []float64
+	for n := 0; n < 180 && len(angs) < EnemyBurst; n++ {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		angs = append(angs, freshEnemyMGAngles(w)...)
+	}
+	if len(angs) != EnemyBurst {
+		t.Fatalf("got %d rounds in the first chatter, want %d (%v)", len(angs), EnemyBurst, angs)
+	}
+	if angs[0] == angs[1] || angs[1] == angs[2] || angs[0] == angs[2] {
+		t.Fatalf("seeded cone should scatter the three rounds, got %v", angs)
+	}
+	for _, ang := range angs {
+		if math.Abs(ang) > EnemyMGSpread+1e-9 {
+			t.Fatalf("round angle %v outside ±%v", ang, EnemyMGSpread)
+		}
+	}
+	if e.X != 0 || e.VX != 0 || e.VY != 0 {
+		t.Fatal("a bursting grunt holds the post")
+	}
+	if e.BurstGap != EnemyBurstPause {
+		t.Fatalf("pause %v, want %v", e.BurstGap, EnemyBurstPause)
+	}
+
+	// Sidestep during the gap: he keeps turning and does not shoot.
+	player := playerOf(w)
+	facing := e.Facing
+	quiet := 0.0
+	var fourth []float64
+	for quiet < EnemyBurstPause+0.5 {
+		keepPlayerAlive(w)
+		if quiet < 0.2 {
+			player.X, player.Y = 40, 40
+		} else {
+			player.X, player.Y = 40, 0
+		}
+		w.Step(1.0 / 60)
+		quiet += 1.0 / 60
+		if quiet < 0.2 && e.Facing <= facing {
+			t.Fatal("he should keep turning through the pause")
+		}
+		if e.X != 0 || e.VX != 0 {
+			t.Fatal("the pause does not walk him off the post")
+		}
+		fourth = freshEnemyMGAngles(w)
+		if len(fourth) > 0 {
+			break
+		}
+	}
+	if len(fourth) != 1 {
+		t.Fatalf("expected one round when the pause ended, got %d", len(fourth))
+	}
+	if math.Abs(quiet-EnemyBurstPause) > 1.0/60 {
+		t.Fatalf("silence lasted %v, want %v", quiet, EnemyBurstPause)
+	}
+}
+
+func TestBurstPauseLostContactResetsReaction(t *testing.T) {
+	w := aiWorld(Vec2{X: 40, Y: 0}, Vec2{X: 0, Y: 0})
+	e := enemyOf(w)
+	n := 0
+	for i := 0; i < 180 && n < EnemyBurst; i++ {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		n += len(freshEnemyMGAngles(w))
+	}
+	if n != EnemyBurst || e.BurstGap <= 0 {
+		t.Fatalf("want a live pause after %d rounds, gap=%v", n, e.BurstGap)
+	}
+	w.Projectiles = nil
+	w.Map = Map{W: 4, H: 1, Tiles: []Tile{
+		TileGrass, TileTree, TileGrass, TileGrass,
+	}}
+	w.Step(1.0 / 60)
+	if len(w.Projectiles) != 0 || e.BurstGap != 0 || e.BurstN != 0 || e.SpotT != 0 || e.ReactAt != 0 {
+		t.Fatalf("broken LOS should idle him, gap=%v n=%v spot=%v react=%v shots=%d",
+			e.BurstGap, e.BurstN, e.SpotT, e.ReactAt, len(w.Projectiles))
+	}
+	w.Map = Map{}
+	for i := 0; i < 18; i++ { // 0.3s, inside every reaction window
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		if len(freshEnemyMGAngles(w)) != 0 {
+			t.Fatal("a new contact owes a full reaction, not the rest of the pause")
+		}
+	}
+	if e.X != 0 || e.VX != 0 {
+		t.Fatal("he holds the post after the pause is cancelled")
+	}
+}
+
+// freshEnemyMGAngles is the cone of enemy MG rounds spawned on this 1/60 step.
+func freshEnemyMGAngles(w *World) []float64 {
+	const dt = 1.0 / 60
+	floor := EnemyMGRange - MGSpeed*dt - 1
+	var out []float64
+	for i := range w.Projectiles {
+		p := &w.Projectiles[i]
+		if p.OwnerSide != SideEnemy || p.Kind != ProjMG || !p.Alive || p.Left < floor {
+			continue
+		}
+		out = append(out, math.Atan2(p.VY, p.VX))
+	}
+	return out
+}
+
+func keepPlayerAlive(w *World) {
+	for i := range w.Units {
+		if w.Units[i].Side == SidePlayer {
+			w.Units[i].HP = Alive
+		}
+	}
+}
+
+func playerOf(w *World) *Unit {
+	for i := range w.Units {
+		if w.Units[i].Side == SidePlayer {
+			return &w.Units[i]
+		}
+	}
+	return nil
+}
+
 func aiWorld(player, enemy Vec2) *World {
 	w := &World{Spread: 0, nextID: 1, rng: newRNG(), AI: true}
 	w.SpawnPlayerSquad(SquadSnake, []Vec2{player})

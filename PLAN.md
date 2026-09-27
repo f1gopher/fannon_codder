@@ -692,7 +692,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–21 are in. The next session is **Chunk 22**. Play Mission 1 before deciding on **23**.
+Chunks 01–22 are in. Play Mission 1 before deciding on **23**.
 
 ---
 

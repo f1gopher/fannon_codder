@@ -55,6 +55,8 @@ type Unit struct {
 	RocketCD    float64 // seconds until the next rocket windup
 	SpotT       float64 // seconds of unbroken gun-range LOS. Zeroed when contact breaks.
 	ReactAt     float64 // SpotT must reach this before the first MG round. 0 means no live contact.
+	BurstN      int     // MG rounds fired in the current chatter.
+	BurstGap    float64 // seconds of silence left after a full burst.
 }
 
 func (u *Unit) Dead() bool { return u.HP == Dead }

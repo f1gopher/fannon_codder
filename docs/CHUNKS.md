@@ -23,10 +23,10 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 19 Mission 4 content + free grenades
 - [x] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
 - [x] 21 Grunts spot, turn, and hold the post
-- [ ] 22 Grunt bursts and a wide cone
+- [x] 22 Grunt bursts and a wide cone
 - [ ] 23 Gunfire turns the next man (only after playing Mission 1; skip if 22 already feels right)
 
-Next session is **22**. Play Mission 1 before starting 23. Spec is in `PLAN.md` under “Chunks 21–23”.
+Chunks 01–22 are in. Play Mission 1 before starting **23**. Spec is in `PLAN.md` under “Chunks 21–23”.
 
 ## Log
 
@@ -113,6 +113,10 @@ Verify: `go test ./...`. New game through Mission 5, then save. Valley of Ice: 3
 ### Chunk 21 done
 Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go`, `internal/sim/world.go`, `internal/sim/vehicle_test.go`, `internal/render/units.go`, `internal/data/mission_test.go`.
 Verify: `go test ./...`. Mission 1 spawn: the three grunts stay on their tiles and do not shoot (the south man is 80px away, gun range is 70). Each has a white nose showing facing; they spawn facing east and turn toward you once you are in range with a clear line. The first round waits out about half a second, longer if they have to turn around. Step out already aiming and you can kill the south grunt before he fires. Wait in the open and he turns, then shoots, and keeps shooting — bursts are Chunk 22. Grenadiers still telegraph a throw. Rocketeers are unchanged. `go run ./cmd/fannon`.
+
+### Chunk 22 done
+Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go`.
+Verify: `go test ./...`. Mission 1 again. Winning the opening aim is clean. Missing it means three rounds, a visible gap of about three quarters of a second while he keeps turning, then another burst. Shots go wide of a moving man; standing still in the open still gets him killed. Grenadiers still telegraph throws. Rocketeers are unchanged. `go run ./cmd/fannon`.
 
 ## Backlog
 

@@ -9,12 +9,15 @@ const (
 	EnemyReactJitter = 0.15 // added once per contact, in [-j, +j]
 	EnemyTurnRate    = 4.0  // rad/s. A 180° turn takes about 0.8s
 	EnemyFaceTol     = 0.35 // rad. No round until he is looking at the player
+	EnemyBurst       = 3    // MG rounds, then silence
+	EnemyBurstPause  = 0.75 // seconds with no MG round; he keeps turning
+	EnemyMGSpread    = 0.20 // rad. Wider than a Private's 0.12
 )
 
 // stepAI posts grunts: they hold their tile, turn toward a player in gun
-// range with clear LOS, and withhold the first round until the reaction
-// and the turn are both done. Rocketeers and grenade throws keep their
-// own windups.
+// range with clear LOS, withhold the first round until the reaction and
+// the turn are both done, then fire a short burst and pause. Rocketeers
+// and grenade throws keep their own windups.
 func (w *World) stepAI(dt float64) {
 	if !w.AI {
 		return
@@ -35,8 +38,7 @@ func (w *World) stepAI(dt float64) {
 			u.VY = 0
 			u.GrenadeWind = 0
 			u.RocketWind = 0
-			u.SpotT = 0
-			u.ReactAt = 0
+			resetGruntContact(u)
 			continue
 		}
 		dist := hypot(px-u.X, py-u.Y)
@@ -53,14 +55,13 @@ func (w *World) stepAI(dt float64) {
 
 // stepGruntGun is the MG path for a grunt and for a grenadier who is not
 // throwing. He never leaves his tile. Contact is a living player inside
-// gun range with clear LOS; anything else zeroes the reaction.
+// gun range with clear LOS; anything else zeroes the reaction and the burst.
 func (w *World) stepGruntGun(u *Unit, dt float64) {
 	u.VX = 0
 	u.VY = 0
 	px, py, ok := w.gruntContact(u)
 	if !ok {
-		u.SpotT = 0
-		u.ReactAt = 0
+		resetGruntContact(u)
 		return
 	}
 	if u.ReactAt == 0 {
@@ -74,6 +75,17 @@ func (w *World) stepGruntGun(u *Unit, dt float64) {
 	if u.SpotT+1e-9 < u.ReactAt {
 		return
 	}
+	// The pause is real time under contact. Facing and the trigger come after,
+	// so a man still turning does not freeze the gap or fire through it.
+	if u.BurstGap > 0 {
+		u.BurstGap -= dt
+		if u.BurstGap > 0 {
+			return
+		}
+		u.BurstGap = 0
+		u.BurstN = 0
+		u.FireCD = 0
+	}
 	if facingError(u, px, py) > EnemyFaceTol {
 		return
 	}
@@ -84,15 +96,27 @@ func (w *World) stepGruntGun(u *Unit, dt float64) {
 	if u.FireCD > 0 {
 		return
 	}
-	u.FireCD = 1.0 / EnemyMGRoF
-	ang := u.Facing
-	if w.Spread > 0 {
-		if w.rng == nil {
-			w.rng = newRNG()
-		}
-		ang += (w.rng.Float64()*2 - 1) * w.Spread
+	u.BurstN++
+	if u.BurstN >= EnemyBurst {
+		u.BurstGap = EnemyBurstPause
+		u.FireCD = 0
+	} else {
+		u.FireCD = 1.0 / EnemyMGRoF
 	}
+	if w.rng == nil {
+		w.rng = newRNG()
+	}
+	ang := u.Facing + (w.rng.Float64()*2-1)*EnemyMGSpread
 	w.spawnMG(u, ang, EnemyMGRange)
+}
+
+// resetGruntContact drops a grunt back to idle. The next sighting owes a
+// full reaction, including one new jitter roll.
+func resetGruntContact(u *Unit) {
+	u.SpotT = 0
+	u.ReactAt = 0
+	u.BurstN = 0
+	u.BurstGap = 0
 }
 
 // gruntContact is the nearest living player inside gun range with LOS.

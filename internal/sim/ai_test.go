@@ -1,38 +1,111 @@
 package sim
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
-func TestEnemyShootsWhenPlayerInRange(t *testing.T) {
-	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 40, Y: 0})
-	w.Step(1.0 / 60)
-	if len(w.Projectiles) == 0 {
-		t.Fatal("grunt in range should fire")
+func TestEnemyWaitsOutReactionBeforeFiring(t *testing.T) {
+	// Player is due east, which is the spawn facing, so only the clock waits.
+	w := aiWorld(Vec2{X: 40, Y: 0}, Vec2{X: 0, Y: 0})
+	e := enemyOf(w)
+	if e.Facing != 0 {
+		t.Fatalf("spawn facing %v, want east", e.Facing)
 	}
-}
-
-func TestEnemyIdleWhenPlayerFar(t *testing.T) {
-	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 200, Y: 0})
-	ex := enemyOf(w).X
-	for i := 0; i < 20; i++ {
-		w.Step(1.0 / 60)
+	w.Step(1.0 / 60)
+	if len(w.Projectiles) != 0 {
+		t.Fatal("no round on the first frame")
+	}
+	w.Step(0.3 - 1.0/60)
+	if len(w.Projectiles) != 0 {
+		t.Fatal("no round at 0.3s while already facing")
+	}
+	if e.SpotT < 0.25 || e.ReactAt == 0 {
+		t.Fatalf("contact should be counting, SpotT=%v ReactAt=%v", e.SpotT, e.ReactAt)
+	}
+	// Reach the threshold on a short frame. A long step would land the round
+	// and remove it before the test can see it.
+	if gap := e.ReactAt - e.SpotT - 1.0/60; gap > 0 {
+		w.Step(gap)
 	}
 	if len(w.Projectiles) != 0 {
-		t.Fatal("grunt out of approach range should not fire")
+		t.Fatal("still inside the reaction")
 	}
-	if enemyOf(w).X != ex {
-		t.Fatal("grunt should idle, not walk")
+	w.Step(1.0 / 60)
+	if len(w.Projectiles) == 0 {
+		t.Fatal("a round once the reaction has passed and he is facing")
+	}
+	if e.X != 0 || e.VX != 0 || e.VY != 0 {
+		t.Fatal("he fires from the post")
 	}
 }
 
-func TestEnemyApproachesWhenCloseButOutOfShot(t *testing.T) {
-	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 110, Y: 0})
-	start := enemyOf(w).X
-	for i := 0; i < 40; i++ {
-		w.Step(1.0 / 60)
+func TestEnemyFacingAwayWaitsForTheTurn(t *testing.T) {
+	// Player to the west. Spawn facing is east, so the turn outlasts the reaction.
+	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 40, Y: 0})
+	e := enemyOf(w)
+	if e.Facing != 0 {
+		t.Fatalf("spawn facing %v, want east", e.Facing)
 	}
-	got := enemyOf(w).X
-	if got >= start {
-		t.Fatalf("grunt should walk toward player, x %v -> %v", start, got)
+	// Stop a hair before the cone. π − tol is the turn that just enters tolerance.
+	partial := (math.Pi-EnemyFaceTol)/EnemyTurnRate - 0.02
+	w.Step(partial)
+	if len(w.Projectiles) != 0 {
+		t.Fatal("facing the wrong way blocks the first round")
+	}
+	if e.SpotT < e.ReactAt {
+		t.Fatalf("reaction should already be done, SpotT=%v ReactAt=%v", e.SpotT, e.ReactAt)
+	}
+	if err := facingError(e, 0, 0); err <= EnemyFaceTol {
+		t.Fatalf("turn should still be outside tolerance, err=%v", err)
+	}
+	if e.X != 40 || e.VX != 0 {
+		t.Fatal("he holds the post while turning")
+	}
+	w.Step(0.08)
+	if len(w.Projectiles) == 0 {
+		t.Fatal("once he is facing the player he fires")
+	}
+}
+
+func TestUnspottedGruntHoldsPost(t *testing.T) {
+	for _, x := range []float64{110, 200} {
+		w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: x, Y: 0})
+		e := enemyOf(w)
+		w.Step(0.5)
+		if e.X != x || e.VX != 0 || e.VY != 0 {
+			t.Fatalf("at %vpx the grunt should hold, x=%v vx=%v", x, e.X, e.VX)
+		}
+		if len(w.Projectiles) != 0 || e.SpotT != 0 || e.ReactAt != 0 {
+			t.Fatalf("at %vpx there is no contact", x)
+		}
+	}
+}
+
+func TestBrokenLOSResetsReaction(t *testing.T) {
+	w := aiWorld(Vec2{X: 40, Y: 0}, Vec2{X: 0, Y: 0})
+	w.Step(0.35)
+	e := enemyOf(w)
+	if e.SpotT <= 0 || e.ReactAt == 0 {
+		t.Fatal("contact should start the clock")
+	}
+	if len(w.Projectiles) != 0 {
+		t.Fatal("0.35s is inside every reaction window")
+	}
+	w.Map = Map{W: 4, H: 1, Tiles: []Tile{
+		TileGrass, TileTree, TileGrass, TileGrass,
+	}}
+	w.Step(1.0 / 60)
+	if e.SpotT != 0 || e.ReactAt != 0 {
+		t.Fatalf("LOS break should zero the clock, SpotT=%v ReactAt=%v", e.SpotT, e.ReactAt)
+	}
+	w.Map = Map{}
+	w.Step(0.35)
+	if len(w.Projectiles) != 0 {
+		t.Fatal("a new contact owes a full reaction")
+	}
+	if e.SpotT > 0.4 {
+		t.Fatalf("SpotT=%v, clock should have restarted", e.SpotT)
 	}
 }
 
@@ -169,12 +242,29 @@ func TestGrenadierTooCloseShootsInstead(t *testing.T) {
 	e.Kind = KindGrenadier
 	e.Bombs = GrenadierBombs
 	e.GrenadeCD = 0
+	e.Facing = math.Pi // already looking at the player, so the wait is the reaction
 	w.Step(1.0 / 60)
 	if e.GrenadeWind > 0 || len(w.Grenades) != 0 {
 		t.Fatal("point-blank should not start a suicide throw")
 	}
+	if len(w.Projectiles) != 0 {
+		t.Fatal("point-blank MG waits out the reaction")
+	}
+	if gap := e.ReactAt - e.SpotT - 1.0/60; gap > 0 {
+		w.Step(gap)
+	}
+	if len(w.Projectiles) != 0 || len(w.Grenades) != 0 {
+		t.Fatal("the reaction is not finished yet")
+	}
+	w.Step(1.0 / 60)
+	if e.GrenadeWind > 0 || len(w.Grenades) != 0 {
+		t.Fatal("point-blank should still not throw")
+	}
 	if len(w.Projectiles) == 0 {
-		t.Fatal("point-blank grenadier should use the MG")
+		t.Fatal("point-blank grenadier should use the MG after the reaction")
+	}
+	if e.X != 20 || e.VX != 0 {
+		t.Fatal("a point-blank grenadier holds still")
 	}
 }
 
@@ -183,9 +273,14 @@ func TestEnemyDoesNotShootThroughTree(t *testing.T) {
 	w.Map = Map{W: 6, H: 1, Tiles: []Tile{
 		TileGrass, TileGrass, TileTree, TileTree, TileGrass, TileGrass,
 	}}
-	w.Step(1.0 / 60)
+	start := enemyOf(w).X
+	w.Step(0.5)
+	e := enemyOf(w)
 	if len(w.Projectiles) != 0 {
 		t.Fatal("grunt in range but blocked by trees must not fire")
+	}
+	if e.X != start || e.VX != 0 || e.SpotT != 0 {
+		t.Fatal("a blocked grunt holds the post and does not bank a reaction")
 	}
 }
 

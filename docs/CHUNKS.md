@@ -22,6 +22,11 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 18 Civilians, quicksand, mines
 - [x] 19 Mission 4 content + free grenades
 - [x] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
+- [x] 21 Grunts spot, turn, and hold the post
+- [ ] 22 Grunt bursts and a wide cone
+- [ ] 23 Gunfire turns the next man (only after playing Mission 1; skip if 22 already feels right)
+
+Next session is **22**. Play Mission 1 before starting 23. Spec is in `PLAN.md` under “Chunks 21–23”.
 
 ## Log
 
@@ -105,7 +110,13 @@ Verify: `go test ./...`. New game through Mission 4. Beachy Head (4 men, 5 huts,
 Files: `internal/sim/rocket.go`, `internal/sim/rocket_test.go`, `internal/sim/vehicle.go`, `internal/sim/vehicle_test.go`, `internal/sim/projectile.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/grenade.go`, `internal/sim/world.go`, `internal/sim/hazard.go`, `internal/sim/split.go`, `internal/sim/water.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/overview.go`, `internal/render/pointer.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/app/stub.go`, `internal/app/boothill.go`, `internal/app/progress_test.go`, `cmd/fannon/main.go`, `data/missions/campaign.json`, `data/missions/m05p01.json`, `data/missions/m05p02.json`, `data/missions/m05p03.json`.
 Verify: `go test ./...`. New game through Mission 5, then save. Valley of Ice: 3 men, 6 huts, an ice river, rocketeers beside trees, a grenade crate and a rocket crate. Barmy Bazookas: 3 men, 6 huts, a bridge, many rocketeers. My Beautiful Skidoo: 4 men, 3 huts, a player skidoo, each man starts with 1 rocket (R4). Select R (or press C), then right-hold and left-click or Space to fire; a rocket destroys a hut or a skidoo, and the MG does not. Pointer over the empty skidoo is a board box; left click sends the squad in (or boards immediately if they are already on it). Hold left to drive — longer hold, higher speed. On ice the skidoo keeps sliding after you release. Right fires the mounted gun when the skidoo is armed. Grenades and rockets do not fire from inside. Running someone over kills them. The enemy skidoo has a red blinker. After Mission 5, Boot Hill says the campaign continues another day. `go run ./cmd/fannon -skidoo` is a small field with a skidoo, a rocket crate, a hut, and an enemy skidoo.
 
+### Chunk 21 done
+Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go`, `internal/sim/world.go`, `internal/sim/vehicle_test.go`, `internal/render/units.go`, `internal/data/mission_test.go`.
+Verify: `go test ./...`. Mission 1 spawn: the three grunts stay on their tiles and do not shoot (the south man is 80px away, gun range is 70). Each has a white nose showing facing; they spawn facing east and turn toward you once you are in range with a clear line. The first round waits out about half a second, longer if they have to turn around. Step out already aiming and you can kill the south grunt before he fires. Wait in the open and he turns, then shoots, and keeps shooting — bursts are Chunk 22. Grenadiers still telegraph a throw. Rocketeers are unchanged. `go run ./cmd/fannon`.
+
 ## Backlog
+
+Grunt behaviour is Chunks 21–23, not a backlog item. Do not add chase or pathfinding ahead of those.
 
 - Jeeps (skin of the skidoo), tanks, static turrets, choppers
 - Hostages, kidnap, factories, protect-civilians fail

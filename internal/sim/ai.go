@@ -3,19 +3,22 @@ package sim
 import "math"
 
 const (
-	EnemyMGRoF     = 4.0  // slower than player 8/s
-	EnemyMGRange   = 70.0 // shorter than a Private's 80
-	EnemyWalkSpeed = 18.0
-	EnemyApproach  = 140.0
+	EnemyMGRoF       = 4.0  // slower than player 8/s
+	EnemyMGRange     = 70.0 // shorter than a Private's 80
+	EnemyReact       = 0.55 // seconds of contact before the first round
+	EnemyReactJitter = 0.15 // added once per contact, in [-j, +j]
+	EnemyTurnRate    = 4.0  // rad/s. A 180° turn takes about 0.8s
+	EnemyFaceTol     = 0.35 // rad. No round until he is looking at the player
 )
 
-// stepAI: shoot if a player is in range and has LOS (trees block);
-// otherwise walk slowly toward a nearby player; else idle.
+// stepAI posts grunts: they hold their tile, turn toward a player in gun
+// range with clear LOS, and withhold the first round until the reaction
+// and the turn are both done. Rocketeers and grenade throws keep their
+// own windups.
 func (w *World) stepAI(dt float64) {
 	if !w.AI {
 		return
 	}
-	interval := 1.0 / EnemyMGRoF
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Side != SideEnemy || !u.Living() || u.VehicleID != 0 {
@@ -32,6 +35,8 @@ func (w *World) stepAI(dt float64) {
 			u.VY = 0
 			u.GrenadeWind = 0
 			u.RocketWind = 0
+			u.SpotT = 0
+			u.ReactAt = 0
 			continue
 		}
 		dist := hypot(px-u.X, py-u.Y)
@@ -42,33 +47,107 @@ func (w *World) stepAI(dt float64) {
 		if w.stepGrenadier(u, px, py, dist, dt) {
 			continue
 		}
-		if dist <= EnemyMGRange && w.CanShoot(u) && w.lineClear(u.X, u.Y, px, py) {
-			u.VX = 0
-			u.VY = 0
-			dx, dy := px-u.X, py-u.Y
-			if dx == 0 && dy == 0 {
-				dx = 1
-			}
-			u.Facing = math.Atan2(dy, dx)
-			u.FireCD -= dt
-			if u.FireCD > 0 {
-				continue
-			}
-			u.FireCD = interval
-			ang := u.Facing
-			if w.Spread > 0 {
-				ang += (w.rng.Float64()*2 - 1) * w.Spread
-			}
-			w.spawnMG(u, ang, EnemyMGRange)
-			continue
-		}
-		if dist <= EnemyApproach {
-			w.steerToward(u, px, py, EnemyWalkSpeed, dt, ArrivalRadius)
-			continue
-		}
-		u.VX = 0
-		u.VY = 0
+		w.stepGruntGun(u, dt)
 	}
+}
+
+// stepGruntGun is the MG path for a grunt and for a grenadier who is not
+// throwing. He never leaves his tile. Contact is a living player inside
+// gun range with clear LOS; anything else zeroes the reaction.
+func (w *World) stepGruntGun(u *Unit, dt float64) {
+	u.VX = 0
+	u.VY = 0
+	px, py, ok := w.gruntContact(u)
+	if !ok {
+		u.SpotT = 0
+		u.ReactAt = 0
+		return
+	}
+	if u.ReactAt == 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		u.ReactAt = EnemyReact + (w.rng.Float64()*2-1)*EnemyReactJitter
+	}
+	u.SpotT += dt
+	w.turnToward(u, px, py, dt)
+	if u.SpotT+1e-9 < u.ReactAt {
+		return
+	}
+	if facingError(u, px, py) > EnemyFaceTol {
+		return
+	}
+	if !w.CanShoot(u) {
+		return
+	}
+	u.FireCD -= dt
+	if u.FireCD > 0 {
+		return
+	}
+	u.FireCD = 1.0 / EnemyMGRoF
+	ang := u.Facing
+	if w.Spread > 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		ang += (w.rng.Float64()*2 - 1) * w.Spread
+	}
+	w.spawnMG(u, ang, EnemyMGRange)
+}
+
+// gruntContact is the nearest living player inside gun range with LOS.
+func (w *World) gruntContact(u *Unit) (px, py float64, ok bool) {
+	best := EnemyMGRange
+	for i := range w.Units {
+		o := &w.Units[i]
+		if o.Side != SidePlayer || !o.Living() {
+			continue
+		}
+		d := hypot(o.X-u.X, o.Y-u.Y)
+		if d > EnemyMGRange || (ok && d >= best) {
+			continue
+		}
+		if !w.lineClear(u.X, u.Y, o.X, o.Y) {
+			continue
+		}
+		best = d
+		px, py = o.X, o.Y
+		ok = true
+	}
+	return px, py, ok
+}
+
+func (w *World) turnToward(u *Unit, px, py, dt float64) {
+	dx, dy := px-u.X, py-u.Y
+	if dx == 0 && dy == 0 {
+		return
+	}
+	d := wrapAngle(math.Atan2(dy, dx) - u.Facing)
+	step := EnemyTurnRate * dt
+	if d > step {
+		d = step
+	} else if d < -step {
+		d = -step
+	}
+	u.Facing = wrapAngle(u.Facing + d)
+}
+
+func facingError(u *Unit, px, py float64) float64 {
+	dx, dy := px-u.X, py-u.Y
+	if dx == 0 && dy == 0 {
+		return 0
+	}
+	return math.Abs(wrapAngle(math.Atan2(dy, dx) - u.Facing))
+}
+
+func wrapAngle(d float64) float64 {
+	for d > math.Pi {
+		d -= 2 * math.Pi
+	}
+	for d < -math.Pi {
+		d += 2 * math.Pi
+	}
+	return d
 }
 
 // stepGrenadier spends the frame on a telegraphed throw.
@@ -117,7 +196,7 @@ const (
 	RocketeerWindup     = 0.55
 	RocketeerCooldown   = 3.2
 	RocketeerFirstDelay = 2.0
-	RocketeerApproach   = 90.0 // shorter than a grunt's 140, so they stay in cover
+	RocketeerApproach   = 90.0 // a rocketeer shuffles in; a grunt holds his post
 	RocketeerSpeed      = 12.0
 	RocketeerMinRange   = GrenadeRadius + 8
 )

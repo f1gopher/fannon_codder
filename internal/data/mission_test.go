@@ -47,6 +47,49 @@ func TestLoadMission1(t *testing.T) {
 	}
 }
 
+func TestMission1GruntsHoldAtSpawn(t *testing.T) {
+	p, err := LoadPhase("m01p01.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w, err := p.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	type post struct {
+		x, y float64
+	}
+	var posts []post
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != sim.SideEnemy {
+			continue
+		}
+		if u.Facing != 0 {
+			t.Fatalf("grunt facing %v, want east", u.Facing)
+		}
+		posts = append(posts, post{u.X, u.Y})
+	}
+	w.Step(1)
+	if len(w.Projectiles) != 0 {
+		t.Fatal("nobody is in gun range at the Mission 1 spawn")
+	}
+	n := 0
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != sim.SideEnemy || !u.Living() {
+			continue
+		}
+		if u.X != posts[n].x || u.Y != posts[n].y || u.VX != 0 || u.VY != 0 {
+			t.Fatalf("grunt %d left his post (%v,%v) -> (%v,%v)", n, posts[n].x, posts[n].y, u.X, u.Y)
+		}
+		n++
+	}
+	if livingPlayers(w) != 2 {
+		t.Fatal("spawn should not wound the squad")
+	}
+}
+
 func TestPhaseLoadsHutAndCrate(t *testing.T) {
 	rows := make([]string, 8)
 	for i := range rows {

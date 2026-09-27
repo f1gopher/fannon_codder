@@ -245,6 +245,9 @@ func (w *World) SpawnUnit(side Side, p Vec2) *Unit {
 		X:    p.X,
 		Y:    p.Y,
 	}
+	if side == SideEnemy {
+		u.Facing = 0 // posted sentry, faces east
+	}
 	w.nextID++
 	w.Units = append(w.Units, u)
 	return &w.Units[len(w.Units)-1]

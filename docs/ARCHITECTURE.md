@@ -65,6 +65,12 @@ World space is float64 pixels. Units are ~8×8. One MG bullet kills a healthy in
 
 Player MG does **not** harm living friendlies. Explosives and vehicles kill everyone. Wounded friendlies on the ground can be finished by MG.
 
+## Enemy infantry
+
+Grunts hold the tile they spawned on (facing east). They notice a player only inside gun range with clear LOS. They turn at a limited rate and wait out a short reaction before the first round, then fire a short burst, pause, and repeat. The enemy cone is wider than a Private’s and is not the player’s `World.Spread`. Grenadiers and rocketeers keep their own windups; those windups are not stacked on the grunt reaction. A grenadier’s point-blank MG uses the grunt rules. No pathfinding and no chase. Numbers and the hearing follow-up are Chunks 21–23 in `PLAN.md`.
+
+Inactive player squads still fire as soon as they have a target. Enemy vehicles are a separate rule.
+
 ## Camera
 
 Pointer-driven edge scroll, clamped to the map. Soft inner margin around the active leader. Mission 1 is one screen (no scroll).

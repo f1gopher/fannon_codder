@@ -225,7 +225,7 @@ func TestRocketeerDoesNotChaseIntoTheOpen(t *testing.T) {
 		w.Step(1.0 / 60)
 	}
 	if e.X != 110 {
-		t.Fatalf("110px is inside a grunt's approach and outside a rocketeer's; x=%v", e.X)
+		t.Fatalf("a rocketeer outside his approach holds; x=%v", e.X)
 	}
 }
 

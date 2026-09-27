@@ -2,6 +2,7 @@ package render
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -22,6 +23,7 @@ var (
 	grenadeWindup = color.RGBA{R: 0xff, G: 0xd0, B: 0x30, A: 0xff}
 	rocketShot    = color.RGBA{R: 0xf0, G: 0x78, B: 0x20, A: 0xff}
 	tracerFill    = color.RGBA{R: 0xff, G: 0xff, B: 0xa0, A: 0xff}
+	facingFill    = color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 	spriteCache   = map[color.RGBA]*ebiten.Image{}
 	tracerSprite  *ebiten.Image
 )
@@ -116,6 +118,11 @@ func Units(dst *ebiten.Image, w *sim.World) {
 		op.GeoM.Scale(s, s)
 		op.GeoM.Translate(u.X-w.Camera.X-half*s, u.Y-w.Camera.Y-half*s+drop)
 		dst.DrawImage(unitSprite(unitColor(u)), op)
+		if u.Living() {
+			// Nose so a grunt's turn is visible before he fires.
+			nx, ny := math.Cos(u.Facing), math.Sin(u.Facing)
+			fillRect(dst, int(u.X-w.Camera.X+nx*5), int(u.Y-w.Camera.Y+ny*5), 2, 2, facingFill)
+		}
 		if u.Living() && (u.GrenadeWind > 0 || u.RocketWind > 0) {
 			fillRect(dst, int(u.X-w.Camera.X)-2, int(u.Y-w.Camera.Y)-7, 4, 2, grenadeWindup)
 		}

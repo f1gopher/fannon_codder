@@ -577,7 +577,98 @@ Enemy **grenadiers** (grunt that throws 1–2 grenades): add a `kind: "grenadier
 
 ---
 
-## After Chunk 20 (not this plan)
+## Chunks 21–23 — Grunts you can shoot first
+
+Chunk 05’s rule is still what runs: a grunt who can see a player inside 70px snaps his facing and fires on that frame, at 4 rounds/s, with no pause. His cone is `World.Spread` (0.05 rad), tighter than a Private’s 0.12, and the round is aimed at the body. One hit kills. Bullets are fast (500 px/s), so the cone is the whole miss chance.
+
+He also walks in from 140px before he has spotted anyone. On Mission 1 the south grunt spawns 80px from the squad (tiles (14,10) vs (10,13)), so he closes and opens fire without the player moving. The other two sit near 193px and only join once you step into the open. The Amiga mission is the opposite lesson: the manual’s “shoot them before they shoot you.” Posted men, a visible turn, a late first shot, then a sloppy burst you can sidestep.
+
+Do **21, then 22, then play Mission 1**. Chunk 23 is written so it is ready, and it stays unstarted if that play already feels like the original. These chunks do not retune maps, gun range, or “one hit kills.”
+
+Grenade windups and rocket windups stay as they are. Do not stack the grunt reaction on top of them. A grenadier who is too close to throw uses the grunt MG rules. Enemy vehicles stay on their current “drive at the player and shoot in range” rule. Inactive player squads stay snappy. No A*, no flanking, no chase.
+
+### Chunk 21 — Spot, turn, hold the post
+
+**Goal.** A grunt is a sentry. He stands on his spawn tile. He only notices a player inside gun range with clear LOS. He turns at a limited rate, and the first round waits until both the reaction time has elapsed and he is actually facing you. Walking into the open is a duel you can win by aiming first. Standing there is still fatal.
+
+**Create / change**
+
+- `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go` (a couple of timers on `Unit`).
+- New constants, used by grunts only:
+
+  | Name | Value | Meaning |
+  |---|---|---|
+  | `EnemyReact` | 0.55 s | Contact time before the first round is allowed |
+  | `EnemyReactJitter` | 0.15 s | Added as `rng` in [−j, +j], once per contact |
+  | `EnemyTurnRate` | 4 rad/s | 180° takes about 0.8 s |
+  | `EnemyFaceTol` | 0.35 rad | No round until facing error is inside this |
+
+- Contact is: living player within `EnemyMGRange` (70) and `lineClear`. Anything else is not contact.
+- `SpotT` counts up only while contact holds. Losing LOS or range zeroes `SpotT` and the rolled jitter. A peek does not store a half-finished reaction.
+- While waiting, turn toward the player at `EnemyTurnRate`. Do not snap `Facing`.
+- The first round is allowed only when `SpotT` has passed `EnemyReact + jitter` **and** the facing error is inside `EnemyFaceTol`. Already-facing targets give you the 0.55 s window. A grunt looking the wrong way gives you the turn as well, in parallel with the clock, not after it.
+- Until that moment, `VX` and `VY` stay 0. Delete the unspotted use of `EnemyApproach` (140). He does not walk toward a player he has not finished acquiring, and he does not leave his tile once he has.
+- Enemy spawn facing is east (`0`). Set it where enemies are created. Player facing is unchanged.
+- After the first round is allowed, this chunk may still fire continuously at `EnemyMGRoF`. Burst gaps are Chunk 22.
+- Grenadier throw telegraph, bomb count, and cooldown: unchanged. Point-blank MG goes through this reaction.
+- Rocketeer windup, cooldown, and tree-hiding: unchanged. Do not run them through `SpotT`.
+
+**Tests to replace.** `TestEnemyShootsWhenPlayerInRange` (expects a round after 1/60 s) and `TestEnemyApproachesWhenCloseButOutOfShot` (expects a walk-in from 110 px). `TestGrenadierTooCloseShootsInstead` must wait out the reaction.
+
+**Tests to add.** No round at 1 frame. No round at 0.3 s while already facing. A round once the reaction and the facing tolerance are both satisfied. Facing east with the player to the west: still no round at 0.7 s, because the turn is not finished. LOS broken at 0.4 s resets the clock. A grunt at 110 px and a grunt at 200 px both stay on their tile. Trees still block the shot. Grenadier windup and rocketeer windup timings stay on their old numbers.
+
+**Done when.** `go test ./...`. Mission 1: at spawn, nobody walks and nobody shoots. Step out toward the south grunt already aiming and a short aim kills him before his first round. Wait in the open and he turns, then fires. The west and north grunts stay on their tiles until you reach them.
+
+**Do not.** Bursts, spread changes, hearing, map edits, vehicle AI, pathfinding.
+
+### Chunk 22 — Bursts and a wide cone
+
+**Goal.** Once a grunt is allowed to shoot, he chatters and then stops to re-aim. His cone is wider than a Private’s, so a sidestep survives and standing still does not. This is the sustain half of the Amiga duel. Chunk 21 only made the first shot late.
+
+**Create / change**
+
+- `internal/sim/ai.go`, `internal/sim/ai_test.go`.
+- Constants:
+
+  | Name | Value | Meaning |
+  |---|---|---|
+  | `EnemyBurst` | 3 | Rounds, then silence |
+  | `EnemyBurstPause` | 0.75 s | No MG round during the gap. He keeps turning. |
+  | `EnemyMGSpread` | 0.20 rad | Wider than a Private’s 0.12. At 50 px that is about ±10 px |
+
+- The cone is `EnemyMGSpread`, not `World.Spread`. A test that sets `World.Spread = 0` still gets the enemy cone. Player `GunStatsFor` is unchanged.
+- During the pause he holds still and keeps turning. Contact lost during the pause drops him back to the Chunk 21 idle: next time, he owes a full reaction again.
+- Grenadiers use this only on the MG path. A thrown bomb is not a burst round. Rocketeers and vehicles are unchanged.
+
+**Tests.** Three rounds, then no new enemy MG round for the pause, then another round if contact held. The three angles differ under the seeded `newRNG`. A Private’s spread constant is still 0.12. `World.Spread = 0` does not collapse the enemy cone.
+
+**Done when.** `go test ./...`. Mission 1 again. Winning the opening aim is clean. Missing it means a short chatter, a visible gap, and shots that go wide if you are moving. Waiting in the open still gets a man killed.
+
+**Do not.** Hearing, chase, map edits, changing `EnemyMGRoF` or `EnemyMGRange`.
+
+### Chunk 23 — Gunfire turns the next man (playtest gate)
+
+**Play Mission 1 after Chunk 22 before starting this.** If stepping out, aiming, and taking the three grunts one at a time already feels like the original, leave this chunk unchecked. It exists because a man behind a tree who never reacts to a magazine dumped beside his bush is the one Amiga habit still missing. It is also the chunk most likely to make Mission 1 harder, which is why it is gated.
+
+**Goal.** A shot near a posted grunt starts the same Chunk 21 reaction, even without LOS. He still does not leave his tile, and he still cannot shoot through the tree. He turns toward the noise and fires only once contact (range + LOS) is real.
+
+**Create / change**
+
+- `internal/sim/ai.go`, `internal/sim/combat.go` (the MG spawn is where the noise happens), `internal/sim/ai_test.go`.
+- `EnemyHear` = 96 px (6 tiles). When any living infantry unit fires an MG round, every idle enemy grunt inside that distance starts a Chunk 21 contact as if he had just spotted someone: `SpotT` begins, he turns toward the shooter. Grenade blasts and rockets do not count in this chunk.
+- No LOS from the noise: he turns, and he does not fire. He still needs range and `lineClear` for a round.
+- He does not walk toward the noise. Forget the noise on the same  rules as losing contact (clock resets when the shooter is gone and he has no LOS target).
+- Do not wake the whole map. 96 px from the Mission 1 south fight does not reach the other two posts (~193 px).
+
+**Tests.** A grunt behind trees, 60 px from a player shot, begins turning and does not fire while the trees hold. A grunt 150 px away does not start `SpotT`. A grunt who then gets LOS still owes any remaining reaction and facing tolerance.
+
+**Done when.** `go test ./...`. Mission 1 still plays as three separate duels. Spraying into a bush makes the man on the far side turn. He shoots only after you clear the trees and his reaction finishes.
+
+**Do not.** Chase, last-known-position walking, alerting from explosions, vehicle guns, map edits.
+
+---
+
+## After Chunk 23 (not this plan)
 
 Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 
@@ -600,6 +691,8 @@ Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1, nameless greens vs reds). Then 07–09 make it feel like Cannon Fodder (Boot Hill). Then 11–15 (Mission 2) is the first time it is actually the game.
 
 Do not skip 03–05; Mission 1 is the control tutor.
+
+Chunks 01–21 are in. The next session is **Chunk 22**. Play Mission 1 before deciding on **23**.
 
 ---
 
@@ -624,6 +717,7 @@ Grok must not skip tests to “save time”; they are how the next session knows
 | Integer 320×256 | Amiga silhouette; cheap to render. |
 | Small subsystems, not vertical-slice dumps | Matches limited tokens; each session has a kill-condition. |
 | Stop after Mission 5 | Vehicles/hazards needed for “it feels like CF” are in; tanks/choppers are a second season. |
+| Grunts hold, turn, then burst (Chunks 21–22) | Shoot-on-sight made Mission 1 a meat grinder. The Amiga window is “aim first.” No chase, no A*. |
 
 ## Risks
 
@@ -631,7 +725,8 @@ Grok must not skip tests to “save time”; they are how the next session knows
 - **Right-click** may be eaten by the window manager. If so, add a fallback (`Ctrl` = fire) in Chunk 04 without removing right-click.
 - **Both-buttons grenade** is fiddly on some mice; keep it and also accept `Space` as “special at pointer” from Chunk 14.
 - **Soft-locks** (exploding all crates) are authentic; still make Mission 2 phase 2 have a crate you do not have to shoot-walk through.
-- **Scope creep** (A*, fancy AI, pixel art mid-stream) will blow the budget. Architecture.md is the brake.
+- **Scope creep** (A*, chase AI, pixel art mid-stream) will blow the budget. Grunt feel is Chunks 21–22 only: hold the post, turn, burst. Architecture.md is the brake.
+- **Do not rebalance Mission 1 by deleting grunts or shortening the gun.** The south man walks in because approach is 140 px and he spawns at 80. Chunk 21 stops the walk; Chunk 22 stops the laser.
 
 ## First message to Grok after you accept this plan
 

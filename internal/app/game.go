@@ -110,6 +110,14 @@ func (g *Game) SetListener(x, y float64) {
 	g.sound.SetListener(x, y)
 }
 
+// SetEngine starts or stops the skidoo hum and sets its pitch.
+func (g *Game) SetEngine(run bool, pitch float64) {
+	if g.sound == nil {
+		return
+	}
+	g.sound.SetEngine(run, pitch)
+}
+
 // hearPoint is the active leader, including the vehicle he is driving.
 // With no leader, volume is measured from the middle of the playfield.
 func hearPoint(w *sim.World) (x, y float64) {
@@ -142,6 +150,9 @@ func (g *Game) Update() error {
 	)
 
 	if g.next != nil {
+		// The hum belongs to the battle. A new scene starts it again if it
+		// still has a skidoo to hear.
+		g.SetEngine(false, 0)
 		if g.scene != nil {
 			g.scene.Leave()
 		}

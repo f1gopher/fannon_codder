@@ -153,6 +153,10 @@ Verify: `go test ./...`. Walking into the river splashes once; standing in it, a
 Files: `internal/audio/distance.go`, `internal/audio/distance_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `internal/app/hear_test.go`, `internal/sim/cue.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. A shot at the leader's feet is full loudness. The same crack from the far edge of a scrolling map is faint, and past 320 px it is silent. Title and briefing stings are not in yet (Chunk 31); when they arrive they stay full volume. `go run ./cmd/fannon`.
 
+### Chunk 30 done
+Files: `internal/sim/engine.go`, `internal/sim/engine_test.go`, `internal/audio/engine.go`, `internal/audio/engine_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. Board the skidoo (`go run ./cmd/fannon -skidoo`) and the hum starts at idle. Holding left builds the pitch as the skidoo speeds up. Letting go on grass drops it back to that idle hum. Letting go on ice keeps a lower hum while it slides. Getting off cuts it, unless another occupied skidoo is within 320 px. An empty or destroyed skidoo is silent.
+
 ## Backlog
 
 Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add chase or pathfinding.

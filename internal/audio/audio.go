@@ -39,7 +39,10 @@ type Mixer struct {
 	slots map[sim.CueKind]*clip
 	// lx, ly are the listener in world pixels (the active leader, or the
 	// camera centre when there is no leader).
-	lx, ly float64
+	lx, ly       float64
+	engine       *loopReader
+	enginePlayer *audio.Player
+	engineOn     bool
 }
 
 type clip struct {
@@ -71,6 +74,7 @@ func NewMixer() *Mixer {
 	m.Load(sim.CuePickup, Pickup(), 1, pickupVolume)
 	m.Load(sim.CueBoard, Board(), 1, boardVolume)
 	m.Load(sim.CueExit, Exit(), 1, exitVolume)
+	m.initEngine()
 	return m
 }
 

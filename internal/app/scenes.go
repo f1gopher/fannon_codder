@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"fannon-codder/internal/audio"
 	"fannon-codder/internal/campaign"
 	"fannon-codder/internal/data"
 	"fannon-codder/internal/input"
@@ -30,6 +31,7 @@ type Host interface {
 	Progress() *Progress
 	PlayCues([]sim.Cue)
 	SetListener(x, y float64)
+	SetEngine(run bool, pitch float64)
 }
 
 var (
@@ -226,6 +228,8 @@ func (b *Battle) Update(h Host) error {
 		if b.world != nil {
 			x, y := hearPoint(b.world)
 			h.SetListener(x, y)
+			hum := b.world.EngineHumAt(x, y, audio.HearFar)
+			h.SetEngine(hum.Run, hum.Pitch)
 			h.PlayCues(b.world.TakeCues())
 		}
 	}()

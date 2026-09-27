@@ -57,6 +57,7 @@ type Unit struct {
 	ReactAt     float64 // SpotT must reach this before the first MG round. 0 means no live contact.
 	BurstN      int     // MG rounds fired in the current chatter.
 	BurstGap    float64 // seconds of silence left after a full burst.
+	sampled     bool    // terrain has been read once; a man placed in water does not splash
 }
 
 func (u *Unit) Dead() bool { return u.HP == Dead }

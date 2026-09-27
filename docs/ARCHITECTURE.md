@@ -41,7 +41,7 @@ docs/CHUNKS.md
 
 The sim records `Cue` values (`Kind`, world `X`, `Y`, and `ID` when a sound depends on who made it) and does not play them. The battle scene takes the queue after `Step` and passes it to `internal/audio`. One mixer owns the process-wide Ebitengine context (44100 Hz, 16-bit stereo). A kind with no clip loaded is silent.
 
-The mixer loads the gunshot (8 voices), the blast (4 voices), the death yell (4 voices at each of three pitches, chosen from the unit id), the grenade whoosh (4 voices), and the rocket whoosh (3 voices). Another effect is a `CueKind`, an emit at the cause, and `Mixer.Load(kind, pcm, voices, volume)`. Position is stored now; volume does not use it yet. Each clip keeps its own full-loudness level. Loops (an engine) are not cues. Stings that have no world cause use `PlayKind`. Samples are original synthesis or original recordings, never Amiga rips. There is one mixer per process.
+The mixer loads the gunshot (8 voices), the blast (4 voices), the death yell (4 voices at each of three pitches, chosen from the unit id), the grenade whoosh (4 voices), the rocket whoosh (3 voices), and one voice each for the splash, the quicksand gulp, the crate pickup, boarding, and dismount. Another effect is a `CueKind`, an emit at the cause, and `Mixer.Load(kind, pcm, voices, volume)`. Position is stored now; volume does not use it yet. Each clip keeps its own full-loudness level. Loops (an engine) are not cues. Stings that have no world cause use `PlayKind`. Samples are original synthesis or original recordings, never Amiga rips. There is one mixer per process.
 
 ## Core types (sim)
 

@@ -177,6 +177,7 @@ func (w *World) stepPickups() {
 				}
 			}
 			p.Alive = false
+			w.emit(CuePickup, p.X, p.Y)
 			break
 		}
 	}

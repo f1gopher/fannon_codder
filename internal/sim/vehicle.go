@@ -227,6 +227,7 @@ func (w *World) enterVehicle(v *Vehicle) bool {
 	v.Side = SidePlayer
 	s.HasDest = false
 	w.BoardID = 0
+	w.emit(CueBoard, v.X, v.Y)
 	return true
 }
 
@@ -246,6 +247,7 @@ func (w *World) dismount(v *Vehicle) {
 	v.Occupants = nil
 	v.Hold = 0
 	v.VX, v.VY = 0, 0
+	w.emit(CueExit, v.X, v.Y)
 }
 
 func (w *World) exitSpot(v *Vehicle, n int) Vec2 {

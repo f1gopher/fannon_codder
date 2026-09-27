@@ -24,6 +24,11 @@ const (
 	throwVolume  = 0.42
 	rocketVoices = 3
 	rocketVolume = 0.5
+	splashVolume = 0.55
+	sinkVolume   = 0.5
+	pickupVolume = 0.45
+	boardVolume  = 0.4
+	exitVolume   = 0.4
 )
 
 // Mixer is the clip registry and the voice pool.
@@ -56,6 +61,11 @@ func NewMixer() *Mixer {
 	m.load(sim.CueDeath, [][]byte{DeathPCM(0), DeathPCM(1), DeathPCM(2)}, deathVoices, deathVolume)
 	m.Load(sim.CueThrow, Throw(), throwVoices, throwVolume)
 	m.Load(sim.CueRocket, Rocket(), rocketVoices, rocketVolume)
+	m.Load(sim.CueSplash, Splash(), 1, splashVolume)
+	m.Load(sim.CueSink, Sink(), 1, sinkVolume)
+	m.Load(sim.CuePickup, Pickup(), 1, pickupVolume)
+	m.Load(sim.CueBoard, Board(), 1, boardVolume)
+	m.Load(sim.CueExit, Exit(), 1, exitVolume)
 	return m
 }
 

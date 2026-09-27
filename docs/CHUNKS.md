@@ -29,12 +29,12 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 25 Blasts
 - [x] 26 Death
 - [x] 27 Throw and launch
-- [ ] 28 Terrain and vehicles (one-shots)
+- [x] 28 Terrain and vehicles (one-shots)
 - [ ] 29 Distance
 - [ ] 30 Engine loop
 - [ ] 31 Scene stings
 
-Chunks 01–22 and 24–27 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
+Chunks 01–22 and 24–28 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
 
 ## Log
 
@@ -144,6 +144,10 @@ Verify: `go test ./...`. Shooting a grunt yells when he drops. A grenade that ki
 ### Chunk 27 done
 Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/grenade.go`, `internal/sim/rocket.go`, `internal/audio/audio.go`, `internal/audio/whoosh.go`, `internal/audio/whoosh_test.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. The yellow telegraph is silent. The whoosh is the moment the bomb leaves, then the boom is the landing. A bazooka whooshes at the tube and booms on impact. Player and enemy share each clip.
+
+### Chunk 28 done
+Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/unit.go`, `internal/sim/water.go`, `internal/sim/hazard.go`, `internal/sim/grenade.go`, `internal/sim/vehicle.go`, `internal/audio/audio.go`, `internal/audio/terrain.go`, `internal/audio/terrain_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. Walking into the river splashes once; standing in it, and wading into the deep channel, stays quiet. Leaving the water is silent. The tan pool gulps once when it sticks, and the death at the end is still the yell. A grenade crate and a rocket crate each click once when picked up. Boarding the skidoo and getting off each answer once.
 
 ## Backlog
 

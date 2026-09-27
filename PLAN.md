@@ -678,7 +678,7 @@ One bus, many clips. Chunk 24 is the bus and the gun. Later chunks add a `CueKin
 
 Samples are synthesised or recorded for this game. No Amiga samples, and no theme tune in these chunks. The title tune stays on the backlog.
 
-Chunks 25–27 are in. Do **28** next. 29–31 can follow in order. Do not start 23.
+Chunks 25–28 are in. Do **29** next. 30–31 can follow in order. Do not start 23.
 
 ### Chunk 24 — Sound bus and the gun (done)
 
@@ -744,7 +744,7 @@ Chunks 25–27 are in. Do **28** next. 29–31 can follow in order. Do not start
 
 **Do not.** A reload foley, a click on the G/R icons (that is Chunk 31).
 
-### Chunk 28 — Terrain and vehicles, one-shots
+### Chunk 28 — Terrain and vehicles, one-shots (done)
 
 **Goal.** The world answers when you step in something. These are rare, so one voice each is enough.
 

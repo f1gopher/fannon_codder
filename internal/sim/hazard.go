@@ -25,6 +25,7 @@ func (w *World) noteQuicksand(u *Unit) {
 		u.Sinking = true
 		u.VX = 0
 		u.VY = 0
+		w.emit(CueSink, u.X, u.Y)
 	}
 }
 

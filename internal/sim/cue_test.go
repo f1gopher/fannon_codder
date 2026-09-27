@@ -181,18 +181,132 @@ func TestQuicksandDeathYells(t *testing.T) {
 	c := TileCenter(0, 0)
 	u := w.SpawnUnit(SideEnemy, c)
 	id := u.ID
-	deaths := 0
+	deaths, sinks := 0, 0
 	for i := 0; i < int(SinkTime*60)+8; i++ {
 		w.Step(1.0 / 60)
 		for _, cue := range w.TakeCues() {
-			if cue.Kind != CueDeath || cue.ID != id {
+			switch cue.Kind {
+			case CueSink:
+				sinks++
+			case CueDeath:
+				if cue.ID != id {
+					t.Fatalf("death cue %+v", cue)
+				}
+				deaths++
+			default:
 				t.Fatalf("cue %+v", cue)
 			}
-			deaths++
 		}
 	}
-	if deaths != 1 || !w.Unit(id).Dead() {
-		t.Fatalf("deaths=%d dead=%v", deaths, w.Unit(id).Dead())
+	if sinks != 1 || deaths != 1 || !w.Unit(id).Dead() {
+		t.Fatalf("sinks=%d deaths=%d dead=%v", sinks, deaths, w.Unit(id).Dead())
+	}
+}
+
+func TestSplashOnEnteringWater(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Map = Map{W: 3, H: 1, Tiles: []Tile{TileGrass, TileWaterShallow, TileWaterDeep}}
+	u := w.SpawnUnit(SideEnemy, TileCenter(0, 0))
+	w.refreshTerrain()
+	if len(w.TakeCues()) != 0 {
+		t.Fatal("the first reading of dry ground should be silent")
+	}
+	u.X, u.Y = TileCenter(1, 0).X, TileCenter(1, 0).Y
+	w.refreshTerrain()
+	cues := w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueSplash || cues[0].X != u.X {
+		t.Fatalf("wade cues=%v", cues)
+	}
+	w.refreshTerrain()
+	if len(w.TakeCues()) != 0 {
+		t.Fatal("standing in the water should be silent")
+	}
+	u.X = TileCenter(2, 0).X
+	w.refreshTerrain()
+	if len(w.TakeCues()) != 0 {
+		t.Fatal("shallow to deep is still in the water")
+	}
+	u.X = TileCenter(0, 0).X
+	w.refreshTerrain()
+	if len(w.TakeCues()) != 0 {
+		t.Fatal("leaving the water should be silent")
+	}
+	u.X = TileCenter(2, 0).X
+	w.refreshTerrain()
+	cues = w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueSplash {
+		t.Fatalf("swim cues=%v", cues)
+	}
+}
+
+func TestQuicksandEmitsOneSink(t *testing.T) {
+	tiles := make([]Tile, 4)
+	tiles[1] = TileQuicksand
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.Map = Map{W: 2, H: 2, Tiles: tiles}
+	u := w.SpawnUnit(SideEnemy, TileCenter(0, 0))
+	w.Step(1.0 / 60)
+	if len(w.TakeCues()) != 0 {
+		t.Fatal("dry ground should not sink")
+	}
+	c := TileCenter(1, 0)
+	u.X, u.Y = c.X, c.Y
+	w.Step(1.0 / 60)
+	cues := w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueSink || cues[0].X != c.X || cues[0].Y != c.Y {
+		t.Fatalf("cues=%v", cues)
+	}
+	w.Step(1.0 / 60)
+	if again := w.TakeCues(); len(again) != 0 {
+		t.Fatalf("still sinking emitted %v", again)
+	}
+}
+
+func TestCratePickupEmitsOnce(t *testing.T) {
+	for _, kind := range []PickupKind{PickupGrenades, PickupRockets} {
+		w := NewEmpty()
+		w.AI = false
+		w.Objectives = nil
+		at := Vec2{X: 40, Y: 40}
+		w.SpawnPlayerSquad(SquadSnake, []Vec2{at})
+		if kind == PickupRockets {
+			w.AddRocketCrate(at)
+		} else {
+			w.AddGrenadeCrate(at)
+		}
+		w.Step(1.0 / 60)
+		cues := w.TakeCues()
+		if len(cues) != 1 || cues[0].Kind != CuePickup || cues[0].X != at.X || cues[0].Y != at.Y {
+			t.Fatalf("kind %v cues=%v", kind, cues)
+		}
+		w.Step(1.0 / 60)
+		if again := w.TakeCues(); len(again) != 0 {
+			t.Fatalf("kind %v emitted again %v", kind, again)
+		}
+	}
+}
+
+func TestBoardAndExitEmitOnce(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 20, Y: 20}, {X: 10, Y: 20}})
+	v := w.AddSkidoo(Vec2{X: 20, Y: 20}, SidePlayer, true)
+	if !w.CommandBoard(v.ID) {
+		t.Fatal("board")
+	}
+	cues := w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueBoard || cues[0].X != v.X || cues[0].Y != v.Y {
+		t.Fatalf("board cues=%v", cues)
+	}
+	if !w.CommandExit(v.ID) {
+		t.Fatal("exit")
+	}
+	cues = w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueExit || cues[0].X != 20 || cues[0].Y != 20 {
+		t.Fatalf("exit cues=%v", cues)
 	}
 }
 

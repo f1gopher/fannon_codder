@@ -31,6 +31,12 @@ func (w *World) refreshTerrain() {
 	for i := range w.Units {
 		u := &w.Units[i]
 		t := w.Map.TileAtPixel(u.X, u.Y)
-		u.InWater = t == TileWaterShallow || t == TileWaterDeep
+		wet := t == TileWaterShallow || t == TileWaterDeep
+		// Crew ride the hull. Wading and swimming are the same splash.
+		if wet && !u.InWater && u.sampled && u.VehicleID == 0 {
+			w.emit(CueSplash, u.X, u.Y)
+		}
+		u.InWater = wet
+		u.sampled = true
 	}
 }

@@ -30,11 +30,11 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 26 Death
 - [x] 27 Throw and launch
 - [x] 28 Terrain and vehicles (one-shots)
-- [ ] 29 Distance
-- [ ] 30 Engine loop
+- [x] 29 Distance
+- [x] 30 Engine loop
 - [ ] 31 Scene stings
 
-Chunks 01–22 and 24–28 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
+Chunks 01–22 and 24–30 are in. Chunk 23 will not be built. Next is 31 (scene stings). Sound specs are in `PLAN.md` under “Chunks 24–31”.
 
 ## Log
 

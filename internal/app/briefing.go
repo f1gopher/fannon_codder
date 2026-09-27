@@ -7,6 +7,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+
+	"fannon-codder/internal/sim"
 )
 
 var briefBG = color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xff}
@@ -25,6 +27,7 @@ func (b *Briefing) Update(h Host) error {
 	p := h.Pointer()
 	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		if b.prog.CanStart() {
+			h.PlayKind(sim.CueClick)
 			h.Switch(NewBattle(b.prog))
 		} else {
 			h.Switch(NewBootHill(b.prog))

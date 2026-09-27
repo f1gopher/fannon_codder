@@ -32,9 +32,9 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 28 Terrain and vehicles (one-shots)
 - [x] 29 Distance
 - [x] 30 Engine loop
-- [ ] 31 Scene stings
+- [x] 31 Scene stings
 
-Chunks 01–22 and 24–30 are in. Chunk 23 will not be built. Next is 31 (scene stings). Sound specs are in `PLAN.md` under “Chunks 24–31”.
+Chunks 01–22 and 24–31 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
 
 ## Log
 
@@ -157,6 +157,10 @@ Verify: `go test ./...`. A shot at the leader's feet is full loudness. The same 
 Files: `internal/sim/engine.go`, `internal/sim/engine_test.go`, `internal/audio/engine.go`, `internal/audio/engine_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. Board the skidoo (`go run ./cmd/fannon -skidoo`) and the hum starts at idle. Holding left builds the pitch as the skidoo speeds up. Letting go on grass drops it back to that idle hum. Letting go on ice keeps a lower hum while it slides. Getting off cuts it, unless another occupied skidoo is within 320 px. An empty or destroyed skidoo is silent.
 
+### Chunk 31 done
+Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/audio/sting.go`, `internal/audio/sting_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `internal/app/briefing.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. Title → click or Enter clicks, then Boot Hill is quiet. The briefing clicks when it deploys. Clearing a phase plays a short rising sting as Boot Hill opens. Escape, or clicking through a wipe, plays a short falling sting. HUD icons do not click. `go run ./cmd/fannon`.
+
 ## Backlog
 
 Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add chase or pathfinding.
@@ -167,7 +171,7 @@ Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add cha
 - Missions 6–24 as data
 - Wounded troopers and finishing them; corpse juggling
 - Pixel art
-- Title tune (new, not ripped). Battle sound effects are Chunks 24–31, not this list.
+- Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in.
 - Birds, snowmen, igloos
 - High Scoring Heroes
 - Fullscreen and integer-scale options

@@ -31,6 +31,9 @@ const (
 	pickupVolume = 0.45
 	boardVolume  = 0.4
 	exitVolume   = 0.4
+	clickVolume  = 0.5
+	winVolume    = 0.55
+	failVolume   = 0.5
 )
 
 // Mixer is the clip registry and the voice pool.
@@ -74,6 +77,9 @@ func NewMixer() *Mixer {
 	m.Load(sim.CuePickup, Pickup(), 1, pickupVolume)
 	m.Load(sim.CueBoard, Board(), 1, boardVolume)
 	m.Load(sim.CueExit, Exit(), 1, exitVolume)
+	m.Load(sim.CueClick, Click(), 1, clickVolume)
+	m.Load(sim.CueWin, Win(), 1, winVolume)
+	m.Load(sim.CueFail, Fail(), 1, failVolume)
 	m.initEngine()
 	return m
 }

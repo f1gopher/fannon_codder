@@ -2,6 +2,33 @@ package sim
 
 import "testing"
 
+func TestSceneStingsAreNotWorldCues(t *testing.T) {
+	if CueClick == CueGun || CueWin == CueGun || CueFail == CueGun {
+		t.Fatal("a scene sting shares the gun kind")
+	}
+	if CueClick == CueWin || CueWin == CueFail || CueClick == CueFail || CueClick == CueNone {
+		t.Fatal("click, win, and fail should be three kinds")
+	}
+	w := NewEmpty()
+	w.AI = false
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 20, Y: 20}, {X: 8, Y: 20}})
+	w.SpawnUnit(SideEnemy, Vec2{X: 80, Y: 20})
+	w.SetFire(80, 20, true)
+	w.Step(1.0 / 60)
+	w.explode(80, 20, 0)
+	w.launchGrenade(&Unit{X: 20, Y: 20}, 90, 20)
+	v := w.AddSkidoo(Vec2{X: 20, Y: 20}, SidePlayer, true)
+	if !w.CommandBoard(v.ID) || !w.CommandExit(v.ID) {
+		t.Fatal("board and exit should emit their own cues")
+	}
+	for _, c := range w.TakeCues() {
+		switch c.Kind {
+		case CueClick, CueWin, CueFail:
+			t.Fatalf("world emitted %v", c.Kind)
+		}
+	}
+}
+
 func TestPlayerShotEmitsOneGunCue(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 200, Y: 200})
 	w.SetFire(80, 0, true)

@@ -32,6 +32,7 @@ type Host interface {
 	PlayCues([]sim.Cue)
 	SetListener(x, y float64)
 	SetEngine(run bool, pitch float64)
+	PlayKind(sim.CueKind)
 }
 
 var (
@@ -56,6 +57,7 @@ func (t *Title) Update(h Host) error {
 	}
 	p := h.Pointer()
 	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		h.PlayKind(sim.CueClick)
 		h.Switch(NewBootHill(h.Progress()))
 	}
 	return nil
@@ -353,6 +355,11 @@ func (b *Battle) tally() (graves int, survivors []campaign.Soldier) {
 }
 
 func (b *Battle) leaveBattle(h Host, won bool) {
+	if won {
+		h.PlayKind(sim.CueWin)
+	} else {
+		h.PlayKind(sim.CueFail)
+	}
 	if b.sandbox {
 		h.Switch(NewTitle())
 		return

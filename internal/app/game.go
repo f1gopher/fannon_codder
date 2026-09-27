@@ -118,6 +118,14 @@ func (g *Game) SetEngine(run bool, pitch float64) {
 	g.sound.SetEngine(run, pitch)
 }
 
+// PlayKind plays a sting that has no world position. Menus use it.
+func (g *Game) PlayKind(kind sim.CueKind) {
+	if g.sound == nil {
+		return
+	}
+	g.sound.PlayKind(kind)
+}
+
 // hearPoint is the active leader, including the vehicle he is driving.
 // With no leader, volume is measured from the middle of the playfield.
 func hearPoint(w *sim.World) (x, y float64) {

@@ -19,7 +19,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 15 Mission 2 content
 - [x] 16 HUD finish + overview map
 - [x] 17 Mission 3 (ice, cliffs, grenade economy)
-- [ ] 18 Civilians, quicksand, mines
+- [x] 18 Civilians, quicksand, mines
 - [ ] 19 Mission 4 content + free grenades
 - [ ] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
 
@@ -92,3 +92,7 @@ Verify: `go test ./...`. In battle the left strip shows the troop colour, G and 
 ### Chunk 17 done
 Files: `internal/sim/map.go`, `internal/sim/move.go`, `internal/sim/cliff_test.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/overview.go`, `internal/app/scenes.go`, `internal/app/progress_test.go`, `data/missions/campaign.json`, `data/missions/m03p01.json`.
 Verify: `go test ./...`. After Mission 2, Boot Hill opens Mission 3 “Blast It's Cold” (deploy 4, snow field). Ice walks at grass speed. A cliff row is one-way: walk south to drop, the grey ramp on the west is the way back up. Four door huts, two crates (8 grenades). Pick the crates up before you shoot; hosing them explodes the grenades and the phase cannot be finished. One grenade per hut is enough if you do not waste the boxes. Mission 4 is still the stub.
+
+### Chunk 18 done
+Files: `internal/sim/hazard.go`, `internal/sim/hazard_test.go`, `internal/sim/unit.go`, `internal/sim/move.go`, `internal/sim/world.go`, `internal/sim/objectives.go`, `internal/sim/ai.go`, `internal/sim/water.go`, `internal/sim/map.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/overview.go`, `internal/app/game.go`, `internal/app/scenes.go`, `cmd/fannon/main.go`.
+Verify: `go test ./...`. `go run ./cmd/fannon -hazards` — grass field, brown mine with a dark pip west of the squad, tan quicksand pool further east, a yellow civilian, a doorless hut to the north. Walk onto the mine: grenade-sized blast, the tile is gone. Walk into the tan pool: the trooper stops, shrinks, and dies after about two seconds (no shooting while sinking). Hose the yellow man: he dies, and the phase stays open until the red grunt up the west road is dead. The doorless hut is not a win condition. Spears are not in. `protect_civilians` parses and does not fail the phase. Mission 4 maps are still the stub.

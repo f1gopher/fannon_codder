@@ -16,6 +16,9 @@ var (
 	iceFill     = color.RGBA{R: 0xd4, G: 0xe6, B: 0xf0, A: 0xff}
 	cliffFill   = color.RGBA{R: 0x4a, G: 0x50, B: 0x58, A: 0xff}
 	rampFill    = color.RGBA{R: 0x9a, G: 0xa6, B: 0xb0, A: 0xff}
+	sandFill    = color.RGBA{R: 0xc2, G: 0xa0, B: 0x4a, A: 0xff}
+	mineFill    = color.RGBA{R: 0x6b, G: 0x55, B: 0x32, A: 0xff}
+	mineMark    = color.RGBA{R: 0x2a, G: 0x22, B: 0x18, A: 0xff}
 	tileSprites = map[sim.Tile]*ebiten.Image{}
 )
 
@@ -39,11 +42,22 @@ func tileImage(t sim.Tile) *ebiten.Image {
 		fill = cliffFill
 	case sim.TileRamp:
 		fill = rampFill
+	case sim.TileQuicksand:
+		fill = sandFill
+	case sim.TileMine:
+		fill = mineFill
 	default:
 		return nil
 	}
 	img := ebiten.NewImage(sim.TileSize, sim.TileSize)
 	img.Fill(fill)
+	if t == sim.TileMine {
+		mark := ebiten.NewImage(6, 6)
+		mark.Fill(mineMark)
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(5, 5)
+		img.DrawImage(mark, op)
+	}
 	tileSprites[t] = img
 	return img
 }

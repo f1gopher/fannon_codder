@@ -146,6 +146,35 @@ func NewHutWorld() *World {
 	return w
 }
 
+// NewHazardWorld is the chunk 18 sandbox: a mine, a quicksand pool,
+// a wandering civilian, and a doorless hut that is not an objective.
+func NewHazardWorld() *World {
+	const W, H = 20, 16
+	tiles := make([]Tile, W*H)
+	tiles[12*W+7] = TileMine
+	for ty := 9; ty <= 11; ty++ {
+		for tx := 10; tx <= 13; tx++ {
+			tiles[ty*W+tx] = TileQuicksand
+		}
+	}
+	w := NewEmpty()
+	w.Map = Map{W: W, H: H, Tiles: tiles}
+	mw, mh := w.Map.PixelSize()
+	w.Camera.MapW = mw
+	w.Camera.MapH = mh
+	w.Objectives = []Objective{KillAllEnemy, DestroyEnemyBuildings}
+	start := TileCenter(3, 12)
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{
+		start,
+		{X: start.X - FileSpacing, Y: start.Y},
+	})
+	w.SpawnUnit(SideCivilian, TileCenter(16, 13))
+	w.AddBuilding(14, 2, 2, 2, false, 0)
+	w.SpawnUnit(SideEnemy, TileCenter(3, 3))
+	w.refreshTerrain()
+	return w
+}
+
 // SpawnPlayerSquad adds a player squad. The first position is the leader.
 func (w *World) SpawnPlayerSquad(id SquadID, positions []Vec2) *Squad {
 	s := Squad{ID: id, Active: len(w.Squads) == 0}
@@ -230,6 +259,7 @@ func (w *World) Step(dt float64) {
 	if dt <= 0 {
 		return
 	}
+	w.trapQuicksand()
 	w.pruneSquads()
 	for i := range w.Squads {
 		w.stepSquad(&w.Squads[i], dt)
@@ -237,7 +267,10 @@ func (w *World) Step(dt float64) {
 	w.stepMerge()
 	w.stepPickups()
 	w.refreshTerrain()
+	w.stepCivilians(dt)
 	w.stepAI(dt)
+	w.stepMines()
+	w.stepQuicksand(dt)
 	w.stepFire(dt)
 	w.stepInactiveFire(dt)
 	w.stepProjectiles(dt)

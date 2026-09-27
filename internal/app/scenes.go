@@ -99,6 +99,11 @@ func NewHutBattle(prog *Progress) *Battle {
 	return battleFromWorld(prog, sim.NewHutWorld(), true)
 }
 
+// NewHazardBattle is the chunk 18 sandbox: mine, quicksand, civilian, doorless hut.
+func NewHazardBattle(prog *Progress) *Battle {
+	return battleFromWorld(prog, sim.NewHazardWorld(), true)
+}
+
 func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	if s := w.ActiveSquad(); s != nil {
 		if l := w.Unit(s.LeaderID); l != nil {

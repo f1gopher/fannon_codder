@@ -33,6 +33,11 @@ type Unit struct {
 	VehicleID int
 	Kills     int
 	FireCD    float64 // seconds until next MG round
+	Sinking   bool    // trapped in quicksand; cannot move or fire
+	Sink      float64 // seconds spent sinking; SinkTime is death
+	WanderX   float64 // civilian stroll target
+	WanderY   float64
+	WanderT   float64 // seconds until the next stroll pick
 }
 
 func (u *Unit) Dead() bool { return u.HP == Dead }

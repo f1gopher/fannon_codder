@@ -45,7 +45,7 @@ docs/CHUNKS.md
 - `Building`: pos, hasDoor (spawner vs flavour hut), hp, spawnInterval.
 - `Pickup`: grenadeCrate(4) | rocketCrate(4). Destroying it explodes.
 - `Vehicle`: skidoo (later jeep as the same type with a skin).
-- `Objective`: KillAllEnemy, DestroyEnemyBuildings (both can be required).
+- `Objective`: KillAllEnemy, DestroyEnemyBuildings (both can be required). ProtectCivilians parses and is ignored until a later chunk.
 
 World space is float64 pixels. Units are ~8×8. One MG bullet kills a healthy infantry unit.
 

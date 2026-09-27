@@ -20,6 +20,11 @@ const unitHalf = float64(UnitSize) / 2
 // steerToward walks u toward (tx,ty), sliding along solid tiles.
 // Reports whether it is inside arrival and the dest is standable.
 func (w *World) steerToward(u *Unit, tx, ty, speed, dt, arrival float64) bool {
+	if u.Sinking {
+		u.VX = 0
+		u.VY = 0
+		return false
+	}
 	speed *= w.speedMul(u)
 	dx := tx - u.X
 	dy := ty - u.Y
@@ -30,7 +35,8 @@ func (w *World) steerToward(u *Unit, tx, ty, speed, dt, arrival float64) bool {
 			u.Y = ty
 			u.VX = 0
 			u.VY = 0
-			return true
+			w.noteQuicksand(u)
+			return !u.Sinking
 		}
 		u.VX = 0
 		u.VY = 0
@@ -59,19 +65,23 @@ func (w *World) slide(u *Unit, dx, dy float64) {
 	nx, ny := u.X+dx, u.Y+dy
 	if w.walkableUnit(nx, ny) {
 		u.X, u.Y = nx, ny
+		w.noteQuicksand(u)
 		return
 	}
 	if w.tryCliffDrop(u, nx, ny) {
+		w.noteQuicksand(u)
 		return
 	}
 	if w.walkableUnit(nx, u.Y) {
 		u.X = nx
 		u.VY = 0
+		w.noteQuicksand(u)
 		return
 	}
 	if w.walkableUnit(u.X, ny) {
 		u.Y = ny
 		u.VX = 0
+		w.noteQuicksand(u)
 		return
 	}
 	u.VX = 0

@@ -64,6 +64,15 @@ func NewHut() *Game {
 	return g
 }
 
+// NewHazard starts the civilian, quicksand, and mine sandbox (chunk 18).
+func NewHazard() *Game {
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	g := &Game{prog: NewProgress()}
+	g.scene = NewHazardBattle(g.prog)
+	g.scene.Enter()
+	return g
+}
+
 func (g *Game) Pointer() input.Pointer { return g.pointer }
 
 func (g *Game) Progress() *Progress { return g.prog }

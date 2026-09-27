@@ -114,6 +114,10 @@ func overviewTile(t sim.Tile) color.RGBA {
 		return cliffFill
 	case sim.TileRamp:
 		return rampFill
+	case sim.TileQuicksand:
+		return sandFill
+	case sim.TileMine:
+		return mineFill
 	default:
 		return overviewGrass
 	}

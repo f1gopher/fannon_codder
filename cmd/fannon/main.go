@@ -14,6 +14,7 @@ func main() {
 	cover := flag.Bool("cover", false, "debug oversized map: scrolling + tree LOS")
 	river := flag.Bool("river", false, "debug river + bridge (water, swimming)")
 	hut := flag.Bool("hut", false, "debug spawner hut + grenade crate")
+	hazards := flag.Bool("hazards", false, "debug civilians, quicksand, and mines")
 	flag.Parse()
 
 	ebiten.SetWindowTitle("Fannon Codder")
@@ -23,6 +24,8 @@ func main() {
 
 	var game *app.Game
 	switch {
+	case *hazards:
+		game = app.NewHazard()
 	case *hut:
 		game = app.NewHut()
 	case *river:

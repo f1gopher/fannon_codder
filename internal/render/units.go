@@ -15,6 +15,8 @@ var (
 	enemySwim    = color.RGBA{R: 0x88, G: 0x28, B: 0x58, A: 0xff}
 	corpseFill   = color.RGBA{R: 0x50, G: 0x30, B: 0x30, A: 0xff}
 	playerDead   = color.RGBA{R: 0x20, G: 0x50, B: 0x20, A: 0xff}
+	civilianFill = color.RGBA{R: 0xe6, G: 0xd2, B: 0x3a, A: 0xff}
+	civilianDead = color.RGBA{R: 0x6a, G: 0x5a, B: 0x20, A: 0xff}
 	tracerFill   = color.RGBA{R: 0xff, G: 0xff, B: 0xa0, A: 0xff}
 	spriteCache  = map[color.RGBA]*ebiten.Image{}
 	tracerSprite *ebiten.Image
@@ -32,10 +34,17 @@ func unitSprite(c color.RGBA) *ebiten.Image {
 
 func unitColor(u *sim.Unit) color.RGBA {
 	if u.Dead() {
-		if u.Side == sim.SidePlayer {
+		switch u.Side {
+		case sim.SidePlayer:
 			return playerDead
+		case sim.SideCivilian:
+			return civilianDead
+		default:
+			return corpseFill
 		}
-		return corpseFill
+	}
+	if u.Side == sim.SideCivilian {
+		return civilianFill
 	}
 	if u.Side == sim.SideEnemy {
 		if u.InWater {
@@ -44,6 +53,21 @@ func unitColor(u *sim.Unit) color.RGBA {
 		return enemyFill
 	}
 	return squadFill(u.SquadID, u.InWater)
+}
+
+// unitPose shrinks a sinking trooper into the pool. Everyone else is full size.
+func unitPose(u *sim.Unit) (scale, drop float64) {
+	if !u.Sinking || sim.SinkTime <= 0 {
+		return 1, 0
+	}
+	p := u.Sink / sim.SinkTime
+	if p < 0 {
+		p = 0
+	}
+	if p > 1 {
+		p = 1
+	}
+	return 1 - 0.7*p, p * 4
 }
 
 func squadFill(id sim.SquadID, swim bool) color.RGBA {
@@ -74,8 +98,10 @@ func Units(dst *ebiten.Image, w *sim.World) {
 	half := float64(sim.UnitSize) / 2
 	for i := range w.Units {
 		u := &w.Units[i]
+		s, drop := unitPose(u)
 		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(u.X-w.Camera.X-half, u.Y-w.Camera.Y-half)
+		op.GeoM.Scale(s, s)
+		op.GeoM.Translate(u.X-w.Camera.X-half*s, u.Y-w.Camera.Y-half*s+drop)
 		dst.DrawImage(unitSprite(unitColor(u)), op)
 	}
 }

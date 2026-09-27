@@ -44,6 +44,14 @@ func (m *Map) At(tx, ty int) Tile {
 	return m.Tiles[ty*m.W+tx]
 }
 
+// Set replaces one cell. Out of range is a no-op. Spent mines become grass.
+func (m *Map) Set(tx, ty int, t Tile) {
+	if !m.active() || tx < 0 || ty < 0 || tx >= m.W || ty >= m.H {
+		return
+	}
+	m.Tiles[ty*m.W+tx] = t
+}
+
 func (m *Map) WalkableTile(t Tile) bool {
 	switch t {
 	case TileTree, TileCliff:

@@ -314,6 +314,46 @@ func TestMission3IcePhase(t *testing.T) {
 	assertSpawnSurvives(t, w)
 }
 
+func TestPhaseSpawnsCivilian(t *testing.T) {
+	rows := []string{
+		"........",
+		"...Q....",
+		"........",
+		".....M..",
+		"........",
+		"........",
+		"........",
+		"........",
+	}
+	p := &Phase{
+		Deploy:      1,
+		PlayerStart: [2]int{1, 6},
+		Map:         Tilemap{W: 8, H: 8, Tiles: rows},
+		Civilians:   []Enemy{{X: 4, Y: 4}},
+		Buildings:   []BuildingSpec{{X: 5, Y: 1, Door: false}},
+		Objectives:  []string{"kill_all_enemy", "protect_civilians"},
+	}
+	w, err := p.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Map.At(3, 1) != sim.TileQuicksand || w.Map.At(5, 3) != sim.TileMine {
+		t.Fatal("Q and M tiles did not load")
+	}
+	n := 0
+	for i := range w.Units {
+		if w.Units[i].Side == sim.SideCivilian && w.Units[i].Living() {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("civilians=%d", n)
+	}
+	if len(w.Buildings) != 1 || w.Buildings[0].HasDoor {
+		t.Fatal("expected a doorless hut")
+	}
+}
+
 func TestParseWaterTiles(t *testing.T) {
 	cases := []struct {
 		ch rune
@@ -326,6 +366,8 @@ func TestParseWaterTiles(t *testing.T) {
 		{'I', sim.TileIce},
 		{'C', sim.TileCliff},
 		{'R', sim.TileRamp},
+		{'Q', sim.TileQuicksand},
+		{'M', sim.TileMine},
 	}
 	for _, c := range cases {
 		got, err := parseTile(c.ch)

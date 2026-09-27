@@ -15,6 +15,9 @@ type Objective int
 const (
 	KillAllEnemy Objective = iota
 	DestroyEnemyBuildings
+	// ProtectCivilians is reserved for a later chunk. It parses so phase JSON
+	// can name it, and it does not fail or block a phase yet.
+	ProtectCivilians
 )
 
 func ParseObjective(s string) (Objective, bool) {
@@ -23,6 +26,8 @@ func ParseObjective(s string) (Objective, bool) {
 		return KillAllEnemy, true
 	case "destroy_enemy_buildings":
 		return DestroyEnemyBuildings, true
+	case "protect_civilians":
+		return ProtectCivilians, true
 	default:
 		return 0, false
 	}
@@ -57,6 +62,8 @@ func (w *World) evaluateObjectives() {
 			if w.anyDoorBuilding() {
 				return
 			}
+		case ProtectCivilians:
+			// Unused. Killing civilians does not fail Village People.
 		}
 	}
 	w.Status = Won

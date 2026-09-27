@@ -21,6 +21,11 @@ func (w *World) stepAI(dt float64) {
 		if u.Side != SideEnemy || !u.Living() {
 			continue
 		}
+		if u.Sinking {
+			u.VX = 0
+			u.VY = 0
+			continue
+		}
 		px, py, ok := w.nearestLiving(SidePlayer, u.X, u.Y)
 		if !ok {
 			u.VX = 0

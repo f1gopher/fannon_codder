@@ -25,6 +25,7 @@ type Phase struct {
 	Map         Tilemap        `json:"map"`
 	PlayerStart [2]int         `json:"playerStart"`
 	Enemies     []Enemy        `json:"enemies"`
+	Civilians   []Enemy        `json:"civilians"`
 	Buildings   []BuildingSpec `json:"buildings"`
 	Pickups     []PickupSpec   `json:"pickups"`
 	Objectives  []string       `json:"objectives"`
@@ -150,6 +151,9 @@ func (p *Phase) World() (*sim.World, error) {
 	for _, e := range p.Enemies {
 		w.SpawnUnit(sim.SideEnemy, sim.TileCenter(e.X, e.Y))
 	}
+	for _, c := range p.Civilians {
+		w.SpawnUnit(sim.SideCivilian, sim.TileCenter(c.X, c.Y))
+	}
 	for _, b := range p.Buildings {
 		w.AddBuilding(b.X, b.Y, b.W, b.H, b.Door, b.Spawn)
 	}
@@ -205,6 +209,10 @@ func parseTile(ch rune) (sim.Tile, error) {
 		return sim.TileCliff, nil
 	case 'R':
 		return sim.TileRamp, nil
+	case 'Q':
+		return sim.TileQuicksand, nil
+	case 'M':
+		return sim.TileMine, nil
 	default:
 		return 0, fmt.Errorf("unknown tile %q", string(ch))
 	}

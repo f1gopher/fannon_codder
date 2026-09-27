@@ -13,11 +13,13 @@ import (
 
 const (
 	// SampleRate is the one rate for every clip, including later music.
-	SampleRate = 44100
-	gunVoices  = 8
-	gunVolume  = 0.45
-	boomVoices = 4
-	boomVolume = 0.7
+	SampleRate  = 44100
+	gunVoices   = 8
+	gunVolume   = 0.45
+	boomVoices  = 4
+	boomVolume  = 0.7
+	deathVoices = 4
+	deathVolume = 0.55
 )
 
 // Mixer is the clip registry and the voice pool.
@@ -27,12 +29,18 @@ type Mixer struct {
 }
 
 type clip struct {
-	players []*audio.Player
-	next    int
-	volume  float64
+	banks  []voiceBank
+	volume float64
 }
 
-// NewMixer opens the audio device and loads the gunshot and the blast.
+// voiceBank is one pitch of a clip. A gun or a blast has one bank.
+// A death yell has three, chosen from the unit id.
+type voiceBank struct {
+	players []*audio.Player
+	next    int
+}
+
+// NewMixer opens the audio device and loads the gunshot, the blast, and the yell.
 // Calling it twice in one process panics: Ebitengine allows one context.
 func NewMixer() *Mixer {
 	m := &Mixer{
@@ -41,6 +49,7 @@ func NewMixer() *Mixer {
 	}
 	m.Load(sim.CueGun, Gunshot(), gunVoices, gunVolume)
 	m.Load(sim.CueBoom, Boom(), boomVoices, boomVolume)
+	m.load(sim.CueDeath, [][]byte{DeathPCM(0), DeathPCM(1), DeathPCM(2)}, deathVoices, deathVolume)
 	return m
 }
 
@@ -48,19 +57,34 @@ func NewMixer() *Mixer {
 // voices is how many copies may overlap; the oldest restarts when all are busy.
 // volume is the clip's full-loudness level in [0, 1]. Loading a kind again replaces its voices.
 func (m *Mixer) Load(kind sim.CueKind, pcm []byte, voices int, volume float64) {
-	if m == nil || kind == sim.CueNone || len(pcm) == 0 || voices < 1 {
+	m.load(kind, [][]byte{pcm}, voices, volume)
+}
+
+// load registers one clip. Each entry of pcms is a pitch variant with its own voices.
+func (m *Mixer) load(kind sim.CueKind, pcms [][]byte, voices int, volume float64) {
+	if m == nil || kind == sim.CueNone || len(pcms) == 0 || voices < 1 {
 		return
 	}
 	if volume < 0 {
 		volume = 0
 	}
-	players := make([]*audio.Player, voices)
-	for i := range players {
-		p := m.ctx.NewPlayerFromBytes(pcm)
-		p.SetVolume(volume)
-		players[i] = p
+	banks := make([]voiceBank, 0, len(pcms))
+	for _, pcm := range pcms {
+		if len(pcm) == 0 {
+			continue
+		}
+		players := make([]*audio.Player, voices)
+		for i := range players {
+			p := m.ctx.NewPlayerFromBytes(pcm)
+			p.SetVolume(volume)
+			players[i] = p
+		}
+		banks = append(banks, voiceBank{players: players})
 	}
-	m.slots[kind] = &clip{players: players, volume: volume}
+	if len(banks) == 0 {
+		return
+	}
+	m.slots[kind] = &clip{banks: banks, volume: volume}
 }
 
 // Play starts one voice per cue. Missing kinds are skipped.
@@ -84,13 +108,21 @@ func (m *Mixer) play(c sim.Cue) {
 		return
 	}
 	cl := m.slots[c.Kind]
-	if cl == nil || len(cl.players) == 0 {
+	if cl == nil || len(cl.banks) == 0 {
 		return
 	}
-	p := cl.players[cl.next]
-	cl.next++
-	if cl.next >= len(cl.players) {
-		cl.next = 0
+	bi := 0
+	if len(cl.banks) > 1 {
+		bi = DeathVariant(c.ID) % len(cl.banks)
+	}
+	b := &cl.banks[bi]
+	if len(b.players) == 0 {
+		return
+	}
+	p := b.players[b.next]
+	b.next++
+	if b.next >= len(b.players) {
+		b.next = 0
 	}
 	if err := p.Rewind(); err != nil {
 		return

@@ -9,6 +9,7 @@ const (
 	CueNone CueKind = iota
 	CueGun
 	CueBoom
+	CueDeath
 )
 
 // maxCues bounds the queue when a frame is not drained. The newest shots
@@ -16,14 +17,23 @@ const (
 const maxCues = 64
 
 // Cue is one sound to play. X and Y are world pixels at the source.
-// Volume ignores them until a later chunk.
+// ID is the unit for a kind that varies by who made it (the death yell).
+// Volume ignores position until a later chunk.
 type Cue struct {
 	Kind CueKind
 	X, Y float64
+	ID   int
 }
 
 func (w *World) emit(kind CueKind, x, y float64) {
-	c := Cue{Kind: kind, X: x, Y: y}
+	w.pushCue(Cue{Kind: kind, X: x, Y: y})
+}
+
+func (w *World) emitFrom(kind CueKind, x, y float64, id int) {
+	w.pushCue(Cue{Kind: kind, X: x, Y: y, ID: id})
+}
+
+func (w *World) pushCue(c Cue) {
 	if len(w.Cues) < maxCues {
 		w.Cues = append(w.Cues, c)
 		return

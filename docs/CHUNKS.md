@@ -27,14 +27,14 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - 23 dropped — gunfire does not wake the next post
 - [x] 24 Sound bus and gunshot
 - [x] 25 Blasts
-- [ ] 26 Death
+- [x] 26 Death
 - [ ] 27 Throw and launch
 - [ ] 28 Terrain and vehicles (one-shots)
 - [ ] 29 Distance
 - [ ] 30 Engine loop
 - [ ] 31 Scene stings
 
-Chunks 01–22 and 24–25 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
+Chunks 01–22 and 24–26 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
 
 ## Log
 
@@ -136,6 +136,10 @@ Verify: `go test ./...`. Hold right mouse: each trooper cracks, including the mo
 ### Chunk 25 done
 Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/grenade.go`, `internal/audio/audio.go`, `internal/audio/boom.go`, `internal/audio/boom_test.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. A grenade, a rocket, and a mine each boom once when they go off. Hosing a crate booms, and a crate it sets off booms again. The throw and the launch are still silent; death is still silent. The gun crack is unchanged.
+
+### Chunk 26 done
+Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/combat.go`, `internal/audio/audio.go`, `internal/audio/yell.go`, `internal/audio/yell_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. Shooting a grunt yells when he drops. A grenade that kills two men booms once and yells twice, at different pitches when their ids differ. A man who sinks in quicksand yells once. Calling kill again is silent. The throw and the launch are still silent.
 
 ## Backlog
 

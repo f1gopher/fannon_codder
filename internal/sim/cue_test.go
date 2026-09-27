@@ -102,6 +102,99 @@ func TestCrateChainBoomsForEachCrate(t *testing.T) {
 	}
 }
 
+func TestKillEmitsOneDeathCue(t *testing.T) {
+	w := NewEmpty()
+	u := w.SpawnUnit(SideCivilian, Vec2{X: 10, Y: 20})
+	id := u.ID
+	w.kill(u)
+	cues := w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueDeath || cues[0].ID != id {
+		t.Fatalf("cues=%v, want one death for unit %d", cues, id)
+	}
+	if cues[0].X != 10 || cues[0].Y != 20 {
+		t.Fatalf("yell at (%v,%v)", cues[0].X, cues[0].Y)
+	}
+	w.kill(u)
+	if again := w.TakeCues(); len(again) != 0 {
+		t.Fatalf("second kill emitted %d cues", len(again))
+	}
+}
+
+func TestMGKillEmitsGunThenDeath(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 48, Y: 0})
+	enemy := enemyOf(w)
+	id := enemy.ID
+	w.SetFire(48, 0, true)
+	var kinds []CueKind
+	var death Cue
+	for i := 0; i < 30; i++ {
+		w.Step(1.0 / 60)
+		for _, c := range w.TakeCues() {
+			kinds = append(kinds, c.Kind)
+			if c.Kind == CueDeath {
+				death = c
+			}
+		}
+		if death.Kind == CueDeath {
+			break
+		}
+	}
+	if len(kinds) < 2 || kinds[0] != CueGun {
+		t.Fatalf("kinds=%v, want the crack before the yell", kinds)
+	}
+	if death.Kind != CueDeath || death.ID != id || death.X != 48 {
+		t.Fatalf("death=%v, want the grunt at x=48", death)
+	}
+	nDeath := 0
+	for _, k := range kinds {
+		if k == CueDeath {
+			nDeath++
+		}
+	}
+	if nDeath != 1 {
+		t.Fatalf("deaths=%d in %v", nDeath, kinds)
+	}
+}
+
+func TestExplosionBoomsOnceAndYellsPerMan(t *testing.T) {
+	w := NewEmpty()
+	a := w.SpawnUnit(SideEnemy, Vec2{X: 0, Y: 0})
+	b := w.SpawnUnit(SideCivilian, Vec2{X: 8, Y: 0})
+	w.explode(4, 0, 0)
+	cues := w.TakeCues()
+	if len(cues) != 3 || cues[0].Kind != CueBoom || cues[1].Kind != CueDeath || cues[2].Kind != CueDeath {
+		t.Fatalf("cues=%v, want one boom and two yells", cues)
+	}
+	if cues[0].X != 4 || cues[1].ID != a.ID || cues[2].ID != b.ID {
+		t.Fatalf("cues=%v", cues)
+	}
+}
+
+func TestQuicksandDeathYells(t *testing.T) {
+	tiles := make([]Tile, 4)
+	tiles[0] = TileQuicksand
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.Map = Map{W: 2, H: 2, Tiles: tiles}
+	c := TileCenter(0, 0)
+	u := w.SpawnUnit(SideEnemy, c)
+	id := u.ID
+	deaths := 0
+	for i := 0; i < int(SinkTime*60)+8; i++ {
+		w.Step(1.0 / 60)
+		for _, cue := range w.TakeCues() {
+			if cue.Kind != CueDeath || cue.ID != id {
+				t.Fatalf("cue %+v", cue)
+			}
+			deaths++
+		}
+	}
+	if deaths != 1 || !w.Unit(id).Dead() {
+		t.Fatalf("deaths=%d dead=%v", deaths, w.Unit(id).Dead())
+	}
+}
+
 func TestThrowAndLaunchStaySilent(t *testing.T) {
 	w := NewEmpty()
 	w.launchGrenade(&Unit{X: 0, Y: 0}, 40, 0)

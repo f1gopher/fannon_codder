@@ -678,7 +678,7 @@ One bus, many clips. Chunk 24 is the bus and the gun. Later chunks add a `CueKin
 
 Samples are synthesised or recorded for this game. No Amiga samples, and no theme tune in these chunks. The title tune stays on the backlog.
 
-Chunk 25 is in. Do **26, then 27**. Those are the sounds you notice the moment the gun and the blast exist. 28–31 can follow in order. Do not start 23.
+Chunks 25–26 are in. Do **27** next. 28–31 can follow in order. Do not start 23.
 
 ### Chunk 24 — Sound bus and the gun (done)
 
@@ -703,7 +703,7 @@ Chunk 25 is in. Do **26, then 27**. Those are the sounds you notice the moment t
 
 - `CueBoom`. Emit it once at the top of `explode` (grenades, rockets, mines, and crate chains all go through there). A crate that sets off another crate booms again. That is the chain you already see.
 - Synthesise a lower, longer clip (~180 ms) and `Load` it with 4 voices and its own volume.
-- Death, the throw, and the launch stay silent. The boom is the impact, not the leaving of the hand.
+- The throw and the launch stay silent. The boom is the impact, not the leaving of the hand. Death is Chunk 26.
 
 **Tests.** `explode` appends one `CueBoom` at the blast point. A grenade that lands does too. An MG round still emits only `CueGun`.
 
@@ -711,7 +711,7 @@ Chunk 25 is in. Do **26, then 27**. Those are the sounds you notice the moment t
 
 **Do not.** A separate building-collapse sample, death yells, distance.
 
-### Chunk 26 — Death
+### Chunk 26 — Death (done)
 
 **Goal.** A man who just died makes a short yell. The same clip, a few pitches, so a wiped squad is not one sample retriggered.
 

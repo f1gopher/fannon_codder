@@ -247,6 +247,7 @@ func (w *World) kill(u *Unit) {
 	u.VX = 0
 	u.VY = 0
 	w.dropFromFile(u.ID)
+	w.emitFrom(CueDeath, u.X, u.Y, u.ID)
 }
 
 func (w *World) dropFromFile(id int) {

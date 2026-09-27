@@ -1,7 +1,11 @@
 package app
 
 import (
+	"image/color"
+
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/audio"
 	"fannon-codder/internal/input"
@@ -26,7 +30,10 @@ type Game struct {
 	pointer input.Pointer
 	prog    *Progress
 	sound   *audio.Mixer
+	quit    quitPrompt
 }
+
+var quitPanel = color.RGBA{R: 0x10, G: 0x10, B: 0x10, A: 0xff}
 
 // newShell is the window shell shared by every entry point, including the sandboxes.
 func newShell() *Game {
@@ -168,6 +175,19 @@ func (g *Game) Update() error {
 		g.next = nil
 		g.scene.Enter()
 	}
+	// Escape asks to quit from every screen. The scene stays frozen until
+	// the player confirms or backs out, so a battle press does not also
+	// order a move.
+	switch g.quit.decide(
+		inpututil.IsKeyJustPressed(ebiten.KeyEscape),
+		inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeyY),
+		inpututil.IsKeyJustPressed(ebiten.KeyN),
+	) {
+	case quitExit:
+		return ebiten.Termination
+	case quitHold, quitCancel:
+		return nil
+	}
 	if g.scene != nil {
 		return g.scene.Update(g)
 	}
@@ -185,6 +205,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
 		ebiten.IsKeyPressed(ebiten.KeyControlRight) {
 		kind = render.PointerCrosshair
+	}
+	if g.quit.open {
+		const x, y, w, h = 70, 96, 180, 64
+		ebitenutil.DrawRect(screen, x, y, w, h, quitPanel)
+		ebitenutil.DebugPrintAt(screen, "Quit the game?\n\nY or Enter  quit\nN or Escape  stay", x+8, y+6)
 	}
 	render.Pointer(screen, g.pointer.X, g.pointer.Y, kind)
 }

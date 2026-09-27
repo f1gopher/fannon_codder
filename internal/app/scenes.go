@@ -243,11 +243,6 @@ func (b *Battle) Update(h Host) error {
 		}
 		return nil
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		b.settleOnce(false)
-		b.leaveBattle(h, false)
-		return nil
-	}
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
 		b.world.SetActiveSquad(sim.SquadSnake)
 	}

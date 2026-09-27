@@ -18,7 +18,7 @@ func (w *World) stepAI(dt float64) {
 	interval := 1.0 / EnemyMGRoF
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Side != SideEnemy || !u.Living() {
+		if u.Side != SideEnemy || !u.Living() || u.VehicleID != 0 {
 			continue
 		}
 		if u.Sinking {
@@ -31,9 +31,14 @@ func (w *World) stepAI(dt float64) {
 			u.VX = 0
 			u.VY = 0
 			u.GrenadeWind = 0
+			u.RocketWind = 0
 			continue
 		}
 		dist := hypot(px-u.X, py-u.Y)
+		if u.Kind == KindRocketeer {
+			w.stepRocketeer(u, px, py, dist, dt)
+			continue
+		}
 		if w.stepGrenadier(u, px, py, dist, dt) {
 			continue
 		}
@@ -105,6 +110,89 @@ func (w *World) stepGrenadier(u *Unit, px, py, dist, dt float64) bool {
 	u.VY = 0
 	u.Facing = math.Atan2(py-u.Y, px-u.X)
 	return true
+}
+
+const (
+	RocketeerRange      = RocketRange
+	RocketeerWindup     = 0.55
+	RocketeerCooldown   = 3.2
+	RocketeerFirstDelay = 2.0
+	RocketeerApproach   = 90.0 // shorter than a grunt's 140, so they stay in cover
+	RocketeerSpeed      = 12.0
+	RocketeerMinRange   = GrenadeRadius + 8
+)
+
+// stepRocketeer fires a slow rocket. Beside a tree they hold still instead of chasing.
+func (w *World) stepRocketeer(u *Unit, px, py, dist, dt float64) {
+	hiding := w.treeAdjacent(u)
+	if u.RocketWind > 0 {
+		u.VX = 0
+		u.VY = 0
+		u.Facing = math.Atan2(py-u.Y, px-u.X)
+		u.RocketWind -= dt
+		if u.RocketWind > 0 {
+			return
+		}
+		u.RocketWind = 0
+		if w.CanShoot(u) {
+			w.launchRocket(u.ID, u.Side, u.X, u.Y, px, py)
+			u.RocketCD = RocketeerCooldown
+		}
+		return
+	}
+	if u.RocketCD > 0 {
+		u.RocketCD -= dt
+		if u.RocketCD < 0 {
+			u.RocketCD = 0
+		}
+	}
+	if hiding {
+		u.VX = 0
+		u.VY = 0
+	} else if dist <= RocketeerApproach && dist > RocketeerMinRange {
+		w.steerToward(u, px, py, RocketeerSpeed, dt, ArrivalRadius)
+	} else {
+		u.VX = 0
+		u.VY = 0
+	}
+	if u.RocketCD > 0 || !w.CanShoot(u) {
+		return
+	}
+	if dist < RocketeerMinRange || dist > RocketeerRange {
+		return
+	}
+	if !w.lineClear(u.X, u.Y, px, py) {
+		return
+	}
+	u.RocketWind = RocketeerWindup
+	u.VX = 0
+	u.VY = 0
+	u.Facing = math.Atan2(py-u.Y, px-u.X)
+}
+
+// treeAdjacent reports a tree in the eight neighbouring cells.
+// Off-map cells are solid but are not cover.
+func (w *World) treeAdjacent(u *Unit) bool {
+	if u == nil || !w.Map.active() {
+		return false
+	}
+	tx := int(math.Floor(u.X / float64(TileSize)))
+	ty := int(math.Floor(u.Y / float64(TileSize)))
+	for dy := -1; dy <= 1; dy++ {
+		for dx := -1; dx <= 1; dx++ {
+			if dx == 0 && dy == 0 {
+				continue
+			}
+			nx, ny := tx+dx, ty+dy
+			if nx < 0 || ny < 0 || nx >= w.Map.W || ny >= w.Map.H {
+				continue
+			}
+			if w.Map.At(nx, ny) == TileTree {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (w *World) nearestLiving(side Side, x, y float64) (px, py float64, ok bool) {

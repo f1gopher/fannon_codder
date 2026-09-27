@@ -43,7 +43,35 @@ func Solids(dst *ebiten.Image, w *sim.World) {
 		x := int(p.X-cam.X) - 6
 		y := int(p.Y-cam.Y) - 6
 		fillRect(dst, x, y, 12, 12, crateFill)
-		ebitenutil.DebugPrintAt(dst, "G", x+3, y+2)
+		label := "G"
+		if p.Kind == sim.PickupRockets {
+			label = "R"
+		}
+		ebitenutil.DebugPrintAt(dst, label, x+3, y+2)
+	}
+}
+
+// Vehicles draws skidoos. Enemy ones blink a red lamp.
+func Vehicles(dst *ebiten.Image, w *sim.World) {
+	if w == nil {
+		return
+	}
+	cam := w.Camera
+	body := color.RGBA{R: 0xd0, G: 0xd4, B: 0xd8, A: 0xff}
+	trim := color.RGBA{R: 0x68, G: 0x70, B: 0x78, A: 0xff}
+	lamp := color.RGBA{R: 0xe0, G: 0x28, B: 0x28, A: 0xff}
+	for i := range w.Vehicles {
+		v := &w.Vehicles[i]
+		if !v.Alive {
+			continue
+		}
+		x := int(v.X-cam.X) - 10
+		y := int(v.Y-cam.Y) - 6
+		fillRect(dst, x, y, 20, 12, trim)
+		fillRect(dst, x+1, y+1, 18, 10, body)
+		if v.Side == sim.SideEnemy && int(v.Blink*6)%2 == 0 {
+			fillRect(dst, x+2, y+2, 3, 3, lamp)
+		}
 	}
 }
 

@@ -154,18 +154,29 @@ func (w *World) stepProjectiles(dt float64) {
 			continue
 		}
 		x0, y0 := p.X, p.Y
-		step := MGSpeed * dt
+		speed := hypot(p.VX, p.VY)
+		if speed < 1 {
+			continue
+		}
+		step := speed * dt
 		if step > p.Left {
 			step = p.Left
 		}
-		dist := hypot(p.VX, p.VY)
-		if dist == 0 {
-			continue
-		}
-		nx, ny := p.VX/dist, p.VY/dist
+		nx, ny := p.VX/speed, p.VY/speed
 		p.X += nx * step
 		p.Y += ny * step
 		p.Left -= step
+		if p.Kind == ProjRocket {
+			if hx, hy, hit := w.rocketHit(p.OwnerID, x0, y0, p.X, p.Y); hit || p.Left <= 0 {
+				if !hit {
+					hx, hy = p.X, p.Y
+				}
+				w.explode(hx, hy, p.OwnerID)
+				continue
+			}
+			out = append(out, *p)
+			continue
+		}
 		blocked := false
 		if hx, hy, hit := w.Map.FirstSolid(x0, y0, p.X, p.Y); hit {
 			p.X, p.Y = hx, hy
@@ -194,7 +205,7 @@ func (w *World) stepProjectiles(dt float64) {
 func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.ID == p.OwnerID || u.Dead() {
+		if u.ID == p.OwnerID || u.Dead() || u.VehicleID != 0 {
 			continue
 		}
 		if !w.mgCanHurt(p, u) {

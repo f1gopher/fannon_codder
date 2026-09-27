@@ -9,6 +9,8 @@ import (
 const (
 	PointerArrow = iota
 	PointerCrosshair
+	PointerBoard
+	PointerExit
 )
 
 var (
@@ -23,9 +25,39 @@ func Pointer(dst *ebiten.Image, x, y float64, kind int) {
 	switch kind {
 	case PointerCrosshair:
 		drawCrosshair(dst, ix, iy)
+	case PointerBoard:
+		drawBoard(dst, ix, iy)
+	case PointerExit:
+		drawExit(dst, ix, iy)
 	default:
 		drawArrow(dst, ix, iy)
 	}
+}
+
+func drawBoard(dst *ebiten.Image, x, y int) {
+	// Hollow box: climb in.
+	rows := [][]int{
+		{1, 1, 1, 1, 1, 1, 1},
+		{1, 0, 0, 0, 0, 0, 1},
+		{1, 0, 0, 1, 0, 0, 1},
+		{1, 0, 0, 1, 0, 0, 1},
+		{1, 0, 0, 0, 0, 0, 1},
+		{1, 1, 1, 1, 1, 1, 1},
+	}
+	drawBitmap(dst, x-3, y-3, rows)
+}
+
+func drawExit(dst *ebiten.Image, x, y int) {
+	// Arrow leaving a box.
+	rows := [][]int{
+		{0, 0, 0, 1, 0, 0, 0},
+		{0, 0, 1, 1, 1, 0, 0},
+		{0, 1, 0, 1, 0, 1, 0},
+		{1, 1, 1, 1, 1, 1, 1},
+		{1, 0, 0, 0, 0, 0, 1},
+		{1, 1, 1, 1, 1, 1, 1},
+	}
+	drawBitmap(dst, x-3, y-5, rows)
 }
 
 func drawArrow(dst *ebiten.Image, x, y int) {

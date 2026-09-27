@@ -1,0 +1,141 @@
+{
+  "mission": 5,
+  "phase": 2,
+  "title": "Barmy Bazookas",
+  "briefing": "With 3 soldiers you must kill all enemy and destroy the huts. The far bank is full of rockets.",
+  "deploy": 3,
+  "terrain": "jungle",
+  "map": {
+    "w": 36,
+    "h": 24,
+    "tiles": [
+      "....................................",
+      "....................................",
+      "...T..........T...............T.....",
+      "........T...............T...........",
+      "....................................",
+      "....................................",
+      ".................................T..",
+      "....................................",
+      "....................................",
+      "~~~~~~~~~~~~~~~~~BB~~~~~~~~~~~~~~~~~",
+      "WWWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWW",
+      "~~~~~~~~~~~~~~~~~BB~~~~~~~~~~~~~~~~~",
+      "....................................",
+      "....................................",
+      "..T.................................",
+      "....................................",
+      ".................................T..",
+      "....................................",
+      "....................................",
+      "...................................."
+    ]
+  },
+  "playerStart": [
+    12,
+    21
+  ],
+  "enemies": [
+    {
+      "x": 4,
+      "y": 3,
+      "kind": "rocketeer"
+    },
+    {
+      "x": 9,
+      "y": 3,
+      "kind": "rocketeer"
+    },
+    {
+      "x": 15,
+      "y": 3,
+      "kind": "rocketeer"
+    },
+    {
+      "x": 25,
+      "y": 4,
+      "kind": "rocketeer"
+    },
+    {
+      "x": 31,
+      "y": 3,
+      "kind": "rocketeer"
+    },
+    {
+      "x": 33,
+      "y": 7,
+      "kind": "grunt"
+    }
+  ],
+  "buildings": [
+    {
+      "x": 2,
+      "y": 5,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 10,
+      "y": 4,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 20,
+      "y": 5,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 28,
+      "y": 4,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 24,
+      "y": 1,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    }
+  ],
+  "pickups": [
+    {
+      "x": 14,
+      "y": 18,
+      "kind": "grenades"
+    },
+    {
+      "x": 14,
+      "y": 7,
+      "kind": "rockets"
+    }
+  ],
+  "objectives": [
+    "kill_all_enemy",
+    "destroy_enemy_buildings"
+  ],
+  "startGrenadesPerTrooper": 2
+}

@@ -101,7 +101,7 @@ func TestCleanMission1ThenMission2Shows27(t *testing.T) {
 	if q4.AwaitingStub || q4.Phase == nil || q4.Phase.Title != "Beachy Head" {
 		t.Fatal("a finished Mission 3 save should open Beachy Head")
 	}
-	// Four Mission 4 phases, then the Mission 5 stub.
+	// Four Mission 4 phases, then Mission 5.
 	for i, want := range []struct {
 		phase, deploy, grenades int
 	}{
@@ -123,8 +123,41 @@ func TestCleanMission1ThenMission2Shows27(t *testing.T) {
 		p.Pool.Return(men)
 		p.OnPhaseWon()
 	}
-	if p.MissionsCompleted != 4 || !p.AwaitingStub || p.Phase != nil {
+	if p.MissionsCompleted != 4 || p.AwaitingStub || p.Phase == nil || p.Phase.Mission != 5 {
 		t.Fatalf("after M4: completed=%d stub=%v phase=%v", p.MissionsCompleted, p.AwaitingStub, p.Phase)
+	}
+	q5 := NewProgress()
+	q5.ApplySave(p.ToSave())
+	if q5.AwaitingStub || q5.Phase == nil || q5.Phase.Title != "Valley of Ice" {
+		t.Fatal("a finished Mission 4 save should open Valley of Ice")
+	}
+	for i, want := range []struct {
+		phase, deploy, rockets int
+	}{
+		{1, 3, 0},
+		{2, 3, 0},
+		{3, 4, 1},
+	} {
+		if p.Phase == nil || p.Phase.Phase != want.phase || p.DeployCount() != want.deploy {
+			t.Fatalf("M5 phase index %d: %+v deploy=%d", i, p.Phase, p.DeployCount())
+		}
+		if p.Phase.StartRocketsPerTrooper != want.rockets {
+			t.Fatalf("M5 phase %d start rockets=%d", want.phase, p.Phase.StartRocketsPerTrooper)
+		}
+		men := p.Pool.Deploy(p.DeployCount())
+		for j := range men {
+			men[j].PhasesThisMission++
+		}
+		p.Pool.Return(men)
+		p.OnPhaseWon()
+	}
+	if p.MissionsCompleted != 5 || !p.AwaitingStub || p.Phase != nil {
+		t.Fatalf("after M5: completed=%d stub=%v phase=%v", p.MissionsCompleted, p.AwaitingStub, p.Phase)
+	}
+	done := NewProgress()
+	done.ApplySave(p.ToSave())
+	if !done.AwaitingStub || done.Phase != nil || done.MissionsCompleted != 5 {
+		t.Fatalf("save after M5: stub=%v phase=%v completed=%d", done.AwaitingStub, done.Phase, done.MissionsCompleted)
 	}
 }
 

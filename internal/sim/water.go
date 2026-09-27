@@ -21,7 +21,7 @@ func (w *World) speedMul(u *Unit) float64 {
 // CanShoot is false in deep water (Amiga: swimming troopers cannot fire)
 // and while sinking in quicksand.
 func (w *World) CanShoot(u *Unit) bool {
-	if u == nil || !u.Living() || u.Sinking {
+	if u == nil || !u.Living() || u.Sinking || u.VehicleID != 0 {
 		return false
 	}
 	return w.Map.TileAtPixel(u.X, u.Y) != TileWaterDeep

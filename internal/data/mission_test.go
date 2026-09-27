@@ -391,7 +391,7 @@ func TestUnknownEnemyKind(t *testing.T) {
 		Deploy:      1,
 		PlayerStart: [2]int{1, 1},
 		Map:         Tilemap{W: 4, H: 4, Tiles: rows},
-		Enemies:     []Enemy{{X: 2, Y: 2, Kind: "rocketeer"}},
+		Enemies:     []Enemy{{X: 2, Y: 2, Kind: "tank"}},
 	}
 	if _, err := p.World(); err == nil {
 		t.Fatal("expected unknown enemy kind to fail")
@@ -598,6 +598,149 @@ func livingCivilians(w *sim.World) int {
 		}
 	}
 	return n
+}
+
+func TestMission5ValleyOfIce(t *testing.T) {
+	p := mustPhase(t, "m05p01.json")
+	if p.Mission != 5 || p.Phase != 1 || p.Deploy != 3 || p.Title != "Valley of Ice" || p.Terrain != "arctic" {
+		t.Fatalf("%d/%d %q deploy %d terrain %q", p.Mission, p.Phase, p.Title, p.Deploy, p.Terrain)
+	}
+	if p.StartGrenadesPerTrooper != 2 || p.StartRocketsPerTrooper != 0 {
+		t.Fatalf("grenades %d rockets %d", p.StartGrenadesPerTrooper, p.StartRocketsPerTrooper)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	assertGrenadeEconomy(t, w, 6, 8)
+	if !hasTile(w, sim.TileIce) {
+		t.Fatal("want an ice river")
+	}
+	if countKind(w, sim.KindRocketeer) < 2 {
+		t.Fatal("want the first rocketeers")
+	}
+	if !hasPickup(w, sim.PickupGrenades) || !hasPickup(w, sim.PickupRockets) {
+		t.Fatal("want a grenade crate and a rocket crate")
+	}
+	if !rocketeersBesideTrees(w) {
+		t.Fatal("rocketeers should stand beside a tree")
+	}
+	if w.ActiveSquad().Grenades != 6 {
+		t.Fatalf("starter grenades=%d, want 6", w.ActiveSquad().Grenades)
+	}
+	assertSpawnSurvives(t, w)
+}
+
+func TestMission5BarmyBazookas(t *testing.T) {
+	p := mustPhase(t, "m05p02.json")
+	if p.Title != "Barmy Bazookas" || p.Deploy != 3 || p.StartRocketsPerTrooper != 0 {
+		t.Fatalf("%q deploy %d rockets %d", p.Title, p.Deploy, p.StartRocketsPerTrooper)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	assertGrenadeEconomy(t, w, 6, 8)
+	if !hasTile(w, sim.TileWaterDeep) || !hasTile(w, sim.TileBridge) {
+		t.Fatal("want a river and a bridge")
+	}
+	if countKind(w, sim.KindRocketeer) < 4 {
+		t.Fatal("want many rocketeers")
+	}
+	if !rocketeersBesideTrees(w) {
+		t.Fatal("rocketeers should stand beside a tree")
+	}
+	assertSpawnSurvives(t, w)
+}
+
+func TestMission5Skidoo(t *testing.T) {
+	p := mustPhase(t, "m05p03.json")
+	if p.Title != "My Beautiful Skidoo" || p.Deploy != 4 || p.StartRocketsPerTrooper != 1 {
+		t.Fatalf("%q deploy %d rockets %d", p.Title, p.Deploy, p.StartRocketsPerTrooper)
+	}
+	if len(p.Objectives) != 1 || p.Objectives[0] != "destroy_enemy_buildings" {
+		t.Fatalf("objectives=%v", p.Objectives)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	assertGrenadeEconomy(t, w, 3, 4)
+	if !hasTile(w, sim.TileIce) {
+		t.Fatal("want ice to skid on")
+	}
+	if w.ActiveSquad().Rockets != 4 || w.ActiveSquad().Grenades != 8 {
+		t.Fatalf("rockets=%d grenades=%d, want 4 and 8", w.ActiveSquad().Rockets, w.ActiveSquad().Grenades)
+	}
+	player, enemy := 0, 0
+	for i := range w.Vehicles {
+		v := &w.Vehicles[i]
+		if !v.Alive || !v.Armed {
+			t.Fatal("skidoos should start armed and intact")
+		}
+		if v.Side == sim.SidePlayer && !vehicleOccupied(w, v) {
+			player++
+		}
+		if v.Side == sim.SideEnemy && vehicleOccupied(w, v) {
+			enemy++
+		}
+	}
+	if player != 1 || enemy != 1 {
+		t.Fatalf("player skidoos=%d enemy skidoos=%d", player, enemy)
+	}
+	assertSpawnSurvives(t, w)
+}
+
+func vehicleOccupied(w *sim.World, v *sim.Vehicle) bool {
+	for _, id := range v.Occupants {
+		if u := w.Unit(id); u != nil && u.Living() {
+			return true
+		}
+	}
+	return false
+}
+
+func countKind(w *sim.World, kind sim.UnitKind) int {
+	n := 0
+	for i := range w.Units {
+		if w.Units[i].Living() && w.Units[i].Kind == kind {
+			n++
+		}
+	}
+	return n
+}
+
+func hasPickup(w *sim.World, kind sim.PickupKind) bool {
+	for i := range w.Pickups {
+		if w.Pickups[i].Alive && w.Pickups[i].Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+func rocketeersBesideTrees(w *sim.World) bool {
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Kind != sim.KindRocketeer || !u.Living() {
+			continue
+		}
+		tx := int(u.X) / 16
+		ty := int(u.Y) / 16
+		near := false
+		for dy := -1; dy <= 1 && !near; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				if dx == 0 && dy == 0 {
+					continue
+				}
+				if w.Map.At(tx+dx, ty+dy) == sim.TileTree {
+					near = true
+					break
+				}
+			}
+		}
+		if !near {
+			return false
+		}
+	}
+	return true
 }
 
 func TestParseWaterTiles(t *testing.T) {

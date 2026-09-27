@@ -64,6 +64,15 @@ func NewHut() *Game {
 	return g
 }
 
+// NewSkidoo starts the skidoo and bazooka sandbox (chunk 20).
+func NewSkidoo() *Game {
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	g := &Game{prog: NewProgress()}
+	g.scene = NewSkidooBattle(g.prog)
+	g.scene.Enter()
+	return g
+}
+
 // NewHazard starts the civilian, quicksand, and mine sandbox (chunk 18).
 func NewHazard() *Game {
 	ebiten.SetCursorMode(ebiten.CursorModeHidden)
@@ -119,7 +128,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.scene.Draw(screen)
 	}
 	kind := render.PointerArrow
-	if g.pointer.Right ||
+	if b, ok := g.scene.(*Battle); ok {
+		kind = b.CursorKind(g.pointer)
+	} else if g.pointer.Right ||
 		ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
 		ebiten.IsKeyPressed(ebiten.KeyControlRight) {
 		kind = render.PointerCrosshair

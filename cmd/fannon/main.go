@@ -15,6 +15,7 @@ func main() {
 	river := flag.Bool("river", false, "debug river + bridge (water, swimming)")
 	hut := flag.Bool("hut", false, "debug spawner hut + grenade crate")
 	hazards := flag.Bool("hazards", false, "debug civilians, quicksand, and mines")
+	skidoo := flag.Bool("skidoo", false, "debug skidoo, bazooka, and an enemy skidoo")
 	flag.Parse()
 
 	ebiten.SetWindowTitle("Fannon Codder")
@@ -24,6 +25,8 @@ func main() {
 
 	var game *app.Game
 	switch {
+	case *skidoo:
+		game = app.NewSkidoo()
 	case *hazards:
 		game = app.NewHazard()
 	case *hut:

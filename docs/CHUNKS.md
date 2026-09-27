@@ -21,7 +21,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 17 Mission 3 (ice, cliffs, grenade economy)
 - [x] 18 Civilians, quicksand, mines
 - [x] 19 Mission 4 content + free grenades
-- [ ] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
+- [x] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
 
 ## Log
 
@@ -100,3 +100,20 @@ Verify: `go test ./...`. `go run ./cmd/fannon -hazards` — grass field, brown m
 ### Chunk 19 done
 Files: `data/missions/campaign.json`, `data/missions/m04p01.json`, `data/missions/m04p02.json`, `data/missions/m04p03.json`, `data/missions/m04p04.json`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/sim/unit.go`, `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/grenade.go`, `internal/render/units.go`, `internal/render/overview.go`, `internal/app/progress_test.go`.
 Verify: `go test ./...`. New game through Mission 4. Beachy Head (4 men, 5 huts, two crates, no free grenades): blow both crates and the phase cannot be finished. Pier Pressure onward, each trooper starts with 2 grenades (G8 with 4 men, G10 with 5). Village People has yellow civilians, doorless huts, and a quicksand pool; only the two door huts count. Quicksand has pools, mines, and orange grenadiers. A grenadier stops and shows a yellow bar, then throws; each carries two bombs and will not throw again for about five seconds. Mission 5 is still the stub.
+
+### Chunk 20 done
+Files: `internal/sim/rocket.go`, `internal/sim/rocket_test.go`, `internal/sim/vehicle.go`, `internal/sim/vehicle_test.go`, `internal/sim/projectile.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/grenade.go`, `internal/sim/world.go`, `internal/sim/hazard.go`, `internal/sim/split.go`, `internal/sim/water.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/overview.go`, `internal/render/pointer.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/app/stub.go`, `internal/app/boothill.go`, `internal/app/progress_test.go`, `cmd/fannon/main.go`, `data/missions/campaign.json`, `data/missions/m05p01.json`, `data/missions/m05p02.json`, `data/missions/m05p03.json`.
+Verify: `go test ./...`. New game through Mission 5, then save. Valley of Ice: 3 men, 6 huts, an ice river, rocketeers beside trees, a grenade crate and a rocket crate. Barmy Bazookas: 3 men, 6 huts, a bridge, many rocketeers. My Beautiful Skidoo: 4 men, 3 huts, a player skidoo, each man starts with 1 rocket (R4). Select R (or press C), then right-hold and left-click or Space to fire; a rocket destroys a hut or a skidoo, and the MG does not. Pointer over the empty skidoo is a board box; left click sends the squad in (or boards immediately if they are already on it). Hold left to drive — longer hold, higher speed. On ice the skidoo keeps sliding after you release. Right fires the mounted gun when the skidoo is armed. Grenades and rockets do not fire from inside. Running someone over kills them. The enemy skidoo has a red blinker. After Mission 5, Boot Hill says the campaign continues another day. `go run ./cmd/fannon -skidoo` is a small field with a skidoo, a rocket crate, a hut, and an enemy skidoo.
+
+## Backlog
+
+- Jeeps (skin of the skidoo), tanks, static turrets, choppers
+- Hostages, kidnap, factories, protect-civilians fail
+- Desert, moors, and underground tiles
+- Missions 6–24 as data
+- Wounded troopers and finishing them; corpse juggling
+- Pixel art and original-feeling audio
+- Birds, snowmen, igloos
+- High Scoring Heroes
+- Fullscreen and integer-scale options
+- Headless sim replay for each phase

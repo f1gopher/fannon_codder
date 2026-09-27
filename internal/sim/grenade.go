@@ -27,6 +27,7 @@ type PickupKind int
 
 const (
 	PickupGrenades PickupKind = iota
+	PickupRockets
 )
 
 // Pickup is a crate. Walking over a grenade crate adds ammo; shooting it explodes.
@@ -66,7 +67,7 @@ func (w *World) AddGrenadeCrate(p Vec2) {
 	})
 }
 
-// Special is the weapon a chord or Space uses. Bazookas arrive later.
+// Special is the weapon a chord or Space uses.
 type Special int
 
 const (
@@ -153,7 +154,10 @@ func (w *World) launchGrenade(u *Unit, x, y float64) {
 func (w *World) stepPickups() {
 	for pi := range w.Pickups {
 		p := &w.Pickups[pi]
-		if !p.Alive || p.Kind != PickupGrenades {
+		if !p.Alive {
+			continue
+		}
+		if p.Kind != PickupGrenades && p.Kind != PickupRockets {
 			continue
 		}
 		for i := range w.Units {
@@ -165,7 +169,11 @@ func (w *World) stepPickups() {
 				continue
 			}
 			if s := w.SquadByID(u.SquadID); s != nil {
-				s.Grenades += p.Amount
+				if p.Kind == PickupRockets {
+					s.Rockets += p.Amount
+				} else {
+					s.Grenades += p.Amount
+				}
 			}
 			p.Alive = false
 			break
@@ -225,6 +233,16 @@ func (w *World) explode(x, y float64, ownerID int) {
 		if owner := w.Unit(ownerID); owner != nil && owner.Living() && owner.ID != u.ID {
 			owner.Kills++
 		}
+	}
+	for i := range w.Vehicles {
+		v := &w.Vehicles[i]
+		if !v.Alive {
+			continue
+		}
+		if hypot(v.X-x, v.Y-y) > GrenadeRadius+VehicleHitR {
+			continue
+		}
+		w.destroyVehicle(v)
 	}
 	for i := range w.Buildings {
 		b := &w.Buildings[i]

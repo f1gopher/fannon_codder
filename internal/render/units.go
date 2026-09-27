@@ -18,7 +18,9 @@ var (
 	civilianFill  = color.RGBA{R: 0xe6, G: 0xd2, B: 0x3a, A: 0xff}
 	civilianDead  = color.RGBA{R: 0x6a, G: 0x5a, B: 0x20, A: 0xff}
 	grenadierFill = color.RGBA{R: 0xe0, G: 0x60, B: 0x18, A: 0xff}
+	rocketeerFill = color.RGBA{R: 0x78, G: 0x18, B: 0x38, A: 0xff}
 	grenadeWindup = color.RGBA{R: 0xff, G: 0xd0, B: 0x30, A: 0xff}
+	rocketShot    = color.RGBA{R: 0xf0, G: 0x78, B: 0x20, A: 0xff}
 	tracerFill    = color.RGBA{R: 0xff, G: 0xff, B: 0xa0, A: 0xff}
 	spriteCache   = map[color.RGBA]*ebiten.Image{}
 	tracerSprite  *ebiten.Image
@@ -51,6 +53,9 @@ func unitColor(u *sim.Unit) color.RGBA {
 	if u.Side == sim.SideEnemy {
 		if u.Kind == sim.KindGrenadier {
 			return grenadierFill
+		}
+		if u.Kind == sim.KindRocketeer {
+			return rocketeerFill
 		}
 		if u.InWater {
 			return enemySwim
@@ -103,12 +108,15 @@ func Units(dst *ebiten.Image, w *sim.World) {
 	half := float64(sim.UnitSize) / 2
 	for i := range w.Units {
 		u := &w.Units[i]
+		if u.VehicleID != 0 {
+			continue
+		}
 		s, drop := unitPose(u)
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Scale(s, s)
 		op.GeoM.Translate(u.X-w.Camera.X-half*s, u.Y-w.Camera.Y-half*s+drop)
 		dst.DrawImage(unitSprite(unitColor(u)), op)
-		if u.Living() && u.GrenadeWind > 0 {
+		if u.Living() && (u.GrenadeWind > 0 || u.RocketWind > 0) {
 			fillRect(dst, int(u.X-w.Camera.X)-2, int(u.Y-w.Camera.Y)-7, 4, 2, grenadeWindup)
 		}
 	}
@@ -126,6 +134,10 @@ func Projectiles(dst *ebiten.Image, w *sim.World) {
 	for i := range w.Projectiles {
 		p := &w.Projectiles[i]
 		if !p.Alive {
+			continue
+		}
+		if p.Kind == sim.ProjRocket {
+			fillRect(dst, int(p.X-w.Camera.X)-2, int(p.Y-w.Camera.Y)-1, 5, 3, rocketShot)
 			continue
 		}
 		op := &ebiten.DrawImageOptions{}

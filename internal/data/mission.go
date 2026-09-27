@@ -24,14 +24,26 @@ type Phase struct {
 	Terrain  string `json:"terrain"`
 	// StartGrenadesPerTrooper is free bombs each deployed man carries.
 	// Pier Pressure onward sets 2. Beachy Head leaves it 0.
-	StartGrenadesPerTrooper int            `json:"startGrenadesPerTrooper"`
-	Map                     Tilemap        `json:"map"`
-	PlayerStart             [2]int         `json:"playerStart"`
-	Enemies                 []Enemy        `json:"enemies"`
-	Civilians               []Enemy        `json:"civilians"`
-	Buildings               []BuildingSpec `json:"buildings"`
-	Pickups                 []PickupSpec   `json:"pickups"`
-	Objectives              []string       `json:"objectives"`
+	StartGrenadesPerTrooper int `json:"startGrenadesPerTrooper"`
+	// StartRocketsPerTrooper is free bazooka rounds. My Beautiful Skidoo sets 1.
+	StartRocketsPerTrooper int            `json:"startRocketsPerTrooper"`
+	Map                    Tilemap        `json:"map"`
+	PlayerStart            [2]int         `json:"playerStart"`
+	Enemies                []Enemy        `json:"enemies"`
+	Civilians              []Enemy        `json:"civilians"`
+	Buildings              []BuildingSpec `json:"buildings"`
+	Pickups                []PickupSpec   `json:"pickups"`
+	Vehicles               []VehicleSpec  `json:"vehicles"`
+	Objectives             []string       `json:"objectives"`
+}
+
+// VehicleSpec is a skidoo. Side is "player" or "enemy".
+type VehicleSpec struct {
+	X     int    `json:"x"`
+	Y     int    `json:"y"`
+	Kind  string `json:"kind"`
+	Armed bool   `json:"armed"`
+	Side  string `json:"side"`
 }
 
 // BuildingSpec is a hut in tile coordinates (top-left). Door huts spawn grunts.
@@ -158,6 +170,14 @@ func (p *Phase) World() (*sim.World, error) {
 			s.Grenades = p.StartGrenadesPerTrooper * len(s.MemberIDs)
 		}
 	}
+	if p.StartRocketsPerTrooper < 0 {
+		return nil, fmt.Errorf("startRocketsPerTrooper %d", p.StartRocketsPerTrooper)
+	}
+	if p.StartRocketsPerTrooper > 0 {
+		if s := w.ActiveSquad(); s != nil {
+			s.Rockets = p.StartRocketsPerTrooper * len(s.MemberIDs)
+		}
+	}
 
 	for _, e := range p.Enemies {
 		u := w.SpawnUnit(sim.SideEnemy, sim.TileCenter(e.X, e.Y))
@@ -167,6 +187,9 @@ func (p *Phase) World() (*sim.World, error) {
 			u.Kind = sim.KindGrenadier
 			u.Bombs = sim.GrenadierBombs
 			u.GrenadeCD = sim.GrenadierFirstDelay
+		case "rocketeer":
+			u.Kind = sim.KindRocketeer
+			u.RocketCD = sim.RocketeerFirstDelay
 		default:
 			return nil, fmt.Errorf("unknown enemy %q", e.Kind)
 		}
@@ -181,9 +204,25 @@ func (p *Phase) World() (*sim.World, error) {
 		switch pk.Kind {
 		case "grenade", "grenades":
 			w.AddGrenadeCrate(sim.TileCenter(pk.X, pk.Y))
+		case "rocket", "rockets":
+			w.AddRocketCrate(sim.TileCenter(pk.X, pk.Y))
 		default:
 			return nil, fmt.Errorf("unknown pickup %q", pk.Kind)
 		}
+	}
+	for _, v := range p.Vehicles {
+		if v.Kind != "" && v.Kind != "skidoo" {
+			return nil, fmt.Errorf("unknown vehicle %q", v.Kind)
+		}
+		side := sim.SidePlayer
+		switch v.Side {
+		case "", "player":
+		case "enemy":
+			side = sim.SideEnemy
+		default:
+			return nil, fmt.Errorf("unknown vehicle side %q", v.Side)
+		}
+		w.AddSkidoo(sim.TileCenter(v.X, v.Y), side, v.Armed)
 	}
 	return w, nil
 }

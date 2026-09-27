@@ -87,13 +87,27 @@ func Overview(dst *ebiten.Image, w *sim.World) {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if !u.Living() {
+		if !u.Living() || u.VehicleID != 0 {
 			continue
 		}
 		fillRect(dst,
 			ox+int(u.X/pw*float64(drawW))-dot/2,
 			oy+int(u.Y/ph*float64(drawH))-dot/2,
 			dot, dot, overviewUnit(u))
+	}
+	for i := range w.Vehicles {
+		v := &w.Vehicles[i]
+		if !v.Alive {
+			continue
+		}
+		c := color.RGBA{R: 0xd8, G: 0xd8, B: 0xdc, A: 0xff}
+		if v.Side == sim.SideEnemy {
+			c = color.RGBA{R: 0xe0, G: 0x30, B: 0x30, A: 0xff}
+		}
+		fillRect(dst,
+			ox+int(v.X/pw*float64(drawW))-dot/2,
+			oy+int(v.Y/ph*float64(drawH))-dot/2,
+			dot, dot, c)
 	}
 	strokeView(dst, ox, oy, drawW, drawH, pw, ph, w.Camera)
 }
@@ -127,6 +141,9 @@ func overviewUnit(u *sim.Unit) color.RGBA {
 	if u.Side == sim.SideEnemy {
 		if u.Kind == sim.KindGrenadier {
 			return color.RGBA{R: 0xe0, G: 0x60, B: 0x18, A: 0xff}
+		}
+		if u.Kind == sim.KindRocketeer {
+			return color.RGBA{R: 0x78, G: 0x18, B: 0x38, A: 0xff}
 		}
 		return color.RGBA{R: 0xe0, G: 0x30, B: 0x30, A: 0xff}
 	}

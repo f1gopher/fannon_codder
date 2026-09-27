@@ -58,6 +58,9 @@ func (w *World) Split() bool {
 	if active == nil {
 		return false
 	}
+	if leader := w.Unit(active.LeaderID); leader != nil && leader.VehicleID != 0 {
+		return false
+	}
 	sel := map[int]bool{}
 	for _, id := range w.Selected {
 		sel[id] = true

@@ -18,7 +18,7 @@ func (w *World) trapQuicksand() {
 }
 
 func (w *World) noteQuicksand(u *Unit) {
-	if u == nil || !u.Living() || u.Sinking {
+	if u == nil || !u.Living() || u.Sinking || u.VehicleID != 0 {
 		return
 	}
 	if w.Map.TileAtPixel(u.X, u.Y) == TileQuicksand {
@@ -55,7 +55,7 @@ func (w *World) stepMines() {
 	seen := map[[2]int]bool{}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if !u.Living() {
+		if !u.Living() || u.VehicleID != 0 {
 			continue
 		}
 		tx := int(math.Floor(u.X / float64(TileSize)))
@@ -77,6 +77,23 @@ func (w *World) stepMines() {
 		w.Map.Set(h.tx, h.ty, TileGrass)
 		c := TileCenter(h.tx, h.ty)
 		w.explode(c.X, c.Y, h.id)
+	}
+	if !w.Map.active() {
+		return
+	}
+	for i := range w.Vehicles {
+		v := &w.Vehicles[i]
+		if !v.Alive {
+			continue
+		}
+		tx := int(math.Floor(v.X / float64(TileSize)))
+		ty := int(math.Floor(v.Y / float64(TileSize)))
+		if w.Map.At(tx, ty) != TileMine {
+			continue
+		}
+		w.Map.Set(tx, ty, TileGrass)
+		c := TileCenter(tx, ty)
+		w.explode(c.X, c.Y, 0)
 	}
 }
 

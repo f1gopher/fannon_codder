@@ -16,6 +16,7 @@ type World struct {
 	Pickups     []Pickup
 	Grenades    []Grenade
 	Explosions  []Explosion
+	Vehicles    []Vehicle
 	AimX, AimY  float64
 	Firing      bool
 	Spread      float64
@@ -28,7 +29,12 @@ type World struct {
 	GrenadeShare AmmoShare
 	RocketShare  AmmoShare
 	Special      Special
+	BoardID      int
+	Driving      bool
+	DriveX       float64
+	DriveY       float64
 	nextID       int
+	nextVID      int
 	rng          *rand.Rand
 }
 
@@ -46,6 +52,7 @@ func NewEmpty() *World {
 		Status:     Playing,
 		Objectives: []Objective{KillAllEnemy},
 		nextID:     1,
+		nextVID:    1,
 		rng:        newRNG(),
 	}
 }
@@ -142,6 +149,34 @@ func NewHutWorld() *World {
 	w.AddDoorHut(13, 3)
 	w.AddGrenadeCrate(TileCenter(10, 9))
 	w.SpawnUnit(SideEnemy, w.Buildings[0].DoorSpawn())
+	w.refreshTerrain()
+	return w
+}
+
+// NewSkidooWorld is the chunk 20 sandbox: a skidoo, a rocket crate, and a hut.
+func NewSkidooWorld() *World {
+	const W, H = 24, 18
+	tiles := make([]Tile, W*H)
+	for tx := 8; tx <= 14; tx++ {
+		for ty := 8; ty <= 10; ty++ {
+			tiles[ty*W+tx] = TileIce
+		}
+	}
+	w := NewEmpty()
+	w.Map = Map{W: W, H: H, Tiles: tiles}
+	mw, mh := w.Map.PixelSize()
+	w.Camera.MapW = mw
+	w.Camera.MapH = mh
+	w.Objectives = []Objective{DestroyEnemyBuildings}
+	start := TileCenter(4, 14)
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{
+		start,
+		{X: start.X - FileSpacing, Y: start.Y},
+	})
+	w.AddSkidoo(TileCenter(8, 14), SidePlayer, true)
+	w.AddRocketCrate(TileCenter(6, 12))
+	w.AddBuilding(16, 3, 2, 2, true, SpawnEvery)
+	w.AddSkidoo(TileCenter(20, 4), SideEnemy, true)
 	w.refreshTerrain()
 	return w
 }
@@ -248,6 +283,7 @@ func (w *World) CommandMove(x, y float64, newOrder bool) {
 	s.DestX = x
 	s.DestY = y
 	if newOrder {
+		w.BoardID = 0
 		if l := w.Unit(s.LeaderID); l != nil {
 			s.Trail = []Vec2{{X: l.X, Y: l.Y}}
 		}
@@ -264,11 +300,13 @@ func (w *World) Step(dt float64) {
 	for i := range w.Squads {
 		w.stepSquad(&w.Squads[i], dt)
 	}
+	w.tryCompleteBoard()
 	w.stepMerge()
 	w.stepPickups()
 	w.refreshTerrain()
 	w.stepCivilians(dt)
 	w.stepAI(dt)
+	w.stepVehicles(dt)
 	w.stepMines()
 	w.stepQuicksand(dt)
 	w.stepFire(dt)
@@ -291,6 +329,11 @@ func (w *World) stepSquad(s *Squad, dt float64) {
 			return
 		}
 		s.LeaderID = leader.ID
+	}
+	if leader.VehicleID != 0 {
+		leader.VX = 0
+		leader.VY = 0
+		return
 	}
 	if s.HasDest {
 		arrived := w.steerToward(leader, s.DestX, s.DestY, WalkSpeed, dt, ArrivalRadius)

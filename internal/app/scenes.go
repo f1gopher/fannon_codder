@@ -36,7 +36,9 @@ var (
 )
 
 // Title is the click-through splash.
-type Title struct{}
+type Title struct {
+	continues bool
+}
 
 func NewTitle() *Title { return &Title{} }
 
@@ -44,6 +46,9 @@ func (t *Title) Enter() {}
 func (t *Title) Leave() {}
 
 func (t *Title) Update(h Host) error {
+	if prog := h.Progress(); prog != nil && prog.MissionsCompleted >= 5 {
+		t.continues = true
+	}
 	p := h.Pointer()
 	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		h.Switch(NewBootHill(h.Progress()))
@@ -53,7 +58,11 @@ func (t *Title) Update(h Host) error {
 
 func (t *Title) Draw(screen *ebiten.Image) {
 	screen.Fill(titleColor)
-	ebitenutil.DebugPrint(screen, "FANNON CODDER\n\nClick or press Enter")
+	msg := "FANNON CODDER\n\nClick or press Enter"
+	if t.continues {
+		msg += "\n\nThe campaign continues another day."
+	}
+	ebitenutil.DebugPrint(screen, msg)
 }
 
 // Battle is one phase on the map.
@@ -97,6 +106,11 @@ func NewRiverBattle(prog *Progress) *Battle {
 // NewHutBattle is the chunk 14 sandbox: a spawner hut and a grenade crate.
 func NewHutBattle(prog *Progress) *Battle {
 	return battleFromWorld(prog, sim.NewHutWorld(), true)
+}
+
+// NewSkidooBattle is the chunk 20 sandbox: skidoo, rocket crate, hut.
+func NewSkidooBattle(prog *Progress) *Battle {
+	return battleFromWorld(prog, sim.NewSkidooWorld(), true)
 }
 
 // NewHazardBattle is the chunk 18 sandbox: mine, quicksand, civilian, doorless hut.
@@ -175,6 +189,25 @@ func nameSquad(w *sim.World, men []campaign.Soldier) {
 func (b *Battle) Enter() {}
 func (b *Battle) Leave() {}
 
+// CursorKind is the playfield pointer: board and exit sit on a skidoo.
+func (b *Battle) CursorKind(p input.Pointer) int {
+	if p.Right || ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight) {
+		return render.PointerCrosshair
+	}
+	if b.world == nil || b.mapOpen || p.X < float64(render.HUDWidth) {
+		return render.PointerArrow
+	}
+	hover, _ := b.world.VehicleHover(p.X+b.world.Camera.X, p.Y+b.world.Camera.Y)
+	switch hover {
+	case sim.HoverBoard:
+		return render.PointerBoard
+	case sim.HoverExit:
+		return render.PointerExit
+	default:
+		return render.PointerArrow
+	}
+}
+
 func (b *Battle) Update(h Host) error {
 	p := h.Pointer()
 	if b.world.Status != sim.Playing {
@@ -204,9 +237,11 @@ func (b *Battle) Update(h Host) error {
 	wx := p.X + b.world.Camera.X
 	wy := p.Y + b.world.Camera.Y
 	onHUD := p.X < float64(render.HUDWidth)
+	hover, veh := b.world.VehicleHover(wx, wy)
+	inVeh := b.world.LeaderInVehicle()
 	// Right-held + left click, or Space: leader's selected special. Not a move order.
 	if !onHUD && !b.mapOpen && (p.ChordGrenade || inpututil.IsKeyJustPressed(ebiten.KeySpace)) {
-		b.world.ThrowGrenade(wx, wy)
+		b.world.UseSpecial(wx, wy)
 	}
 	if p.LeftDown && onHUD {
 		kind, id := render.HitHUD(b.world, p.X, p.Y)
@@ -226,12 +261,20 @@ func (b *Battle) Update(h Host) error {
 		}
 	} else if p.LeftDown && b.mapOpen {
 		b.mapOpen = false
+	} else if p.LeftDown && !p.ChordGrenade && hover == sim.HoverBoard && veh != nil {
+		b.world.CommandBoard(veh.ID)
+	} else if p.LeftDown && !p.ChordGrenade && hover == sim.HoverExit && veh != nil {
+		b.world.CommandExit(veh.ID)
+	} else if !onHUD && !b.mapOpen && inVeh && (p.LeftDown || p.Left) && !p.ChordGrenade {
+		b.world.SetDrive(wx, wy, true)
 	} else if p.LeftDown && !p.ChordGrenade {
 		b.world.CommandMove(wx, wy, true)
 	} else if p.Left && !onHUD && !b.mapOpen {
 		if s := b.world.ActiveSquad(); s != nil && s.HasDest {
 			b.world.CommandMove(wx, wy, false)
 		}
+	} else if inVeh {
+		b.world.SetDrive(wx, wy, false)
 	}
 	if onHUD || b.mapOpen {
 		b.world.SetFire(b.world.AimX, b.world.AimY, false)
@@ -307,6 +350,7 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	render.Tiles(screen, b.world.Map, b.world.Camera)
 	render.Solids(screen, b.world)
 	render.Units(screen, b.world)
+	render.Vehicles(screen, b.world)
 	render.Projectiles(screen, b.world)
 	render.Grenades(screen, b.world)
 	if b.mapOpen {

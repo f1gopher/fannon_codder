@@ -24,6 +24,7 @@ type UnitKind int
 const (
 	KindInfantry UnitKind = iota
 	KindGrenadier
+	KindRocketeer
 )
 
 // Unit is one trooper (or later, a corpse still drawn on the map).
@@ -50,6 +51,8 @@ type Unit struct {
 	Bombs       int     // grenades a grenadier still carries
 	GrenadeWind float64 // seconds left in the throw telegraph; the bomb leaves at 0
 	GrenadeCD   float64 // seconds until the next windup may start
+	RocketWind  float64 // rocketeer aim telegraph
+	RocketCD    float64 // seconds until the next rocket windup
 }
 
 func (u *Unit) Dead() bool { return u.HP == Dead }

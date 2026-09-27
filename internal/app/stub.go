@@ -32,6 +32,13 @@ func (s *MissionStub) Update(h Host) error {
 func (s *MissionStub) Draw(screen *ebiten.Image) {
 	screen.Fill(stubBG)
 	n := s.prog.MissionsCompleted + 1
+	if s.prog.MissionsCompleted >= 5 {
+		ebitenutil.DebugPrint(screen, fmt.Sprintf(
+			"THE CAMPAIGN CONTINUES\nANOTHER DAY\n\nQueue %d\n\nClick or Enter — Boot Hill",
+			s.prog.Pool.Remaining(),
+		))
+		return
+	}
 	ebitenutil.DebugPrint(screen, fmt.Sprintf(
 		"MISSION %d\n\nNot implemented yet.\n\nQueue %d\n\nClick or Enter — Boot Hill",
 		n, s.prog.Pool.Remaining(),

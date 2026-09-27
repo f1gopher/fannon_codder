@@ -73,7 +73,7 @@ Inactive player squads still fire as soon as they have a target. Enemy vehicles 
 
 ## Camera
 
-Pointer-driven edge scroll, clamped to the map. Soft inner margin around the active leader. Mission 1 is one screen (no scroll).
+Pointer-driven edge scroll, clamped to the map. The view is the playfield beside the status strip, so a map the width of the full screen still scrolls by the strip's width. The active leader stays inside a soft inner margin.
 
 ## Campaign
 

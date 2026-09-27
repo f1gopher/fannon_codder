@@ -1,6 +1,7 @@
 package app
 
 import (
+	"image"
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -118,7 +119,17 @@ func NewHazardBattle(prog *Progress) *Battle {
 	return battleFromWorld(prog, sim.NewHazardWorld(), true)
 }
 
+// applyPlayfield sizes the camera to the area beside the status strip.
+// A map as wide as the full screen can still pan by the strip's width,
+// so the west edge is not stuck underneath it.
+func applyPlayfield(w *sim.World) {
+	w.Camera.ViewW = float64(ScreenWidth - render.HUDWidth)
+	w.Camera.ViewH = float64(ScreenHeight)
+	w.Camera.OriginX = float64(render.HUDWidth)
+}
+
 func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
+	applyPlayfield(w)
 	if s := w.ActiveSquad(); s != nil {
 		if l := w.Unit(s.LeaderID); l != nil {
 			w.Camera.CenterOn(l.X, l.Y)
@@ -197,7 +208,7 @@ func (b *Battle) CursorKind(p input.Pointer) int {
 	if b.world == nil || b.mapOpen || p.X < float64(render.HUDWidth) {
 		return render.PointerArrow
 	}
-	hover, _ := b.world.VehicleHover(p.X+b.world.Camera.X, p.Y+b.world.Camera.Y)
+	hover, _ := b.world.VehicleHover(b.world.Camera.WorldX(p.X), b.world.Camera.WorldY(p.Y))
 	switch hover {
 	case sim.HoverBoard:
 		return render.PointerBoard
@@ -234,8 +245,8 @@ func (b *Battle) Update(h Host) error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
 		b.world.ToggleSpecial()
 	}
-	wx := p.X + b.world.Camera.X
-	wy := p.Y + b.world.Camera.Y
+	wx := b.world.Camera.WorldX(p.X)
+	wy := b.world.Camera.WorldY(p.Y)
 	onHUD := p.X < float64(render.HUDWidth)
 	hover, veh := b.world.VehicleHover(wx, wy)
 	inVeh := b.world.LeaderInVehicle()
@@ -291,6 +302,9 @@ func (b *Battle) Update(h Host) error {
 		)
 	}
 	b.world.Step(1.0 / TPS)
+	if x, y, ok := b.world.CameraFocus(); ok {
+		b.world.Camera.Contain(x, y)
+	}
 	return nil
 }
 
@@ -347,12 +361,13 @@ func (b *Battle) battlefieldColor() color.Color {
 
 func (b *Battle) Draw(screen *ebiten.Image) {
 	screen.Fill(b.battlefieldColor())
-	render.Tiles(screen, b.world.Map, b.world.Camera)
-	render.Solids(screen, b.world)
-	render.Units(screen, b.world)
-	render.Vehicles(screen, b.world)
-	render.Projectiles(screen, b.world)
-	render.Grenades(screen, b.world)
+	play := screen.SubImage(image.Rect(render.HUDWidth, 0, ScreenWidth, ScreenHeight)).(*ebiten.Image)
+	render.Tiles(play, b.world.Map, b.world.Camera)
+	render.Solids(play, b.world)
+	render.Units(play, b.world)
+	render.Vehicles(play, b.world)
+	render.Projectiles(play, b.world)
+	render.Grenades(play, b.world)
 	if b.mapOpen {
 		render.Overview(screen, b.world)
 	}

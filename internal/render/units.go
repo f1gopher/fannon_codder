@@ -102,7 +102,7 @@ func squadFill(id sim.SquadID, swim bool) color.RGBA {
 	}
 }
 
-// Units draws placeholder troopers in screen space (world minus camera).
+// Units draws placeholder troopers in screen space.
 func Units(dst *ebiten.Image, w *sim.World) {
 	if w == nil {
 		return
@@ -116,15 +116,15 @@ func Units(dst *ebiten.Image, w *sim.World) {
 		s, drop := unitPose(u)
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Scale(s, s)
-		op.GeoM.Translate(u.X-w.Camera.X-half*s, u.Y-w.Camera.Y-half*s+drop)
+		op.GeoM.Translate(w.Camera.ScreenX(u.X)-half*s, w.Camera.ScreenY(u.Y)-half*s+drop)
 		dst.DrawImage(unitSprite(unitColor(u)), op)
 		if u.Living() {
 			// Nose so a grunt's turn is visible before he fires.
 			nx, ny := math.Cos(u.Facing), math.Sin(u.Facing)
-			fillRect(dst, int(u.X-w.Camera.X+nx*5), int(u.Y-w.Camera.Y+ny*5), 2, 2, facingFill)
+			fillRect(dst, int(w.Camera.ScreenX(u.X)+nx*5), int(w.Camera.ScreenY(u.Y)+ny*5), 2, 2, facingFill)
 		}
 		if u.Living() && (u.GrenadeWind > 0 || u.RocketWind > 0) {
-			fillRect(dst, int(u.X-w.Camera.X)-2, int(u.Y-w.Camera.Y)-7, 4, 2, grenadeWindup)
+			fillRect(dst, int(w.Camera.ScreenX(u.X))-2, int(w.Camera.ScreenY(u.Y))-7, 4, 2, grenadeWindup)
 		}
 	}
 }
@@ -144,11 +144,11 @@ func Projectiles(dst *ebiten.Image, w *sim.World) {
 			continue
 		}
 		if p.Kind == sim.ProjRocket {
-			fillRect(dst, int(p.X-w.Camera.X)-2, int(p.Y-w.Camera.Y)-1, 5, 3, rocketShot)
+			fillRect(dst, int(w.Camera.ScreenX(p.X))-2, int(w.Camera.ScreenY(p.Y))-1, 5, 3, rocketShot)
 			continue
 		}
 		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(p.X-w.Camera.X-1, p.Y-w.Camera.Y-1)
+		op.GeoM.Translate(w.Camera.ScreenX(p.X)-1, w.Camera.ScreenY(p.Y)-1)
 		dst.DrawImage(tracerSprite, op)
 	}
 }

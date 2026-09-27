@@ -139,7 +139,7 @@ Player MG does **not** harm living friendlies. Explosives and vehicles kill ever
 
 ### Camera
 
-Pointer-driven edge scroll, clamped to the map. Also keep the active leader from leaving a soft inner margin. Mission 1’s map is one screen, so no scroll there.
+Pointer-driven edge scroll, clamped to the map. The view is the playfield beside the status strip, so a map the width of the full screen still scrolls by the strip's width. Keep the active leader inside a soft inner margin.
 
 ### Campaign numbers (Amiga)
 

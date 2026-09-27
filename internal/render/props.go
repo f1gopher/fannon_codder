@@ -28,8 +28,8 @@ func Solids(dst *ebiten.Image, w *sim.World) {
 		if !b.Alive {
 			continue
 		}
-		x := int(b.X - cam.X)
-		y := int(b.Y - cam.Y)
+		x := int(cam.ScreenX(b.X))
+		y := int(cam.ScreenY(b.Y))
 		fillRect(dst, x, y, int(b.W), int(b.H), hutFill)
 		if b.HasDoor {
 			fillRect(dst, x+int(b.W)/2-3, y+int(b.H)-8, 6, 6, doorFill)
@@ -40,8 +40,8 @@ func Solids(dst *ebiten.Image, w *sim.World) {
 		if !p.Alive {
 			continue
 		}
-		x := int(p.X-cam.X) - 6
-		y := int(p.Y-cam.Y) - 6
+		x := int(cam.ScreenX(p.X)) - 6
+		y := int(cam.ScreenY(p.Y)) - 6
 		fillRect(dst, x, y, 12, 12, crateFill)
 		label := "G"
 		if p.Kind == sim.PickupRockets {
@@ -65,8 +65,8 @@ func Vehicles(dst *ebiten.Image, w *sim.World) {
 		if !v.Alive {
 			continue
 		}
-		x := int(v.X-cam.X) - 10
-		y := int(v.Y-cam.Y) - 6
+		x := int(cam.ScreenX(v.X)) - 10
+		y := int(cam.ScreenY(v.Y)) - 6
 		fillRect(dst, x, y, 20, 12, trim)
 		fillRect(dst, x+1, y+1, 18, 10, body)
 		if v.Side == sim.SideEnemy && int(v.Blink*6)%2 == 0 {
@@ -86,13 +86,13 @@ func Grenades(dst *ebiten.Image, w *sim.World) {
 		if !g.Alive {
 			continue
 		}
-		fillRect(dst, int(g.X-cam.X)-1, int(g.Y-g.Height-cam.Y)-1, 3, 3, bombFill)
+		fillRect(dst, int(cam.ScreenX(g.X))-1, int(cam.ScreenY(g.Y-g.Height))-1, 3, 3, bombFill)
 	}
 	for i := range w.Explosions {
 		e := &w.Explosions[i]
 		r := int(e.R)
-		x := int(e.X-cam.X) - r
-		y := int(e.Y-cam.Y) - r
+		x := int(cam.ScreenX(e.X)) - r
+		y := int(cam.ScreenY(e.Y)) - r
 		s := r * 2
 		fillRect(dst, x, y, s, 1, blastFill)
 		fillRect(dst, x, y+s, s, 1, blastFill)

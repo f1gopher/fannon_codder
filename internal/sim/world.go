@@ -262,6 +262,23 @@ func (w *World) Unit(id int) *Unit {
 	return nil
 }
 
+// CameraFocus is the point the view keeps on screen: the driven vehicle,
+// or the active leader on foot.
+func (w *World) CameraFocus() (x, y float64, ok bool) {
+	s := w.ActiveSquad()
+	if s == nil {
+		return 0, 0, false
+	}
+	if v := w.leaderVehicle(); v != nil && v.Alive {
+		return v.X, v.Y, true
+	}
+	u := w.Unit(s.LeaderID)
+	if u == nil || !u.Living() {
+		return 0, 0, false
+	}
+	return u.X, u.Y, true
+}
+
 func (w *World) ActiveSquad() *Squad {
 	for i := range w.Squads {
 		if w.Squads[i].Active {

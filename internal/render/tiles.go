@@ -76,8 +76,8 @@ func Tiles(dst *ebiten.Image, m sim.Map, cam sim.Camera) {
 			}
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(
-				float64(tx*sim.TileSize)-cam.X,
-				float64(ty*sim.TileSize)-cam.Y,
+				cam.ScreenX(float64(tx*sim.TileSize)),
+				cam.ScreenY(float64(ty*sim.TileSize)),
 			)
 			dst.DrawImage(img, op)
 		}

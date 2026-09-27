@@ -3,8 +3,10 @@ package app
 import (
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"fannon-codder/internal/audio"
 	"fannon-codder/internal/input"
 	"fannon-codder/internal/render"
+	"fannon-codder/internal/sim"
 )
 
 const (
@@ -23,11 +25,20 @@ type Game struct {
 	tracker input.Tracker
 	pointer input.Pointer
 	prog    *Progress
+	sound   *audio.Mixer
+}
+
+// newShell is the window shell shared by every entry point, including the sandboxes.
+func newShell() *Game {
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	return &Game{
+		prog:  NewProgress(),
+		sound: audio.NewMixer(),
+	}
 }
 
 func New(skipTitle bool) *Game {
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	g := &Game{prog: NewProgress()}
+	g := newShell()
 	if skipTitle {
 		g.scene = NewBootHill(g.prog)
 	} else {
@@ -39,8 +50,7 @@ func New(skipTitle bool) *Game {
 
 // NewCover starts the oversized tree-cover sandbox (chunk 11).
 func NewCover() *Game {
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	g := &Game{prog: NewProgress()}
+	g := newShell()
 	g.scene = NewCoverBattle(g.prog)
 	g.scene.Enter()
 	return g
@@ -48,8 +58,7 @@ func NewCover() *Game {
 
 // NewRiver starts the river/bridge sandbox (chunk 12).
 func NewRiver() *Game {
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	g := &Game{prog: NewProgress()}
+	g := newShell()
 	g.scene = NewRiverBattle(g.prog)
 	g.scene.Enter()
 	return g
@@ -57,8 +66,7 @@ func NewRiver() *Game {
 
 // NewHut starts the spawner-hut and grenade-crate sandbox (chunk 14).
 func NewHut() *Game {
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	g := &Game{prog: NewProgress()}
+	g := newShell()
 	g.scene = NewHutBattle(g.prog)
 	g.scene.Enter()
 	return g
@@ -66,8 +74,7 @@ func NewHut() *Game {
 
 // NewSkidoo starts the skidoo and bazooka sandbox (chunk 20).
 func NewSkidoo() *Game {
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	g := &Game{prog: NewProgress()}
+	g := newShell()
 	g.scene = NewSkidooBattle(g.prog)
 	g.scene.Enter()
 	return g
@@ -75,8 +82,7 @@ func NewSkidoo() *Game {
 
 // NewHazard starts the civilian, quicksand, and mine sandbox (chunk 18).
 func NewHazard() *Game {
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	g := &Game{prog: NewProgress()}
+	g := newShell()
 	g.scene = NewHazardBattle(g.prog)
 	g.scene.Enter()
 	return g
@@ -87,6 +93,14 @@ func (g *Game) Pointer() input.Pointer { return g.pointer }
 func (g *Game) Progress() *Progress { return g.prog }
 
 func (g *Game) Switch(s Scene) { g.next = s }
+
+// PlayCues plays the sounds the battle recorded this frame.
+func (g *Game) PlayCues(cues []sim.Cue) {
+	if g.sound == nil {
+		return
+	}
+	g.sound.Play(cues)
+}
 
 func (g *Game) Update() error {
 	x, y := ebiten.CursorPosition()

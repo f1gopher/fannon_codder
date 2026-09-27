@@ -583,7 +583,7 @@ Chunk 05’s rule is still what runs: a grunt who can see a player inside 70px s
 
 He also walks in from 140px before he has spotted anyone. On Mission 1 the south grunt spawns 80px from the squad (tiles (14,10) vs (10,13)), so he closes and opens fire without the player moving. The other two sit near 193px and only join once you step into the open. The Amiga mission is the opposite lesson: the manual’s “shoot them before they shoot you.” Posted men, a visible turn, a late first shot, then a sloppy burst you can sidestep.
 
-Do **21, then 22, then play Mission 1**. Chunk 23 is written so it is ready, and it stays unstarted if that play already feels like the original. These chunks do not retune maps, gun range, or “one hit kills.”
+Chunks 21 and 22 are in. Chunk 23 is dropped. These chunks do not retune maps, gun range, or “one hit kills.”
 
 Grenade windups and rocket windups stay as they are. Do not stack the grunt reaction on top of them. A grenadier who is too close to throw uses the grunt MG rules. Enemy vehicles stay on their current “drive at the player and shoot in range” rule. Inactive player squads stay snappy. No A*, no flanking, no chase.
 
@@ -646,9 +646,11 @@ Grenade windups and rocket windups stay as they are. Do not stack the grunt reac
 
 **Do not.** Hearing, chase, map edits, changing `EnemyMGRoF` or `EnemyMGRange`.
 
-### Chunk 23 — Gunfire turns the next man (playtest gate)
+### Chunk 23 — dropped
 
-**Play Mission 1 after Chunk 22 before starting this.** If stepping out, aiming, and taking the three grunts one at a time already feels like the original, leave this chunk unchecked. It exists because a man behind a tree who never reacts to a magazine dumped beside his bush is the one Amiga habit still missing. It is also the chunk most likely to make Mission 1 harder, which is why it is gated.
+**Do not implement this.** Hearing would wake the next post and make Mission 1 harder. The opener stays three separate duels. The old spec is kept below so the idea is not reinvented later.
+
+### Chunk 23 (record only) — Gunfire turns the next man
 
 **Goal.** A shot near a posted grunt starts the same Chunk 21 reaction, even without LOS. He still does not leave his tile, and he still cannot shoot through the tree. He turns toward the noise and fires only once contact (range + LOS) is real.
 
@@ -668,7 +670,147 @@ Grenade windups and rocket windups stay as they are. Do not stack the grunt reac
 
 ---
 
-## After Chunk 23 (not this plan)
+## Chunks 24–31 — Sound effects
+
+One bus, many clips. Chunk 24 is the bus and the gun. Later chunks add a `CueKind`, one emit at the cause, and one clip. They do not add a second playback path.
+
+`internal/sim` appends `Cue{Kind, X, Y}` and never imports Ebitengine. The battle takes the queue every update (`TakeCues`) and `internal/audio.Mixer.Play` starts a voice. `Mixer.Load(kind, pcm, voices, volume)` registers 16-bit little-endian stereo PCM at 44100. A kind that is not loaded is silent. `PlayKind` is the same pool for a sting that has no world cause. Position is already on the cue; volume ignores it until Chunk 29, which scales the clip's own volume. Eight gun voices overlap; the oldest restarts when they are all busy. The queue keeps the newest 64 cues if a frame forgets to drain.
+
+Samples are synthesised or recorded for this game. No Amiga samples, and no theme tune in these chunks. The title tune stays on the backlog.
+
+Do **25, then 26, then 27**. Those are the sounds you notice the moment the gun exists. 28–31 can follow in order. Do not start 23.
+
+### Chunk 24 — Sound bus and the gun (done)
+
+**Goal.** Every machine-gun round cracks. Player squads, posted grunts, and a mounted skidoo gun share one sample. Grenades, rockets, and blasts stay silent.
+
+**Create / change**
+
+- `internal/sim/cue.go`: `CueKind` (`CueNone`, `CueGun`), `Cue`, `emit`, `TakeCues`.
+- `addMG` is the only spawn for an MG round (on foot and mounted). It emits `CueGun` at the muzzle.
+- `internal/audio`: one context, `Load` / `Play` / `PlayKind`, synthesised `Gunshot` (~40 ms).
+- The battle defers `PlayCues(TakeCues())` so a phase that ends mid-frame still plays.
+
+**Tests.** One round, one cue at the muzzle; the cooldown frame is silent. Two living troopers, two cues. The skidoo gun emits one cue 10 px along the aim. `explode`, `launchGrenade`, and `launchRocket` emit nothing. The queue drops the oldest past 64. `Gunshot` is stable, decays, starts and ends near zero, and is the same in both channels.
+
+**Do not.** Other kinds, music, distance, wav files.
+
+### Chunk 25 — Blasts
+
+**Goal.** One boom for every explosion that already exists: grenade, rocket impact, mine, and a crate that cooks off.
+
+**Create / change**
+
+- `CueBoom`. Emit it once at the top of `explode` (grenades, rockets, mines, and crate chains all go through there). A crate that sets off another crate booms again. That is the chain you already see.
+- Synthesise a lower, longer clip (~180 ms) and `Load` it with 4 voices and its own volume.
+- Death, the throw, and the launch stay silent. The boom is the impact, not the leaving of the hand.
+
+**Tests.** `explode` appends one `CueBoom` at the blast point. A grenade that lands does too. An MG round still emits only `CueGun`.
+
+**Done when.** `go test ./...`. A grenade, a rocket, and a mine each boom once. Hosing a crate booms, and the crates it sets off boom too.
+
+**Do not.** A separate building-collapse sample, death yells, distance.
+
+### Chunk 26 — Death
+
+**Goal.** A man who just died makes a short yell. The same clip, a few pitches, so a wiped squad is not one sample retriggered.
+
+**Create / change**
+
+- `CueDeath` from `kill`, only on the transition to dead (the early return already covers a second call).
+- Store the unit id on the cue (add a field when this chunk needs it) and pick one of three pitch variants from it. Civilians use the same yell.
+- A kill inside `explode` still booms and yells. Both are real.
+- Quicksand death also yells. A distinct gurgle is not this chunk.
+
+**Tests.** `kill` on a living unit emits one death cue. `kill` again emits nothing. An MG kill emits the gun cue and, once the round lands, the death cue.
+
+**Done when.** Shooting a grunt yells when he drops. A grenade that kills two men booms once and yells twice.
+
+**Do not.** Voice acting pulled from the original, a victory sting.
+
+### Chunk 27 — Throw and launch
+
+**Goal.** The bomb and the rocket make a sound when they leave, distinct from the boom when they arrive.
+
+**Create / change**
+
+- `CueThrow` at the end of `launchGrenade` (player and grenadier share it).
+- `CueRocket` at the end of `launchRocket` (player and rocketeer share it).
+- Two short clips. Impacts stay `CueBoom` from Chunk 25.
+
+**Tests.** A throw emits `CueThrow` and no boom yet. After the fuse, the boom is the only new cue. A rocket emits `CueRocket` at the tube and `CueBoom` on impact.
+
+**Done when.** The yellow telegraph is still silent; the whoosh is the moment the bomb leaves. The bazooka whooshes, then booms.
+
+**Do not.** A reload foley, a click on the G/R icons (that is Chunk 31).
+
+### Chunk 28 — Terrain and vehicles, one-shots
+
+**Goal.** The world answers when you step in something. These are rare, so one voice each is enough.
+
+**Create / change**
+
+- `CueSplash` when `InWater` goes from false to true (a wade and a swim share it). Leaving the water is silent.
+- `CueSink` when quicksand first sticks a unit. The death at the end of the sink is still Chunk 26's yell.
+- `CuePickup` when a trooper takes a grenade or rocket crate.
+- `CueBoard` in `enterVehicle`, `CueExit` in `dismount`.
+
+**Tests.** Crossing onto water emits one splash, and standing in it does not emit another. Stepping into quicksand emits one sink. Walking onto a crate emits one pickup. Board and exit each emit once.
+
+**Done when.** The river, the tan pool, a crate, and the skidoo each answer once per action.
+
+**Do not.** Footsteps on grass, an engine loop (Chunk 30).
+
+### Chunk 29 — Distance
+
+**Goal.** A shot across the map is quieter than a shot at your feet. The picture stays centred; Ebitengine players have volume and no pan, and the shared clip is what lets rounds overlap.
+
+**Create / change**
+
+- `Mixer.SetListener` from the battle, at the active leader, or the camera centre when there is no leader.
+- At play time, volume is full inside 48 px and falls linearly to 0 at 320 px. `PlayKind` stays full volume (no position).
+- Use the `X, Y` already stored on the cue. Do not change emit sites.
+
+**Tests.** A pure function of distance: 0 px → full, 48 px → full, 320 px → 0, halfway between 48 and 320 → half. The gun PCM itself is unchanged.
+
+**Done when.** A grunt you can see cracks loudly. A fight near the far edge of a scrolling map is faint.
+
+**Do not.** Stereo pan, a low-pass, occlusion by trees.
+
+### Chunk 30 — Engine loop
+
+**Goal.** An occupied skidoo hums, and the hum rises with speed. This is not a cue. A one-shot bus cannot hold a loop.
+
+**Create / change**
+
+- A loop voice on the mixer: start, stop, and a playback rate or pitch. One loop is enough (the skidoo you can hear).
+- While any living occupied skidoo is the listener's vehicle, or the nearest occupied one inside the Chunk 29 radius, keep the loop running. Pitch tracks speed from idle to `VehicleMaxSpeed`.
+- Silence on foot, and silence when the vehicle is empty or destroyed.
+
+**Tests.** The loop decision is a pure function of occupied, alive, and speed. Playback itself stays on the mixer.
+
+**Done when.** Boarding and holding left builds the hum. Letting go on ice keeps a lower hum while it slides. Dismount cuts it.
+
+**Do not.** A second loop for the enemy skidoo if one voice cannot follow both. The player's vehicle wins.
+
+### Chunk 31 — Scene stings
+
+**Goal.** The menus answer. No new sim emits.
+
+**Create / change**
+
+- `CueClick`, `CueWin`, `CueFail` as kinds with no `emit` in the world. Scenes call `PlayKind`.
+- A click when the title advances and when a briefing starts the phase. A short win sting when the phase is cleared, a short fail sting on surrender or wipe. Boot Hill itself stays quiet.
+
+**Tests.** Kinds are distinct from the gun. There is no world path that emits them.
+
+**Done when.** Title → battle clicks. Clearing a phase stings before Boot Hill. Escaping out stings the fail.
+
+**Do not.** The title tune, High Scoring Heroes, icon clicks on the HUD.
+
+---
+
+## After Chunk 31 (not this plan)
 
 Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 
@@ -678,7 +820,7 @@ Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 - Missions 6–24 as data
 - Wounded-squirm + “finish them” (manual); corpse-juggle (manual easter egg)
 - Real pixel art (Sensible-sized ~8–12 px troopers, 16-colour palettes per terrain)
-- Original-feeling title tune and SFX (new audio, not ripped)
+- Original-feeling title tune (new audio, not ripped). Battle sound effects are Chunks 24–31.
 - Birds, snowmen, igloos as flavour
 - High Scoring Heroes table
 - Fullscreen, integer-scale options
@@ -692,7 +834,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–22 are in. Play Mission 1 before deciding on **23**.
+Chunks 01–22 and 24 are in. Chunk 23 is dropped. Next sound chunk is **25**.
 
 ---
 
@@ -718,6 +860,7 @@ Grok must not skip tests to “save time”; they are how the next session knows
 | Small subsystems, not vertical-slice dumps | Matches limited tokens; each session has a kill-condition. |
 | Stop after Mission 5 | Vehicles/hazards needed for “it feels like CF” are in; tanks/choppers are a second season. |
 | Grunts hold, turn, then burst (Chunks 21–22) | Shoot-on-sight made Mission 1 a meat grinder. The Amiga window is “aim first.” No chase, no A*. |
+| Sim emits cues, audio plays them | Ebitengine stays out of `internal/sim`. A new sound is a kind, an emit, and a clip. |
 
 ## Risks
 

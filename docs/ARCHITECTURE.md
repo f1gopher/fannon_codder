@@ -26,6 +26,7 @@ internal/input/      # pointer, buttons, both-buttons chord
 internal/sim/        # world, units, combat, AI, objectives — NO ebiten import
 internal/campaign/   # recruits, names, ranks, save JSON — NO ebiten import
 internal/render/     # placeholder draw of sim + HUD
+internal/audio/      # cue playback — the only package that opens the audio device
 internal/data/       # load mission JSON
 assets/placeholder/  # later: real PNGs with the same filenames
 data/missions/       # mission JSON
@@ -34,7 +35,13 @@ docs/ARCHITECTURE.md
 docs/CHUNKS.md
 ```
 
-`internal/sim` must not import Ebitengine. Simulation is unit-tested with `go test`.
+`internal/sim` must not import Ebitengine or `internal/audio`. Simulation is unit-tested with `go test`.
+
+## Audio
+
+The sim records `Cue` values (`Kind`, world `X`, `Y`) and does not play them. The battle scene takes the queue after `Step` and passes it to `internal/audio`. One mixer owns the process-wide Ebitengine context (44100 Hz, 16-bit stereo). A kind with no clip loaded is silent.
+
+Chunk 24 loads only the gun. Another effect is a `CueKind`, an emit at the cause, and `Mixer.Load(kind, pcm, voices, volume)`. Position is stored now; volume does not use it yet. Each clip keeps its own full-loudness level. Loops (an engine) are not cues. Stings that have no world cause use `PlayKind`. Samples are original synthesis or original recordings, never Amiga rips. There is one mixer per process.
 
 ## Core types (sim)
 

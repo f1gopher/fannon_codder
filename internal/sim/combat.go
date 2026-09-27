@@ -134,16 +134,24 @@ func (w *World) shootAt(u *Unit, dx, dy float64, st GunStats, dt float64) {
 func (w *World) spawnMG(u *Unit, ang float64, maxRange float64) {
 	nx, ny := math.Cos(ang), math.Sin(ang)
 	muzzle := float64(UnitSize) / 2
+	w.addMG(u.X+nx*muzzle, u.Y+ny*muzzle, ang, maxRange, u.ID, u.Side)
+}
+
+// addMG spawns one round and records a gun cue at the muzzle.
+func (w *World) addMG(x, y, ang, travel float64, owner int, side Side) {
+	nx, ny := math.Cos(ang), math.Sin(ang)
 	w.Projectiles = append(w.Projectiles, Projectile{
-		X:         u.X + nx*muzzle,
-		Y:         u.Y + ny*muzzle,
+		Kind:      ProjMG,
+		X:         x,
+		Y:         y,
 		VX:        nx * MGSpeed,
 		VY:        ny * MGSpeed,
-		OwnerID:   u.ID,
-		OwnerSide: u.Side,
-		Left:      maxRange,
+		OwnerID:   owner,
+		OwnerSide: side,
+		Left:      travel,
 		Alive:     true,
 	})
+	w.emit(CueGun, x, y)
 }
 
 func (w *World) stepProjectiles(dt float64) {

@@ -17,6 +17,7 @@ type World struct {
 	Grenades    []Grenade
 	Explosions  []Explosion
 	Vehicles    []Vehicle
+	Cues        []Cue
 	AimX, AimY  float64
 	Firing      bool
 	Spread      float64

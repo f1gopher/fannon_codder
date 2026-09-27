@@ -441,7 +441,6 @@ func (w *World) vehicleShoot(v *Vehicle, tx, ty, dt float64) {
 	}
 	ang := math.Atan2(dy, dx)
 	v.Facing = ang
-	nx, ny := math.Cos(ang), math.Sin(ang)
 	owner := 0
 	side := v.Side
 	for _, id := range v.Occupants {
@@ -451,15 +450,5 @@ func (w *World) vehicleShoot(v *Vehicle, tx, ty, dt float64) {
 			break
 		}
 	}
-	w.Projectiles = append(w.Projectiles, Projectile{
-		Kind:      ProjMG,
-		X:         v.X + nx*10,
-		Y:         v.Y + ny*10,
-		VX:        nx * MGSpeed,
-		VY:        ny * MGSpeed,
-		OwnerID:   owner,
-		OwnerSide: side,
-		Left:      VehicleMGRange,
-		Alive:     true,
-	})
+	w.addMG(v.X+math.Cos(ang)*10, v.Y+math.Sin(ang)*10, ang, VehicleMGRange, owner, side)
 }

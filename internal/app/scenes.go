@@ -28,6 +28,7 @@ type Host interface {
 	Pointer() input.Pointer
 	Switch(Scene)
 	Progress() *Progress
+	PlayCues([]sim.Cue)
 }
 
 var (
@@ -220,6 +221,11 @@ func (b *Battle) CursorKind(p input.Pointer) int {
 }
 
 func (b *Battle) Update(h Host) error {
+	defer func() {
+		if b.world != nil {
+			h.PlayCues(b.world.TakeCues())
+		}
+	}()
 	p := h.Pointer()
 	if b.world.Status != sim.Playing {
 		b.settleOnce(b.world.Status == sim.Won)

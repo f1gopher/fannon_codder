@@ -24,9 +24,17 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
 - [x] 21 Grunts spot, turn, and hold the post
 - [x] 22 Grunt bursts and a wide cone
-- [ ] 23 Gunfire turns the next man (only after playing Mission 1; skip if 22 already feels right)
+- 23 dropped — gunfire does not wake the next post
+- [x] 24 Sound bus and gunshot
+- [ ] 25 Blasts
+- [ ] 26 Death
+- [ ] 27 Throw and launch
+- [ ] 28 Terrain and vehicles (one-shots)
+- [ ] 29 Distance
+- [ ] 30 Engine loop
+- [ ] 31 Scene stings
 
-Chunks 01–22 are in. Play Mission 1 before starting **23**. Spec is in `PLAN.md` under “Chunks 21–23”.
+Chunks 01–22 and 24 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
 
 ## Log
 
@@ -118,16 +126,24 @@ Verify: `go test ./...`. Mission 1 spawn: the three grunts stay on their tiles a
 Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go`.
 Verify: `go test ./...`. Mission 1 again. Winning the opening aim is clean. Missing it means three rounds, a visible gap of about three quarters of a second while he keeps turning, then another burst. Shots go wide of a moving man; standing still in the open still gets him killed. Grenadiers still telegraph throws. Rocketeers are unchanged. `go run ./cmd/fannon`.
 
+### Chunk 23 dropped
+Gunfire does not wake a posted man. Mission 1 stays three separate duels.
+
+### Chunk 24 done
+Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/sim/vehicle.go`, `internal/audio/audio.go`, `internal/audio/gun.go`, `internal/audio/gun_test.go`, `internal/app/game.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. Hold right mouse: each trooper cracks, including the mounted skidoo gun (`go run ./cmd/fannon -skidoo`). Enemy bursts crack three times, then the gap is quiet. Grenades, rockets, and blasts are still silent.
+
 ## Backlog
 
-Grunt behaviour is Chunks 21–23, not a backlog item. Do not add chase or pathfinding ahead of those.
+Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add chase or pathfinding.
 
 - Jeeps (skin of the skidoo), tanks, static turrets, choppers
 - Hostages, kidnap, factories, protect-civilians fail
 - Desert, moors, and underground tiles
 - Missions 6–24 as data
 - Wounded troopers and finishing them; corpse juggling
-- Pixel art and original-feeling audio
+- Pixel art
+- Title tune (new, not ripped). Battle sound effects are Chunks 24–31, not this list.
 - Birds, snowmen, igloos
 - High Scoring Heroes
 - Fullscreen and integer-scale options

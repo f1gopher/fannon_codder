@@ -8,6 +8,7 @@ type CueKind uint8
 const (
 	CueNone CueKind = iota
 	CueGun
+	CueBoom
 )
 
 // maxCues bounds the queue when a frame is not drained. The newest shots

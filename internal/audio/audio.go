@@ -16,6 +16,8 @@ const (
 	SampleRate = 44100
 	gunVoices  = 8
 	gunVolume  = 0.45
+	boomVoices = 4
+	boomVolume = 0.7
 )
 
 // Mixer is the clip registry and the voice pool.
@@ -30,7 +32,7 @@ type clip struct {
 	volume  float64
 }
 
-// NewMixer opens the audio device and loads the gunshot.
+// NewMixer opens the audio device and loads the gunshot and the blast.
 // Calling it twice in one process panics: Ebitengine allows one context.
 func NewMixer() *Mixer {
 	m := &Mixer{
@@ -38,6 +40,7 @@ func NewMixer() *Mixer {
 		slots: map[sim.CueKind]*clip{},
 	}
 	m.Load(sim.CueGun, Gunshot(), gunVoices, gunVolume)
+	m.Load(sim.CueBoom, Boom(), boomVoices, boomVolume)
 	return m
 }
 

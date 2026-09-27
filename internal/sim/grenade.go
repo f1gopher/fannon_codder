@@ -220,6 +220,7 @@ func (w *World) stepBlasts(dt float64) {
 // explode hurts every living unit and destroys huts and crates in the radius.
 // Grenades do not spare friendlies. A destroyed crate explodes too.
 func (w *World) explode(x, y float64, ownerID int) {
+	w.emit(CueBoom, x, y)
 	w.Explosions = append(w.Explosions, Explosion{X: x, Y: y, R: GrenadeRadius})
 	for i := range w.Units {
 		u := &w.Units[i]

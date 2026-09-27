@@ -48,13 +48,66 @@ func TestVehicleGunEmitsCue(t *testing.T) {
 	}
 }
 
-func TestBlastsDoNotEmitGunCues(t *testing.T) {
+func TestExplodeEmitsOneBoom(t *testing.T) {
 	w := NewEmpty()
-	w.explode(8, 8, 0)
+	w.explode(8, 12, 0)
+	cues := w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueBoom {
+		t.Fatalf("cues=%v, want one boom", cues)
+	}
+	if cues[0].X != 8 || cues[0].Y != 12 {
+		t.Fatalf("boom at (%v,%v), want the blast point", cues[0].X, cues[0].Y)
+	}
+}
+
+func TestGrenadeLandingEmitsBoom(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.launchGrenade(&Unit{X: 0, Y: 0}, 40, 0)
+	if len(w.TakeCues()) != 0 {
+		t.Fatal("the throw stays silent")
+	}
+	var booms []Cue
+	for i := 0; i < 120; i++ {
+		w.Step(1.0 / 60)
+		for _, c := range w.TakeCues() {
+			if c.Kind != CueBoom {
+				t.Fatalf("in-flight cue %v", c.Kind)
+			}
+			booms = append(booms, c)
+		}
+	}
+	if len(booms) != 1 || booms[0].X != 40 || booms[0].Y != 0 {
+		t.Fatalf("booms=%v, want one at the landing point", booms)
+	}
+}
+
+func TestCrateChainBoomsForEachCrate(t *testing.T) {
+	w := NewEmpty()
+	w.AddGrenadeCrate(Vec2{X: 0, Y: 0})
+	w.AddGrenadeCrate(Vec2{X: 10, Y: 0})
+	w.Pickups[0].Alive = false // the round already destroyed this crate
+	w.explode(0, 0, 0)
+	cues := w.TakeCues()
+	if len(cues) != 2 {
+		t.Fatalf("cues=%d, want the blast and the crate it sets off", len(cues))
+	}
+	for _, c := range cues {
+		if c.Kind != CueBoom {
+			t.Fatalf("kind=%v", c.Kind)
+		}
+	}
+	if cues[0].X != 0 || cues[1].X != 10 {
+		t.Fatalf("chain at %v then %v", cues[0].X, cues[1].X)
+	}
+}
+
+func TestThrowAndLaunchStaySilent(t *testing.T) {
+	w := NewEmpty()
 	w.launchGrenade(&Unit{X: 0, Y: 0}, 40, 0)
 	w.launchRocket(0, SidePlayer, 0, 0, 40, 0)
 	if len(w.Cues) != 0 {
-		t.Fatalf("non-gun actions emitted %d cues", len(w.Cues))
+		t.Fatalf("leaving the hand emitted %d cues", len(w.Cues))
 	}
 }
 

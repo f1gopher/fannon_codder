@@ -26,7 +26,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 22 Grunt bursts and a wide cone
 - 23 dropped — gunfire does not wake the next post
 - [x] 24 Sound bus and gunshot
-- [ ] 25 Blasts
+- [x] 25 Blasts
 - [ ] 26 Death
 - [ ] 27 Throw and launch
 - [ ] 28 Terrain and vehicles (one-shots)
@@ -34,7 +34,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 30 Engine loop
 - [ ] 31 Scene stings
 
-Chunks 01–22 and 24 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
+Chunks 01–22 and 24–25 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
 
 ## Log
 
@@ -132,6 +132,10 @@ Gunfire does not wake a posted man. Mission 1 stays three separate duels.
 ### Chunk 24 done
 Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/sim/vehicle.go`, `internal/audio/audio.go`, `internal/audio/gun.go`, `internal/audio/gun_test.go`, `internal/app/game.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. Hold right mouse: each trooper cracks, including the mounted skidoo gun (`go run ./cmd/fannon -skidoo`). Enemy bursts crack three times, then the gap is quiet. Grenades, rockets, and blasts are still silent.
+
+### Chunk 25 done
+Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/grenade.go`, `internal/audio/audio.go`, `internal/audio/boom.go`, `internal/audio/boom_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. A grenade, a rocket, and a mine each boom once when they go off. Hosing a crate booms, and a crate it sets off booms again. The throw and the launch are still silent; death is still silent. The gun crack is unchanged.
 
 ## Backlog
 

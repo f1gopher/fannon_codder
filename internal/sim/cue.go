@@ -25,7 +25,7 @@ const maxCues = 64
 
 // Cue is one sound to play. X and Y are world pixels at the source.
 // ID is the unit for a kind that varies by who made it (the death yell).
-// Volume ignores position until a later chunk.
+// Playback scales the clip by how far (X, Y) is from the listener.
 type Cue struct {
 	Kind CueKind
 	X, Y float64

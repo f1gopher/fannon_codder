@@ -6,6 +6,8 @@
 package audio
 
 import (
+	"math"
+
 	"github.com/hajimehoshi/ebiten/v2/audio"
 
 	"fannon-codder/internal/sim"
@@ -35,6 +37,9 @@ const (
 type Mixer struct {
 	ctx   *audio.Context
 	slots map[sim.CueKind]*clip
+	// lx, ly are the listener in world pixels (the active leader, or the
+	// camera centre when there is no leader).
+	lx, ly float64
 }
 
 type clip struct {
@@ -103,23 +108,34 @@ func (m *Mixer) load(kind sim.CueKind, pcms [][]byte, voices int, volume float64
 	m.slots[kind] = &clip{banks: banks, volume: volume}
 }
 
+// SetListener is the world point volume is measured from.
+// The battle sets it each frame: the active leader, or the camera centre
+// when that squad has no leader.
+func (m *Mixer) SetListener(x, y float64) {
+	if m == nil {
+		return
+	}
+	m.lx, m.ly = x, y
+}
+
 // Play starts one voice per cue. Missing kinds are skipped.
-// Cue position is stored for a later distance chunk and does not change volume yet.
+// Volume is the clip's own level times DistanceGain from the listener.
 func (m *Mixer) Play(cues []sim.Cue) {
 	if m == nil {
 		return
 	}
 	for _, c := range cues {
-		m.play(c)
+		m.play(c, true)
 	}
 }
 
 // PlayKind is for stings that do not come from the world (a click, a phase result).
+// Those have no position, so they stay at the clip's full volume.
 func (m *Mixer) PlayKind(kind sim.CueKind) {
-	m.play(sim.Cue{Kind: kind})
+	m.play(sim.Cue{Kind: kind}, false)
 }
 
-func (m *Mixer) play(c sim.Cue) {
+func (m *Mixer) play(c sim.Cue, positional bool) {
 	if m == nil {
 		return
 	}
@@ -135,6 +151,13 @@ func (m *Mixer) play(c sim.Cue) {
 	if len(b.players) == 0 {
 		return
 	}
+	vol := cl.volume
+	if positional {
+		vol *= DistanceGain(math.Hypot(c.X-m.lx, c.Y-m.ly))
+	}
+	if vol <= 0 {
+		return
+	}
 	p := b.players[b.next]
 	b.next++
 	if b.next >= len(b.players) {
@@ -143,6 +166,6 @@ func (m *Mixer) play(c sim.Cue) {
 	if err := p.Rewind(); err != nil {
 		return
 	}
-	p.SetVolume(cl.volume)
+	p.SetVolume(vol)
 	p.Play()
 }

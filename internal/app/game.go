@@ -102,6 +102,24 @@ func (g *Game) PlayCues(cues []sim.Cue) {
 	g.sound.Play(cues)
 }
 
+// SetListener is the world point cue volume is measured from.
+func (g *Game) SetListener(x, y float64) {
+	if g.sound == nil {
+		return
+	}
+	g.sound.SetListener(x, y)
+}
+
+// hearPoint is the active leader, including the vehicle he is driving.
+// With no leader, volume is measured from the middle of the playfield.
+func hearPoint(w *sim.World) (x, y float64) {
+	if x, y, ok := w.CameraFocus(); ok {
+		return x, y
+	}
+	c := w.Camera
+	return c.X + c.ViewW/2, c.Y + c.ViewH/2
+}
+
 func (g *Game) Update() error {
 	x, y := ebiten.CursorPosition()
 	if x < 0 {

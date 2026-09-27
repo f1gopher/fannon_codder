@@ -674,11 +674,11 @@ Grenade windups and rocket windups stay as they are. Do not stack the grunt reac
 
 One bus, many clips. Chunk 24 is the bus and the gun. Later chunks add a `CueKind`, one emit at the cause, and one clip. They do not add a second playback path.
 
-`internal/sim` appends `Cue{Kind, X, Y}` and never imports Ebitengine. The battle takes the queue every update (`TakeCues`) and `internal/audio.Mixer.Play` starts a voice. `Mixer.Load(kind, pcm, voices, volume)` registers 16-bit little-endian stereo PCM at 44100. A kind that is not loaded is silent. `PlayKind` is the same pool for a sting that has no world cause. Position is already on the cue; volume ignores it until Chunk 29, which scales the clip's own volume. Eight gun voices overlap; the oldest restarts when they are all busy. The queue keeps the newest 64 cues if a frame forgets to drain.
+`internal/sim` appends `Cue{Kind, X, Y}` and never imports Ebitengine. The battle takes the queue every update (`TakeCues`) and `internal/audio.Mixer.Play` starts a voice. `Mixer.Load(kind, pcm, voices, volume)` registers 16-bit little-endian stereo PCM at 44100. A kind that is not loaded is silent. `PlayKind` is the same pool for a sting that has no world cause, and it stays at the clip's full volume. A world cue is full inside 48 px of the listener and silent at 320 px; the clip's own volume is the loud end of that line. The listener is the active leader, or the camera centre when there is no leader. Eight gun voices overlap; the oldest restarts when they are all busy. The queue keeps the newest 64 cues if a frame forgets to drain.
 
 Samples are synthesised or recorded for this game. No Amiga samples, and no theme tune in these chunks. The title tune stays on the backlog.
 
-Chunks 25–28 are in. Do **29** next. 30–31 can follow in order. Do not start 23.
+Chunks 25–29 are in. Do **30** next. 31 can follow. Do not start 23.
 
 ### Chunk 24 — Sound bus and the gun (done)
 
@@ -761,7 +761,7 @@ Chunks 25–28 are in. Do **29** next. 30–31 can follow in order. Do not start
 
 **Do not.** Footsteps on grass, an engine loop (Chunk 30).
 
-### Chunk 29 — Distance
+### Chunk 29 — Distance (done)
 
 **Goal.** A shot across the map is quieter than a shot at your feet. The picture stays centred; Ebitengine players have volume and no pan, and the shared clip is what lets rounds overlap.
 
@@ -834,7 +834,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–22 and 24 are in. Chunk 23 is dropped. Next sound chunk is **25**.
+Chunks 01–22 and 24–29 are in. Chunk 23 is dropped. Next sound chunk is **30**.
 
 ---
 

@@ -29,6 +29,7 @@ type Host interface {
 	Switch(Scene)
 	Progress() *Progress
 	PlayCues([]sim.Cue)
+	SetListener(x, y float64)
 }
 
 var (
@@ -223,6 +224,8 @@ func (b *Battle) CursorKind(p input.Pointer) int {
 func (b *Battle) Update(h Host) error {
 	defer func() {
 		if b.world != nil {
+			x, y := hearPoint(b.world)
+			h.SetListener(x, y)
 			h.PlayCues(b.world.TakeCues())
 		}
 	}()

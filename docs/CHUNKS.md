@@ -149,6 +149,10 @@ Verify: `go test ./...`. The yellow telegraph is silent. The whoosh is the momen
 Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/unit.go`, `internal/sim/water.go`, `internal/sim/hazard.go`, `internal/sim/grenade.go`, `internal/sim/vehicle.go`, `internal/audio/audio.go`, `internal/audio/terrain.go`, `internal/audio/terrain_test.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. Walking into the river splashes once; standing in it, and wading into the deep channel, stays quiet. Leaving the water is silent. The tan pool gulps once when it sticks, and the death at the end is still the yell. A grenade crate and a rocket crate each click once when picked up. Boarding the skidoo and getting off each answer once.
 
+### Chunk 29 done
+Files: `internal/audio/distance.go`, `internal/audio/distance_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `internal/app/hear_test.go`, `internal/sim/cue.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. A shot at the leader's feet is full loudness. The same crack from the far edge of a scrolling map is faint, and past 320 px it is silent. Title and briefing stings are not in yet (Chunk 31); when they arrive they stay full volume. `go run ./cmd/fannon`.
+
 ## Backlog
 
 Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add chase or pathfinding.

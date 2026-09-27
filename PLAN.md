@@ -21,7 +21,7 @@ Later missions (6–24: jeeps, tanks, choppers, Biggunz, hostages, desert/moors/
 ## Constraints you already chose
 
 - **Finish line:** engine + missions 1–5, not the full 72-phase campaign.
-- **Art/audio:** coloured placeholders first. Swap real Sensible-style pixel art later without rewriting simulation.
+- **Art/audio:** coloured placeholders first. Battle sound is in (Chunks 24–31). The picture is Chunks 32–47: original painted art, a 1024×768 window, and a cap at 4K. Simulation stays in the current world pixel space.
 - **Reference:** public longplays and the Amiga manual, not an emulator in-hand. Prefer Amiga footage when it disagrees with Mega Drive/SNES.
 - **Chunk size:** one small subsystem per Grok session.
 
@@ -810,7 +810,252 @@ Chunks 25–31 are in. Do not start 23.
 
 ---
 
-## After Chunk 31 (not this plan)
+## Chunks 32–47 — Graphics
+
+The world stays where it is. A tile is still 16 world pixels, a man is still an 8-pixel body, the playfield is still the 268×256 view beside the 52-pixel strip, and audio distances are untouched. Missions are not redrawn and the camera does not zoom. A larger window is a sharper picture of that same frame.
+
+The window opens at **1024×768** and cannot be dragged outside **1024×768 … 3840×2160** (device-independent pixels, `SetWindowSizeLimits`). The picture inside it is the 320×256 frame fitted uniformly, so a 1024×768 window shows a 960×768 image with 32 pixels of bar on each side (scale 3). A 3840×2160 window shows a 2700×2160 image (scale 8.4375) with bars on the sides. Height is the fit. The 5:4 frame is not stretched to 16:9.
+
+That picture is rendered at real pixels, including a high-DPI monitor. `Layout` is given device-independent pixels; the offscreen is `320×S` by `256×S` where `S` is the fit scale times `Monitor().DeviceScaleFactor()`, clamped so the offscreen never exceeds 3840×2160. `DrawFinalScreen` letterboxes that offscreen onto the framebuffer at scale 1. The old path — paint 320×256, then nearest-neighbour integer-scale it — cannot look sharp at both sizes, and 4K is not an integer multiple of 320×256.
+
+Art is painted once, at **8 source pixels per world pixel** (`ArtScale`). A ground tile is 128×128. A trooper is painted about 96 pixels tall. Sprites are drawn at `S / 8` with a linear filter. At 4K that ratio is about 1.05. At the default window it is 0.375. On a 2× monitor the default window is scale 6, ratio 0.75. One linear downscale of a detailed painting stays readable. A one-pixel outline turns to mud, and nearest-neighbour pixels look coarse at 4K.
+
+### The style
+
+**Painted miniatures.** The camera sits south of the field and a little above it, so the ground is visible and a man shows his front. Shapes are soft colour masses with light from the upper left. No ink outline, no dither, no photographic texture. Jungle is deep green, water is blue, snow is blue-white, quicksand is tan, huts are warm brown, rock is grey. Snake wears green, Eagle blue, Panther amber. Grunts are a dull red-brown, grenadiers add an orange satchel, rocketeers add a tube, civilians wear a pale shirt. These are original designs. Nothing is traced from the Amiga sprites.
+
+Chunk 33 shows this style at the 4K master size and at the 1024×768 size. That chunk stops. Chunks 35–47 wait until you accept the board. A rejection redoes 33 only.
+
+### What every graphics session pastes
+
+```
+You are implementing Fannon Codder, a Cannon Fodder (Amiga 1993) gameplay clone.
+
+Stack: Go 1.22+, Ebitengine v2 (`github.com/hajimehoshi/ebiten/v2`).
+Repo root: the current workspace.
+
+Before writing code:
+1. Read docs/ARCHITECTURE.md, docs/CHUNKS.md, and PLAN.md section “Chunks 32–47”.
+2. Read only the files this chunk names, plus their direct neighbours.
+3. Implement THIS CHUNK ONLY. Do not start the next chunk.
+4. Simulation lives in internal/sim and must not import Ebitengine or internal/render.
+5. Do not copy Amiga graphics. Art made in an art chunk is original, and it follows the accepted Chunk 33 board.
+6. A missing sheet still draws the old coloured rectangle. The field is never blank.
+7. When done: go test ./... and go build ./cmd/fannon. Append the chunk note to docs/CHUNKS.md.
+
+Chunk 33 is a stop. Do not start Chunk 34 in that session.
+Chunks 35–47 do not start until the user has accepted the Chunk 33 board.
+```
+
+An art chunk loads the `game-assets` skill and produces PNG sheets plus the JSON manifest from Chunk 34. The engine never plays a video file. Animation time advances in `Update` at 1/60, not in `Draw`.
+
+Facing matches the sim. `atan2(dy, dx)` with Y down the screen: 0 is east, π/2 is south, π is west, −π/2 is north. Sheet rows are `E, SE, S, SW, W, NW, N, NE`. Paint E, SE, S, N, and NE. The runtime mirrors E→W, SE→SW, and NE→NW. N and S are not mirrored.
+
+### Chunk 32 — The picture
+
+**Goal.** The window opens at 1024×768, resizes up to 4K, and shows the same battlefield framing it shows today. Placeholders are still rectangles. They are drawn into the high-resolution picture, not blown up from a 320×256 buffer.
+
+**Create / change**
+
+- `cmd/fannon/main.go`: default window 1024×768. `SetWindowSizeLimits(1024, 768, 3840, 2160)`.
+- A pure function, covered by `internal/app/scale_test.go`, replacing the integer-scale tests:
+
+  | Window (DIP) | Device scale | S | Offscreen |
+  |---|---|---|---|
+  | 1024×768 | 1 | 3 | 960×768 |
+  | 3840×2160 | 1 | 8.4375 | 2700×2160 |
+  | 1024×768 | 2 | 6 | 1920×1536 |
+  | 3840×2160 | 2 | 8.4375 (clamped) | 2700×2160 |
+
+- `Layout` / `LayoutF` returns that offscreen. `DrawFinalScreen` clears the bars and blits the offscreen at 1:1 in the centre. Filter on that blit is nearest, because the scale is 1. Sprite filtering comes in Chunk 34.
+- The cursor arrives in offscreen pixels. Divide by `S` and clamp to the 320×256 frame before the sim, the HUD hit tests, and edge scroll see it. A click in the bar never reaches the game.
+- Every current draw (battle, HUD, overview, title, briefing, Boot Hill, the stub, the pointer) runs in offscreen pixels: logical coordinate times `S`. HUD text uses `ebiten/v2/text/v2` and the Go regular face (`golang.org/x/image/font/gofont/goregular`, the one new dependency) at a size that is 14 pixels when `S` is 3 and scales with `S`. Names are readable at the default window and at 4K.
+- `docs/ARCHITECTURE.md`: replace the Display section with this contract. State that the world pixel space did not change.
+
+**Done when.** `go test ./...`. `go run ./cmd/fannon` opens at 1024×768. Mission 1 still fits one view. Dragging the window wider adds bars and does not show more map. The cursor still selects a HUD name, and title → Boot Hill → briefing → battle all sit in the fitted picture.
+
+**Do not.** Sprites, sheets, animation, changing `TileSize`, the camera, or mission JSON.
+
+### Chunk 33 — Style board
+
+**Goal.** You see the painted-miniature style at both sizes and accept it or send it back. Nothing in the game changes.
+
+**Create**
+
+- `assets/art/style/`. A contact sheet and the separate source images:
+  - Snake, south-east three-quarter, idle, master size (about 96 pixels tall) and the same figure at the default-window size (36 pixels tall).
+  - One jungle grass tile at 128 and at 48, plus a 2×2 of the 48 so a seam is visible.
+  - One tree, a two-frame strip of shallow water, one snow tile, one door hut, one skidoo in three-quarter view, the pointer, and a corner of the status strip with a name set in the Chunk 32 type size.
+- Same light, same brush, the palette named above. Soft edges. Transparent backgrounds on the figures. The grass tile is seamless.
+
+**Done when.** The images are on disk and the session tells you the path. The game still draws rectangles.
+
+**Do not.** Wire the images into the renderer. Do not start Chunk 34. Do not generate the rest of the cast. If you reject the board, the next session replaces this folder and stops again.
+
+### Chunk 34 — Sprite stage
+
+**Goal.** The renderer can play a sheet. Anything without a sheet still draws its rectangle. No production art yet.
+
+**Create / change**
+
+- `internal/render` loads PNG + JSON from an embedded `assets/art/`. One PNG per animation. Rows are the eight directions; columns are frames. JSON fields: `frameW`, `frameH`, `anchorX`, `anchorY` (the anchor is the sim point), `fps`, `loop`, and which rows are mirrors. A mirror row is not stored in the PNG.
+- Draw scale is `S / 8`, filter linear. The anchor sits on the unit or tile point the rectangles use today.
+- Pose, read from the sim, first match wins:
+
+  | Condition | Pose |
+  |---|---|
+  | Dead, and the death cycle has not finished | death, once, then hold the corpse frame |
+  | `Sinking` | sink, scrubbed by `Sink / SinkTime` (the 2 second clock), not a free loop |
+  | `InWater` | swim, loop |
+  | `GrenadeWind > 0` or `RocketWind > 0` or `SinceThrow < 0.25` | throw, once across that interval |
+  | `SinceShot < 0.12` | shoot |
+  | speed above 2 px/s | walk, loop |
+  | else | idle, loop |
+
+- `Unit.SinceShot` resets to 0 in `addMG` and counts up each step. `Unit.SinceThrow` resets in `launchGrenade` and `launchRocket` and counts up. Neither field changes combat. Death timing lives in the renderer, keyed by unit id.
+- Draw order: ground, then a soft oval shadow under each body (drawn by the runtime, not baked into the painting), then trees, huts, crates, men, and vehicles sorted by foot Y, then grenades, tracers, and blasts, then the HUD and the pointer. A sprite may be taller than its cell. Its manifest anchor keeps the feet on the sim point.
+- Scenery loops take a phase of `(tx*3 + ty*5)` frames, so neighbouring tiles do not sway together.
+- Clock advances in the battle `Update`.
+
+**Tests.** Facing 0 → E, π/2 → S, π → W (mirror), −π/2 → N. `addMG` zeroes `SinceShot`; one step of 1/60 increases it. `launchGrenade` zeroes `SinceThrow`. Phase offset differs for tile (0,0) and tile (1,0). A missing file selects the rectangle path.
+
+**Done when.** `go test ./...`. The game looks as it did after Chunk 32, because no production sheet exists yet. A test sheet in the test data plays a frame.
+
+**Do not.** Author the soldiers or the map. Do not change speeds, ranges, or mission data.
+
+### Chunk 35 — Snake walks
+
+**Goal.** Your men idle and walk. Everyone else is still a rectangle.
+
+**Create.** Sheets for Snake, idle (4 frames, 8 fps, loop) and walk (6 frames, 12 fps, loop), five painted directions, master scale. Manifests as Chunk 34 describes. Edit from the accepted board; do not invent a second brush.
+
+**Done when.** Mission 1: the two troopers stand, breathe, and walk in the direction they face. A man in the file faces along the file. Resize to 4K and the same sheets stay sharp. Eagle, enemies, and the map are unchanged.
+
+**Do not.** Shoot, death, swim, or the other squads.
+
+### Chunk 36 — Snake fights and falls
+
+**Goal.** The same body shoots, throws, and dies.
+
+**Create.** Shoot (2 frames, held for the 0.12 s window), throw (4 frames, played across the windup or the 0.25 s flourish), death (6 frames, about 0.4 s, once), corpse (1 frame). Same directions and the same body as Chunk 35.
+
+**Done when.** Holding right plays the shot. A grenade plays the throw as it leaves. A dead trooper falls and stays down. The corpse is not the death’s first frame.
+
+**Do not.** Swim, sink, or recolors.
+
+### Chunk 37 — Snake in the water and the sand
+
+**Goal.** Swimming and sinking use the same body.
+
+**Create.** Swim (4 frames, loop) and sink (8 frames, scrubbed across the 2 seconds). The sink’s last frame is the moment he dies.
+
+**Done when.** `go run ./cmd/fannon -river`: a man in deep water swims and does not walk on the surface. `go run ./cmd/fannon -hazards`: the tan pool plays the sink, then the corpse.
+
+**Do not.** Enemy sheets.
+
+### Chunk 38 — Eagle and Panther
+
+**Goal.** The other two squads are the Snake sheets recoloured, not new people.
+
+**Create.** Blue fatigues for Eagle, amber for Panther, every Snake animation from 35–37. Same pixels, same anchors, new colours. A recolor that muddies the face or the gun is redone from the Snake frame.
+
+**Done when.** Split on the river sandbox: green Snake, blue Eagle, amber Panther, each animating. Merging back does not leave the wrong colour.
+
+**Do not.** Repaint ranks onto the body. Rank stays HUD text.
+
+### Chunk 39 — Enemy soldiers
+
+**Goal.** Grunts, grenadiers, and rocketeers are their own bodies in the accepted style.
+
+**Create.** For each: idle, shoot, death, corpse, swim, sink, five directions. Grenadier also has the throw, with the satchel readable. Rocketeer also has the launch, with the tube readable. No walk cycle. Posted men do not walk, and a civilian walk is Chunk 40.
+
+**Done when.** Mission 1: a grunt idles facing east, turns, and the shot plays on his burst. An orange grenadier on Quicksand telegraphs the throw. A rocketeer on Valley of Ice aims the tube. Killing one plays death, then the corpse.
+
+**Do not.** A second grunt costume. All grunts share one body.
+
+### Chunk 40 — Civilians
+
+**Goal.** The yellow wanderer is a painted person.
+
+**Create.** Idle, walk, death, corpse. Pale shirt, dark trousers. No weapon.
+
+**Done when.** `go run ./cmd/fannon -hazards`: he wanders, and shooting him plays the death. The phase rules are unchanged.
+
+**Do not.** Spears, a second civilian costume.
+
+### Chunk 41 — Ground
+
+**Goal.** The flat green fill and the flat snow fill become looping ground.
+
+**Create.** A seamless jungle grass loop (4 frames, about 8 fps) and a seamless snow loop at the same timing. 128×128 per frame. The battle picks snow when the phase terrain is `arctic`, grass otherwise.
+
+**Done when.** Mission 1’s clearing moves. Mission 3’s field is snow. A 2×2 of either tile has no seam. Trees and water are still the old squares.
+
+**Do not.** Animate water yet.
+
+### Chunk 42 — Water, quicksand, ice
+
+**Goal.** The three surfaces that should move do move.
+
+**Create.** Loops, seamless, 128×128: shallow water, deep water, quicksand (a slow boil), ice (a slow sparkle). About 8 frames for water, 6 for sand and ice.
+
+**Done when.** The river sandbox shows two different water loops and a still bridge. The hazard sandbox’s pool boils. Mission 3’s ice glints. Adjacent tiles of the same kind are not on the same frame.
+
+**Do not.** Change swim speed or the sink timer.
+
+### Chunk 43 — Trees and the hard ground
+
+**Goal.** Cover reads as trees, and a forest does not sway in unison.
+
+**Create.** Three tree silhouettes, each a sway loop (4 frames). A tree is taller than its tile; the anchor is the foot of the trunk on the blocked cell, and the canopy hangs up-screen. Cliff, ramp, and bridge are still paintings (one frame each). The mine is a still painting plus a one-frame glint loop. Cliff and ramp may share the rock colours of the style board.
+
+**Done when.** Mission 1’s trees sway, three shapes, out of phase. A man walking south of a tree passes in front of the trunk; a man north of it passes behind the canopy. The cliff on Mission 3 and the bridge on the river sandbox are painted. The mine on the hazard sandbox is visible before it is stepped on.
+
+**Do not.** New tile types.
+
+### Chunk 44 — Huts, crates, and the skidoo
+
+**Goal.** The things you interact with are painted.
+
+**Create.** A door hut and a doorless hut at building size (a 2×2 hut is 256×256 of art) with a short chimney-smoke loop on both. A grenade crate and a rocket crate, distinct without a letter baked into the painting (the HUD still says G and R). A skidoo, idle and moving (4 frames), five directions, mirrored like the men. The enemy lamp stays a render overlay on the same body, not a second painting.
+
+**Done when.** `go run ./cmd/fannon -hut` shows the door hut and the crate. `go run ./cmd/fannon -skidoo`: the skidoo idles, then the skis and the track move while you drive, and it faces as it turns. The enemy skidoo blinks. Boarding hides the troopers, as it does now.
+
+**Do not.** A jeep skin, rubble, a destroyed-hut sprite.
+
+### Chunk 45 — Fire and blasts
+
+**Goal.** Shots and explosions are painted frames, short enough to match the sounds already in the game.
+
+**Create.** A muzzle flash (tied to the 0.12 s shot window), an MG tracer, a grenade in the air, a rocket in the air, and a blast (about 0.2 s, played at the explosion). The blast is one animation shared by grenades, rockets, mines, and crates.
+
+**Done when.** A burst flashes at the gun. A grenade is visible on the arc and the blast plays where it lands. A rocket and a mine use the same blast.
+
+**Do not.** A second explosion style per weapon.
+
+### Chunk 46 — Pointer and the status strip
+
+**Goal.** The cursor and the HUD icons belong to the style. The strip itself stays a flat panel in the approved dark colour, because a single bitmap stretched between scale 3 and scale 8.4 will not fit the strip.
+
+**Create.** Pointer, crosshair, and the board-vehicle cursor, painted at master scale and drawn in screen space at `S / 8`. Icons for grenade, rocket, on foot, in vehicle, and the map button, plus the three squad marks. The overview keeps its diagram layout and takes the accepted ground colours. Names, ranks, and counts stay the Chunk 32 text.
+
+**Done when.** The battle cursor, the crosshair, and the board cursor are the new art. The strip shows the icons, the selected special is still obvious, and the overview colours match the map. Text is readable at 1024×768 and at the maximum window.
+
+**Do not.** Move the strip or change which clicks it handles.
+
+### Chunk 47 — Title, briefing, Boot Hill
+
+**Goal.** The three menus are painted scenes. The troopers on the hill are the Snake sprite, not a new man.
+
+**Create.** A title picture with the words “Fannon Codder” as part of the scene (this is the one place text may be in the painting; it does not get localised). A briefing backdrop. Boot Hill: sky, hill, a grave marker, save and load as icons. The queue of recruits reuses the trooper sheet. The grave count is still the real count, drawn as markers, not baked into the picture.
+
+**Done when.** A new game walks title → Boot Hill → briefing → Mission 1, and each screen is the painted scene at both the default window and a window dragged toward 4K. Wipe a man and the grave count still goes up. Save and load still hit.
+
+**Do not.** The title tune. High Scoring Heroes. A fullscreen toggle.
+
+---
+
+## After Chunk 47 (not this plan)
 
 Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 
@@ -819,11 +1064,10 @@ Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 - Desert / moors / underground tiles
 - Missions 6–24 as data
 - Wounded-squirm + “finish them” (manual); corpse-juggle (manual easter egg)
-- Real pixel art (Sensible-sized ~8–12 px troopers, 16-colour palettes per terrain)
 - Original-feeling title tune (new audio, not ripped). Battle sound effects are Chunks 24–31.
 - Birds, snowmen, igloos as flavour
 - High Scoring Heroes table
-- Fullscreen, integer-scale options
+- A fullscreen toggle
 - Headless sim replay for regression of each phase
 
 ---
@@ -834,7 +1078,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–22 and 24–31 are in. Chunk 23 is dropped. The sound chunks are done.
+Chunks 01–22 and 24–31 are in. Chunk 23 is dropped. The sound chunks are done. Next is Chunk 32 (the picture), then Chunk 33 (the style board). Chunk 33 stops for approval.
 
 ---
 
@@ -856,7 +1100,8 @@ Grok must not skip tests to “save time”; they are how the next session knows
 | Placeholders until Chunk 20 | Tokens go to feel and rules, not sprites. |
 | Data-driven phases | Missions 2–5 are JSON, not new code. Later campaign is content. |
 | Original maps, original mission names | Close structure without ripping assets. |
-| Integer 320×256 | Amiga silhouette; cheap to render. |
+| Integer 320×256 world | The tactical frame. Missions, camera, and audio distances stay in these pixels. |
+| Picture is 1024×768, cap 4K (Chunks 32–47) | A sharper drawing of that same frame. The window does not reveal more of the map. |
 | Small subsystems, not vertical-slice dumps | Matches limited tokens; each session has a kill-condition. |
 | Stop after Mission 5 | Vehicles/hazards needed for “it feels like CF” are in; tanks/choppers are a second season. |
 | Grunts hold, turn, then burst (Chunks 21–22) | Shoot-on-sight made Mission 1 a meat grinder. The Amiga window is “aim first.” No chase, no A*. |
@@ -868,9 +1113,9 @@ Grok must not skip tests to “save time”; they are how the next session knows
 - **Right-click** may be eaten by the window manager. If so, add a fallback (`Ctrl` = fire) in Chunk 04 without removing right-click.
 - **Both-buttons grenade** is fiddly on some mice; keep it and also accept `Space` as “special at pointer” from Chunk 14.
 - **Soft-locks** (exploding all crates) are authentic; still make Mission 2 phase 2 have a crate you do not have to shoot-walk through.
-- **Scope creep** (A*, chase AI, pixel art mid-stream) will blow the budget. Grunt feel is Chunks 21–22 only: hold the post, turn, burst. Architecture.md is the brake.
+- **Scope creep** (A*, chase AI, a second art style mid-stream) will blow the budget. Grunt feel is Chunks 21–22 only: hold the post, turn, burst. The picture is Chunks 32–47, one chunk at a time. Architecture.md is the brake.
 - **Do not rebalance Mission 1 by deleting grunts or shortening the gun.** The south man walks in because approach is 140 px and he spawns at 80. Chunk 21 stops the walk; Chunk 22 stops the laser.
 
 ## First message to Grok after you accept this plan
 
-Paste the **Preamble** plus **Chunk 01** only. When the window opens, come back and paste Chunk 02 in a new session.
+Chunks 01–31 are already in. Paste the **graphics preamble** plus **Chunk 32** only. When that window looks right, come back and paste Chunk 33 in a new session, then stop for the style board.

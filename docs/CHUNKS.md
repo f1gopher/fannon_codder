@@ -33,8 +33,24 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 29 Distance
 - [x] 30 Engine loop
 - [x] 31 Scene stings
+- [ ] 32 The picture
+- [ ] 33 Style board
+- [ ] 34 Sprite stage
+- [ ] 35 Snake walks
+- [ ] 36 Snake fights and falls
+- [ ] 37 Snake in the water and the sand
+- [ ] 38 Eagle and Panther
+- [ ] 39 Enemy soldiers
+- [ ] 40 Civilians
+- [ ] 41 Ground
+- [ ] 42 Water, quicksand, ice
+- [ ] 43 Trees and the hard ground
+- [ ] 44 Huts, crates, and the skidoo
+- [ ] 45 Fire and blasts
+- [ ] 46 Pointer and the status strip
+- [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–31 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
+Chunks 01–22 and 24–31 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. Next is Chunk 32. Chunk 33 stops until the style board is accepted.
 
 ## Log
 
@@ -170,9 +186,8 @@ Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add cha
 - Desert, moors, and underground tiles
 - Missions 6–24 as data
 - Wounded troopers and finishing them; corpse juggling
-- Pixel art
-- Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in.
+- Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in. The picture is Chunks 32–47.
 - Birds, snowmen, igloos
 - High Scoring Heroes
-- Fullscreen and integer-scale options
+- A fullscreen toggle
 - Headless sim replay for each phase

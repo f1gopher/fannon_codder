@@ -30,9 +30,13 @@ func (w *World) stepAI(dt float64) {
 		if !ok {
 			u.VX = 0
 			u.VY = 0
+			u.GrenadeWind = 0
 			continue
 		}
 		dist := hypot(px-u.X, py-u.Y)
+		if w.stepGrenadier(u, px, py, dist, dt) {
+			continue
+		}
 		if dist <= EnemyMGRange && w.CanShoot(u) && w.lineClear(u.X, u.Y, px, py) {
 			u.VX = 0
 			u.VY = 0
@@ -60,6 +64,47 @@ func (w *World) stepAI(dt float64) {
 		u.VX = 0
 		u.VY = 0
 	}
+}
+
+// stepGrenadier spends the frame on a telegraphed throw.
+// Between bombs the grenadier fights as a grunt.
+func (w *World) stepGrenadier(u *Unit, px, py, dist, dt float64) bool {
+	if u.Kind != KindGrenadier {
+		return false
+	}
+	if u.GrenadeWind > 0 {
+		u.VX = 0
+		u.VY = 0
+		u.Facing = math.Atan2(py-u.Y, px-u.X)
+		u.GrenadeWind -= dt
+		if u.GrenadeWind > 0 {
+			return true
+		}
+		u.GrenadeWind = 0
+		if u.Bombs > 0 && w.CanShoot(u) {
+			w.launchGrenade(u, px, py)
+			u.Bombs--
+			u.GrenadeCD = GrenadierCooldown
+		}
+		return true
+	}
+	if u.GrenadeCD > 0 {
+		u.GrenadeCD -= dt
+		if u.GrenadeCD < 0 {
+			u.GrenadeCD = 0
+		}
+	}
+	if u.Bombs <= 0 || u.GrenadeCD > 0 || !w.CanShoot(u) {
+		return false
+	}
+	if dist < GrenadierMinRange || dist > GrenadeRange {
+		return false
+	}
+	u.GrenadeWind = GrenadierWindup
+	u.VX = 0
+	u.VY = 0
+	u.Facing = math.Atan2(py-u.Y, px-u.X)
+	return true
 }
 
 func (w *World) nearestLiving(side Side, x, y float64) (px, py float64, ok bool) {

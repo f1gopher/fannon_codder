@@ -20,7 +20,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 16 HUD finish + overview map
 - [x] 17 Mission 3 (ice, cliffs, grenade economy)
 - [x] 18 Civilians, quicksand, mines
-- [ ] 19 Mission 4 content + free grenades
+- [x] 19 Mission 4 content + free grenades
 - [ ] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
 
 ## Log
@@ -96,3 +96,7 @@ Verify: `go test ./...`. After Mission 2, Boot Hill opens Mission 3 “Blast It'
 ### Chunk 18 done
 Files: `internal/sim/hazard.go`, `internal/sim/hazard_test.go`, `internal/sim/unit.go`, `internal/sim/move.go`, `internal/sim/world.go`, `internal/sim/objectives.go`, `internal/sim/ai.go`, `internal/sim/water.go`, `internal/sim/map.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/overview.go`, `internal/app/game.go`, `internal/app/scenes.go`, `cmd/fannon/main.go`.
 Verify: `go test ./...`. `go run ./cmd/fannon -hazards` — grass field, brown mine with a dark pip west of the squad, tan quicksand pool further east, a yellow civilian, a doorless hut to the north. Walk onto the mine: grenade-sized blast, the tile is gone. Walk into the tan pool: the trooper stops, shrinks, and dies after about two seconds (no shooting while sinking). Hose the yellow man: he dies, and the phase stays open until the red grunt up the west road is dead. The doorless hut is not a win condition. Spears are not in. `protect_civilians` parses and does not fail the phase. Mission 4 maps are still the stub.
+
+### Chunk 19 done
+Files: `data/missions/campaign.json`, `data/missions/m04p01.json`, `data/missions/m04p02.json`, `data/missions/m04p03.json`, `data/missions/m04p04.json`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/sim/unit.go`, `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/grenade.go`, `internal/render/units.go`, `internal/render/overview.go`, `internal/app/progress_test.go`.
+Verify: `go test ./...`. New game through Mission 4. Beachy Head (4 men, 5 huts, two crates, no free grenades): blow both crates and the phase cannot be finished. Pier Pressure onward, each trooper starts with 2 grenades (G8 with 4 men, G10 with 5). Village People has yellow civilians, doorless huts, and a quicksand pool; only the two door huts count. Quicksand has pools, mines, and orange grenadiers. A grenadier stops and shows a yellow bar, then throws; each carries two bombs and will not throw again for about five seconds. Mission 5 is still the stub.

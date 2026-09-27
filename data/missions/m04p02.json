@@ -1,0 +1,120 @@
+{
+  "mission": 4,
+  "phase": 2,
+  "title": "Pier Pressure",
+  "briefing": "With 4 soldiers you must kill all enemy and destroy the huts. Each man carries grenades.",
+  "deploy": 4,
+  "terrain": "jungle",
+  "map": {
+    "w": 36,
+    "h": 24,
+    "tiles": [
+      ".TT.....T...........TT...........T..",
+      ".........T...................T....T.",
+      "....................................",
+      "...............T....................",
+      "T.................................T.",
+      ".......T............................",
+      "......................T.............",
+      "....................................",
+      "~~~~~~~~~~~~~~~~BB~~~~~~~~~~~~~~~~~~",
+      "WWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWWW",
+      "WWWWWWWWWWWWWWWWBBWWWWWWWWWWWWWWWWWW",
+      "~~~~~~~~~~~~~~~~BB~~~~~~~~~~~~~~~~~~",
+      "....................................",
+      ".T..................................",
+      "..T...........................T.....",
+      "........T......................T....",
+      "..................................T.",
+      "....T...............................",
+      "...................................."
+    ]
+  },
+  "playerStart": [
+    20,
+    21
+  ],
+  "enemies": [
+    {
+      "x": 6,
+      "y": 5,
+      "kind": "grunt"
+    },
+    {
+      "x": 14,
+      "y": 4,
+      "kind": "grunt"
+    },
+    {
+      "x": 22,
+      "y": 4,
+      "kind": "grunt"
+    },
+    {
+      "x": 28,
+      "y": 5,
+      "kind": "grunt"
+    },
+    {
+      "x": 16,
+      "y": 12,
+      "kind": "grunt"
+    },
+    {
+      "x": 33,
+      "y": 6,
+      "kind": "grunt"
+    }
+  ],
+  "buildings": [
+    {
+      "x": 3,
+      "y": 2,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 11,
+      "y": 2,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 24,
+      "y": 2,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    },
+    {
+      "x": 30,
+      "y": 3,
+      "w": 2,
+      "h": 2,
+      "door": true,
+      "spawn": 2.5
+    }
+  ],
+  "pickups": [
+    {
+      "x": 20,
+      "y": 5,
+      "kind": "grenades"
+    }
+  ],
+  "objectives": [
+    "kill_all_enemy",
+    "destroy_enemy_buildings"
+  ],
+  "startGrenadesPerTrooper": 2
+}

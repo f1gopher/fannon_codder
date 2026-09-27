@@ -125,6 +125,9 @@ func overviewTile(t sim.Tile) color.RGBA {
 
 func overviewUnit(u *sim.Unit) color.RGBA {
 	if u.Side == sim.SideEnemy {
+		if u.Kind == sim.KindGrenadier {
+			return color.RGBA{R: 0xe0, G: 0x60, B: 0x18, A: 0xff}
+		}
 		return color.RGBA{R: 0xe0, G: 0x30, B: 0x30, A: 0xff}
 	}
 	if u.Side == sim.SideCivilian {

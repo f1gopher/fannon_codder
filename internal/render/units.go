@@ -9,17 +9,19 @@ import (
 )
 
 var (
-	playerFill   = color.RGBA{R: 0x40, G: 0xc8, B: 0x40, A: 0xff}
-	enemyFill    = color.RGBA{R: 0xc8, G: 0x30, B: 0x30, A: 0xff}
-	playerSwim   = color.RGBA{R: 0x28, G: 0x88, B: 0x70, A: 0xff}
-	enemySwim    = color.RGBA{R: 0x88, G: 0x28, B: 0x58, A: 0xff}
-	corpseFill   = color.RGBA{R: 0x50, G: 0x30, B: 0x30, A: 0xff}
-	playerDead   = color.RGBA{R: 0x20, G: 0x50, B: 0x20, A: 0xff}
-	civilianFill = color.RGBA{R: 0xe6, G: 0xd2, B: 0x3a, A: 0xff}
-	civilianDead = color.RGBA{R: 0x6a, G: 0x5a, B: 0x20, A: 0xff}
-	tracerFill   = color.RGBA{R: 0xff, G: 0xff, B: 0xa0, A: 0xff}
-	spriteCache  = map[color.RGBA]*ebiten.Image{}
-	tracerSprite *ebiten.Image
+	playerFill    = color.RGBA{R: 0x40, G: 0xc8, B: 0x40, A: 0xff}
+	enemyFill     = color.RGBA{R: 0xc8, G: 0x30, B: 0x30, A: 0xff}
+	playerSwim    = color.RGBA{R: 0x28, G: 0x88, B: 0x70, A: 0xff}
+	enemySwim     = color.RGBA{R: 0x88, G: 0x28, B: 0x58, A: 0xff}
+	corpseFill    = color.RGBA{R: 0x50, G: 0x30, B: 0x30, A: 0xff}
+	playerDead    = color.RGBA{R: 0x20, G: 0x50, B: 0x20, A: 0xff}
+	civilianFill  = color.RGBA{R: 0xe6, G: 0xd2, B: 0x3a, A: 0xff}
+	civilianDead  = color.RGBA{R: 0x6a, G: 0x5a, B: 0x20, A: 0xff}
+	grenadierFill = color.RGBA{R: 0xe0, G: 0x60, B: 0x18, A: 0xff}
+	grenadeWindup = color.RGBA{R: 0xff, G: 0xd0, B: 0x30, A: 0xff}
+	tracerFill    = color.RGBA{R: 0xff, G: 0xff, B: 0xa0, A: 0xff}
+	spriteCache   = map[color.RGBA]*ebiten.Image{}
+	tracerSprite  *ebiten.Image
 )
 
 func unitSprite(c color.RGBA) *ebiten.Image {
@@ -47,6 +49,9 @@ func unitColor(u *sim.Unit) color.RGBA {
 		return civilianFill
 	}
 	if u.Side == sim.SideEnemy {
+		if u.Kind == sim.KindGrenadier {
+			return grenadierFill
+		}
 		if u.InWater {
 			return enemySwim
 		}
@@ -103,6 +108,9 @@ func Units(dst *ebiten.Image, w *sim.World) {
 		op.GeoM.Scale(s, s)
 		op.GeoM.Translate(u.X-w.Camera.X-half*s, u.Y-w.Camera.Y-half*s+drop)
 		dst.DrawImage(unitSprite(unitColor(u)), op)
+		if u.Living() && u.GrenadeWind > 0 {
+			fillRect(dst, int(u.X-w.Camera.X)-2, int(u.Y-w.Camera.Y)-7, 4, 2, grenadeWindup)
+		}
 	}
 }
 

@@ -354,6 +354,252 @@ func TestPhaseSpawnsCivilian(t *testing.T) {
 	}
 }
 
+func TestStartGrenadesPerTrooper(t *testing.T) {
+	rows := make([]string, 8)
+	for i := range rows {
+		rows[i] = "........"
+	}
+	base := Phase{
+		Deploy:      4,
+		PlayerStart: [2]int{4, 4},
+		Map:         Tilemap{W: 8, H: 8, Tiles: rows},
+	}
+	base.StartGrenadesPerTrooper = 2
+	w := mustWorld(t, &base)
+	if got := w.ActiveSquad().Grenades; got != 8 {
+		t.Fatalf("4 troopers × 2 = %d, want 8", got)
+	}
+	base.Deploy = 5
+	base.StartGrenadesPerTrooper = 2
+	w = mustWorld(t, &base)
+	if got := w.ActiveSquad().Grenades; got != 10 {
+		t.Fatalf("5 troopers × 2 = %d, want 10", got)
+	}
+	base.StartGrenadesPerTrooper = 0
+	w = mustWorld(t, &base)
+	if got := w.ActiveSquad().Grenades; got != 0 {
+		t.Fatalf("no free grenades, got %d", got)
+	}
+}
+
+func TestUnknownEnemyKind(t *testing.T) {
+	rows := make([]string, 4)
+	for i := range rows {
+		rows[i] = "...."
+	}
+	p := &Phase{
+		Deploy:      1,
+		PlayerStart: [2]int{1, 1},
+		Map:         Tilemap{W: 4, H: 4, Tiles: rows},
+		Enemies:     []Enemy{{X: 2, Y: 2, Kind: "rocketeer"}},
+	}
+	if _, err := p.World(); err == nil {
+		t.Fatal("expected unknown enemy kind to fail")
+	}
+}
+
+func TestMission4BeachyHead(t *testing.T) {
+	p := mustPhase(t, "m04p01.json")
+	if p.Mission != 4 || p.Phase != 1 || p.Deploy != 4 || p.Title != "Beachy Head" {
+		t.Fatalf("%d/%d deploy %d %q", p.Mission, p.Phase, p.Deploy, p.Title)
+	}
+	if p.StartGrenadesPerTrooper != 0 {
+		t.Fatal("Beachy Head does not hand out grenades")
+	}
+	if len(p.Objectives) != 1 || p.Objectives[0] != "destroy_enemy_buildings" {
+		t.Fatalf("objectives=%v", p.Objectives)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	assertGrenadeEconomy(t, w, 5, 8)
+	if w.ActiveSquad().Grenades != 0 {
+		t.Fatal("squad should start empty")
+	}
+	assertSpawnSurvives(t, w)
+	for i := range w.Buildings {
+		w.Buildings[i].Alive = false
+	}
+	w.Step(1.0 / 60)
+	if w.Status != sim.Won {
+		t.Fatal("destroying the huts should win even with grunts left")
+	}
+	if livingEnemies(w) == 0 {
+		t.Fatal("expected surviving grunts")
+	}
+}
+
+func TestMission4PierPressure(t *testing.T) {
+	p := mustPhase(t, "m04p02.json")
+	if p.Title != "Pier Pressure" || p.Deploy != 4 || p.StartGrenadesPerTrooper != 2 {
+		t.Fatalf("%q deploy %d grenades %d", p.Title, p.Deploy, p.StartGrenadesPerTrooper)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	assertGrenadeEconomy(t, w, 4, 4)
+	if w.ActiveSquad().Grenades != 8 {
+		t.Fatalf("starter grenades=%d, want 8", w.ActiveSquad().Grenades)
+	}
+	bridge := false
+	for _, e := range p.Enemies {
+		if w.Map.At(e.X, e.Y) == sim.TileBridge {
+			bridge = true
+		}
+	}
+	if !bridge {
+		t.Fatal("want a grunt holding the pier")
+	}
+	assertSpawnSurvives(t, w)
+}
+
+func TestMission4VillagePeople(t *testing.T) {
+	p := mustPhase(t, "m04p03.json")
+	if p.Title != "Village People" || p.Deploy != 5 || p.StartGrenadesPerTrooper != 2 {
+		t.Fatalf("%q deploy %d grenades %d", p.Title, p.Deploy, p.StartGrenadesPerTrooper)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	doors, scenery := 0, 0
+	for i := range w.Buildings {
+		if w.Buildings[i].HasDoor {
+			doors++
+		} else {
+			scenery++
+		}
+	}
+	if doors != 2 || scenery < 2 {
+		t.Fatalf("doors=%d scenery=%d", doors, scenery)
+	}
+	if livingCivilians(w) < 3 {
+		t.Fatal("village should have civilians")
+	}
+	if !hasTile(w, sim.TileQuicksand) {
+		t.Fatal("want a quicksand warning")
+	}
+	assertGrenadeEconomy(t, w, doors, 4)
+	if w.ActiveSquad().Grenades != 10 {
+		t.Fatalf("starter grenades=%d, want 10", w.ActiveSquad().Grenades)
+	}
+	assertSpawnSurvives(t, w)
+}
+
+func TestMission4Quicksand(t *testing.T) {
+	p := mustPhase(t, "m04p04.json")
+	if p.Title != "Quicksand" || p.Deploy != 5 || p.StartGrenadesPerTrooper != 2 {
+		t.Fatalf("%q deploy %d grenades %d", p.Title, p.Deploy, p.StartGrenadesPerTrooper)
+	}
+	w := mustWorld(t, p)
+	assertBigMap(t, w)
+	assertStartWalkable(t, p, w)
+	if !hasTile(w, sim.TileQuicksand) || !hasTile(w, sim.TileMine) {
+		t.Fatal("want quicksand pools and mines")
+	}
+	n := 0
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Kind != sim.KindGrenadier {
+			continue
+		}
+		n++
+		if u.Bombs != sim.GrenadierBombs || u.GrenadeCD != sim.GrenadierFirstDelay {
+			t.Fatalf("grenadier bombs=%d cd=%v", u.Bombs, u.GrenadeCD)
+		}
+	}
+	if n < 3 {
+		t.Fatalf("grenadiers=%d, want at least 3", n)
+	}
+	doors := 0
+	for i := range w.Buildings {
+		if w.Buildings[i].HasDoor {
+			doors++
+		}
+	}
+	assertGrenadeEconomy(t, w, doors, 4)
+	if w.ActiveSquad().Grenades != 10 {
+		t.Fatalf("starter grenades=%d, want 10", w.ActiveSquad().Grenades)
+	}
+	assertSpawnSurvives(t, w)
+}
+
+func assertGrenadeEconomy(t *testing.T, w *sim.World, doors, crateGrenades int) {
+	t.Helper()
+	gotDoors := 0
+	for i := range w.Buildings {
+		if w.Buildings[i].HasDoor {
+			gotDoors++
+		}
+	}
+	if gotDoors != doors {
+		t.Fatalf("door huts=%d, want %d", gotDoors, doors)
+	}
+	got := 0
+	for i := range w.Pickups {
+		pk := &w.Pickups[i]
+		got += pk.Amount
+		if w.Map.TileAtPixel(pk.X, pk.Y) != sim.TileGrass {
+			t.Fatal("crate is not on grass")
+		}
+		for bi := range w.Buildings {
+			b := &w.Buildings[bi]
+			d := distToRect(pk.X, pk.Y, b.X, b.Y, b.W, b.H)
+			if d <= sim.GrenadeRadius {
+				t.Fatalf("crate %d is inside hut %d blast (dist=%v)", i, bi, d)
+			}
+		}
+	}
+	if got != crateGrenades {
+		t.Fatalf("crate grenades=%d, want %d", got, crateGrenades)
+	}
+}
+
+func distToRect(cx, cy, x, y, w, h float64) float64 {
+	nx, ny := cx, cy
+	if nx < x {
+		nx = x
+	} else if nx > x+w {
+		nx = x + w
+	}
+	if ny < y {
+		ny = y
+	} else if ny > y+h {
+		ny = y + h
+	}
+	return math.Hypot(cx-nx, cy-ny)
+}
+
+func hasTile(w *sim.World, want sim.Tile) bool {
+	for y := 0; y < w.Map.H; y++ {
+		for x := 0; x < w.Map.W; x++ {
+			if w.Map.At(x, y) == want {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func livingEnemies(w *sim.World) int {
+	n := 0
+	for i := range w.Units {
+		if w.Units[i].Side == sim.SideEnemy && w.Units[i].Living() {
+			n++
+		}
+	}
+	return n
+}
+
+func livingCivilians(w *sim.World) int {
+	n := 0
+	for i := range w.Units {
+		if w.Units[i].Side == sim.SideCivilian && w.Units[i].Living() {
+			n++
+		}
+	}
+	return n
+}
+
 func TestParseWaterTiles(t *testing.T) {
 	cases := []struct {
 		ch rune

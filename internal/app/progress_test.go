@@ -90,8 +90,41 @@ func TestCleanMission1ThenMission2Shows27(t *testing.T) {
 	}
 	p.Pool.Return(m3)
 	p.OnPhaseWon()
-	if p.MissionsCompleted != 3 || !p.AwaitingStub || p.Phase != nil {
-		t.Fatalf("after M3: completed=%d stub=%v phase=%v", p.MissionsCompleted, p.AwaitingStub, p.Phase)
+	if p.MissionsCompleted != 3 || p.AwaitingStub {
+		t.Fatalf("after M3: completed=%d stub=%v", p.MissionsCompleted, p.AwaitingStub)
+	}
+	if p.Phase == nil || p.Phase.Mission != 4 || p.Phase.Phase != 1 || p.DeployCount() != 4 {
+		t.Fatalf("Mission 4 not armed: %+v deploy=%d", p.Phase, p.DeployCount())
+	}
+	q4 := NewProgress()
+	q4.ApplySave(p.ToSave())
+	if q4.AwaitingStub || q4.Phase == nil || q4.Phase.Title != "Beachy Head" {
+		t.Fatal("a finished Mission 3 save should open Beachy Head")
+	}
+	// Four Mission 4 phases, then the Mission 5 stub.
+	for i, want := range []struct {
+		phase, deploy, grenades int
+	}{
+		{1, 4, 0},
+		{2, 4, 2},
+		{3, 5, 2},
+		{4, 5, 2},
+	} {
+		if p.Phase == nil || p.Phase.Phase != want.phase || p.DeployCount() != want.deploy {
+			t.Fatalf("M4 phase index %d: %+v deploy=%d", i, p.Phase, p.DeployCount())
+		}
+		if p.Phase.StartGrenadesPerTrooper != want.grenades {
+			t.Fatalf("M4 phase %d start grenades=%d", want.phase, p.Phase.StartGrenadesPerTrooper)
+		}
+		men := p.Pool.Deploy(p.DeployCount())
+		for j := range men {
+			men[j].PhasesThisMission++
+		}
+		p.Pool.Return(men)
+		p.OnPhaseWon()
+	}
+	if p.MissionsCompleted != 4 || !p.AwaitingStub || p.Phase != nil {
+		t.Fatalf("after M4: completed=%d stub=%v phase=%v", p.MissionsCompleted, p.AwaitingStub, p.Phase)
 	}
 }
 

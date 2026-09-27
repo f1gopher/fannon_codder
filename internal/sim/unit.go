@@ -18,26 +18,38 @@ const (
 	Dead
 )
 
+// UnitKind distinguishes a grenadier from an ordinary grunt.
+type UnitKind int
+
+const (
+	KindInfantry UnitKind = iota
+	KindGrenadier
+)
+
 // Unit is one trooper (or later, a corpse still drawn on the map).
 type Unit struct {
-	ID        int
-	Name      string
-	Rank      int
-	Side      Side
-	HP        HP
-	X, Y      float64
-	VX, VY    float64
-	Facing    float64 // radians, 0 = east
-	InWater   bool
-	SquadID   SquadID
-	VehicleID int
-	Kills     int
-	FireCD    float64 // seconds until next MG round
-	Sinking   bool    // trapped in quicksand; cannot move or fire
-	Sink      float64 // seconds spent sinking; SinkTime is death
-	WanderX   float64 // civilian stroll target
-	WanderY   float64
-	WanderT   float64 // seconds until the next stroll pick
+	ID          int
+	Name        string
+	Rank        int
+	Side        Side
+	Kind        UnitKind
+	HP          HP
+	X, Y        float64
+	VX, VY      float64
+	Facing      float64 // radians, 0 = east
+	InWater     bool
+	SquadID     SquadID
+	VehicleID   int
+	Kills       int
+	FireCD      float64 // seconds until next MG round
+	Sinking     bool    // trapped in quicksand; cannot move or fire
+	Sink        float64 // seconds spent sinking; SinkTime is death
+	WanderX     float64 // civilian stroll target
+	WanderY     float64
+	WanderT     float64 // seconds until the next stroll pick
+	Bombs       int     // grenades a grenadier still carries
+	GrenadeWind float64 // seconds left in the throw telegraph; the bomb leaves at 0
+	GrenadeCD   float64 // seconds until the next windup may start
 }
 
 func (u *Unit) Dead() bool { return u.HP == Dead }

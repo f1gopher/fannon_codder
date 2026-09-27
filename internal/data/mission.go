@@ -16,19 +16,22 @@ type Campaign struct {
 
 // Phase is one mission phase loaded from JSON.
 type Phase struct {
-	Mission     int            `json:"mission"`
-	Phase       int            `json:"phase"`
-	Title       string         `json:"title"`
-	Briefing    string         `json:"briefing"`
-	Deploy      int            `json:"deploy"`
-	Terrain     string         `json:"terrain"`
-	Map         Tilemap        `json:"map"`
-	PlayerStart [2]int         `json:"playerStart"`
-	Enemies     []Enemy        `json:"enemies"`
-	Civilians   []Enemy        `json:"civilians"`
-	Buildings   []BuildingSpec `json:"buildings"`
-	Pickups     []PickupSpec   `json:"pickups"`
-	Objectives  []string       `json:"objectives"`
+	Mission  int    `json:"mission"`
+	Phase    int    `json:"phase"`
+	Title    string `json:"title"`
+	Briefing string `json:"briefing"`
+	Deploy   int    `json:"deploy"`
+	Terrain  string `json:"terrain"`
+	// StartGrenadesPerTrooper is free bombs each deployed man carries.
+	// Pier Pressure onward sets 2. Beachy Head leaves it 0.
+	StartGrenadesPerTrooper int            `json:"startGrenadesPerTrooper"`
+	Map                     Tilemap        `json:"map"`
+	PlayerStart             [2]int         `json:"playerStart"`
+	Enemies                 []Enemy        `json:"enemies"`
+	Civilians               []Enemy        `json:"civilians"`
+	Buildings               []BuildingSpec `json:"buildings"`
+	Pickups                 []PickupSpec   `json:"pickups"`
+	Objectives              []string       `json:"objectives"`
 }
 
 // BuildingSpec is a hut in tile coordinates (top-left). Door huts spawn grunts.
@@ -147,9 +150,26 @@ func (p *Phase) World() (*sim.World, error) {
 		positions[i] = sim.Vec2{X: start.X - float64(i)*sim.FileSpacing, Y: start.Y}
 	}
 	w.SpawnPlayerSquad(sim.SquadSnake, positions)
+	if p.StartGrenadesPerTrooper < 0 {
+		return nil, fmt.Errorf("startGrenadesPerTrooper %d", p.StartGrenadesPerTrooper)
+	}
+	if p.StartGrenadesPerTrooper > 0 {
+		if s := w.ActiveSquad(); s != nil {
+			s.Grenades = p.StartGrenadesPerTrooper * len(s.MemberIDs)
+		}
+	}
 
 	for _, e := range p.Enemies {
-		w.SpawnUnit(sim.SideEnemy, sim.TileCenter(e.X, e.Y))
+		u := w.SpawnUnit(sim.SideEnemy, sim.TileCenter(e.X, e.Y))
+		switch e.Kind {
+		case "", "grunt":
+		case "grenadier":
+			u.Kind = sim.KindGrenadier
+			u.Bombs = sim.GrenadierBombs
+			u.GrenadeCD = sim.GrenadierFirstDelay
+		default:
+			return nil, fmt.Errorf("unknown enemy %q", e.Kind)
+		}
 	}
 	for _, c := range p.Civilians {
 		w.SpawnUnit(sim.SideCivilian, sim.TileCenter(c.X, c.Y))

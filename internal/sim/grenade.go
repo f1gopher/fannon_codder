@@ -11,6 +11,15 @@ const (
 	CrateHitR     = 6.0
 	PickupRadius  = 10.0
 	blastTime     = 0.35
+
+	// Grenadiers carry a couple of bombs and throw rarely.
+	// The windup is the telegraph: they stop and face you before the bomb leaves.
+	GrenadierBombs      = 2
+	GrenadierWindup     = 0.8
+	GrenadierCooldown   = 5.0
+	GrenadierFirstDelay = 3.0
+	// Inside this range the blast would catch the thrower, so they shoot instead.
+	GrenadierMinRange = GrenadeRadius + 8
 )
 
 // PickupKind is a crate on the ground.
@@ -104,6 +113,13 @@ func (w *World) ThrowGrenade(x, y float64) bool {
 	if !w.CanShoot(u) {
 		return false
 	}
+	s.Grenades--
+	w.launchGrenade(u, x, y)
+	return true
+}
+
+// launchGrenade arcs a bomb from u toward (x, y), clamped to GrenadeRange.
+func (w *World) launchGrenade(u *Unit, x, y float64) {
 	dx, dy := x-u.X, y-u.Y
 	dist := hypot(dx, dy)
 	if dist < 1 {
@@ -120,7 +136,6 @@ func (w *World) ThrowGrenade(x, y float64) bool {
 	if dur < 0.2 {
 		dur = 0.2
 	}
-	s.Grenades--
 	u.Facing = math.Atan2(y-u.Y, x-u.X)
 	w.Grenades = append(w.Grenades, Grenade{
 		X:       u.X,
@@ -133,7 +148,6 @@ func (w *World) ThrowGrenade(x, y float64) bool {
 		OwnerID: u.ID,
 		Alive:   true,
 	})
-	return true
 }
 
 func (w *World) stepPickups() {

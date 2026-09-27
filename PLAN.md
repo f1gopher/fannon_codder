@@ -678,7 +678,7 @@ One bus, many clips. Chunk 24 is the bus and the gun. Later chunks add a `CueKin
 
 Samples are synthesised or recorded for this game. No Amiga samples, and no theme tune in these chunks. The title tune stays on the backlog.
 
-Chunks 25–26 are in. Do **27** next. 28–31 can follow in order. Do not start 23.
+Chunks 25–27 are in. Do **28** next. 29–31 can follow in order. Do not start 23.
 
 ### Chunk 24 — Sound bus and the gun (done)
 
@@ -691,7 +691,7 @@ Chunks 25–26 are in. Do **27** next. 28–31 can follow in order. Do not start
 - `internal/audio`: one context, `Load` / `Play` / `PlayKind`, synthesised `Gunshot` (~40 ms).
 - The battle defers `PlayCues(TakeCues())` so a phase that ends mid-frame still plays.
 
-**Tests.** One round, one cue at the muzzle; the cooldown frame is silent. Two living troopers, two cues. The skidoo gun emits one cue 10 px along the aim. `launchGrenade` and `launchRocket` emit nothing. The queue drops the oldest past 64. `Gunshot` is stable, decays, starts and ends near zero, and is the same in both channels.
+**Tests.** One round, one cue at the muzzle; the cooldown frame is silent. Two living troopers, two cues. The skidoo gun emits one cue 10 px along the aim. The queue drops the oldest past 64. `Gunshot` is stable, decays, starts and ends near zero, and is the same in both channels. The throw and the launch are Chunk 27.
 
 **Do not.** Other kinds, music, distance, wav files.
 
@@ -728,7 +728,7 @@ Chunks 25–26 are in. Do **27** next. 28–31 can follow in order. Do not start
 
 **Do not.** Voice acting pulled from the original, a victory sting.
 
-### Chunk 27 — Throw and launch
+### Chunk 27 — Throw and launch (done)
 
 **Goal.** The bomb and the rocket make a sound when they leave, distinct from the boom when they arrive.
 

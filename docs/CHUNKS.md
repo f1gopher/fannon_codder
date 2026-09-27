@@ -28,13 +28,13 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 24 Sound bus and gunshot
 - [x] 25 Blasts
 - [x] 26 Death
-- [ ] 27 Throw and launch
+- [x] 27 Throw and launch
 - [ ] 28 Terrain and vehicles (one-shots)
 - [ ] 29 Distance
 - [ ] 30 Engine loop
 - [ ] 31 Scene stings
 
-Chunks 01–22 and 24–26 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
+Chunks 01–22 and 24–27 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”.
 
 ## Log
 
@@ -140,6 +140,10 @@ Verify: `go test ./...`. A grenade, a rocket, and a mine each boom once when the
 ### Chunk 26 done
 Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/combat.go`, `internal/audio/audio.go`, `internal/audio/yell.go`, `internal/audio/yell_test.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. Shooting a grunt yells when he drops. A grenade that kills two men booms once and yells twice, at different pitches when their ids differ. A man who sinks in quicksand yells once. Calling kill again is silent. The throw and the launch are still silent.
+
+### Chunk 27 done
+Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/grenade.go`, `internal/sim/rocket.go`, `internal/audio/audio.go`, `internal/audio/whoosh.go`, `internal/audio/whoosh_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...`. The yellow telegraph is silent. The whoosh is the moment the bomb leaves, then the boom is the landing. A bazooka whooshes at the tube and booms on impact. Player and enemy share each clip.
 
 ## Backlog
 

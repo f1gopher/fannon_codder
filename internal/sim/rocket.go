@@ -80,6 +80,7 @@ func (w *World) launchRocket(owner int, side Side, x, y, tx, ty float64) {
 		Left:      travel,
 		Alive:     true,
 	})
+	w.emit(CueRocket, x+nx*muzzle, y+ny*muzzle)
 }
 
 // rocketHit is the first thing a bazooka round meets along the segment.

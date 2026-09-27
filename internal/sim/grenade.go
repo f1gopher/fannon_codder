@@ -149,6 +149,7 @@ func (w *World) launchGrenade(u *Unit, x, y float64) {
 		OwnerID: u.ID,
 		Alive:   true,
 	})
+	w.emit(CueThrow, u.X, u.Y)
 }
 
 func (w *World) stepPickups() {

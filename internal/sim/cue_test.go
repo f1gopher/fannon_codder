@@ -64,8 +64,9 @@ func TestGrenadeLandingEmitsBoom(t *testing.T) {
 	w := NewEmpty()
 	w.AI = false
 	w.launchGrenade(&Unit{X: 0, Y: 0}, 40, 0)
-	if len(w.TakeCues()) != 0 {
-		t.Fatal("the throw stays silent")
+	cues := w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueThrow || cues[0].X != 0 || cues[0].Y != 0 {
+		t.Fatalf("cues=%v, want one throw at the hand", cues)
 	}
 	var booms []Cue
 	for i := 0; i < 120; i++ {
@@ -195,12 +196,42 @@ func TestQuicksandDeathYells(t *testing.T) {
 	}
 }
 
-func TestThrowAndLaunchStaySilent(t *testing.T) {
+func TestRocketWhooshThenBoom(t *testing.T) {
 	w := NewEmpty()
-	w.launchGrenade(&Unit{X: 0, Y: 0}, 40, 0)
+	w.AI = false
 	w.launchRocket(0, SidePlayer, 0, 0, 40, 0)
-	if len(w.Cues) != 0 {
-		t.Fatalf("leaving the hand emitted %d cues", len(w.Cues))
+	cues := w.TakeCues()
+	tube := float64(UnitSize)
+	if len(cues) != 1 || cues[0].Kind != CueRocket || cues[0].X != tube || cues[0].Y != 0 {
+		t.Fatalf("cues=%v, want the whoosh at the tube", cues)
+	}
+	var booms []Cue
+	for i := 0; i < 40; i++ {
+		w.Step(1.0 / 60)
+		for _, c := range w.TakeCues() {
+			if c.Kind != CueBoom {
+				t.Fatalf("in-flight cue %v", c.Kind)
+			}
+			booms = append(booms, c)
+		}
+	}
+	if len(booms) != 1 || booms[0].X != 40 || booms[0].Y != 0 {
+		t.Fatalf("booms=%v, want one at the impact", booms)
+	}
+}
+
+func TestGrenadierWindupIsSilent(t *testing.T) {
+	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 60, Y: 0})
+	e := enemyOf(w)
+	e.Kind = KindGrenadier
+	e.Bombs = 1
+	e.GrenadeCD = 0
+	w.Step(1.0 / 60)
+	if e.GrenadeWind <= 0 {
+		t.Fatal("expected the yellow telegraph")
+	}
+	if cues := w.TakeCues(); len(cues) != 0 {
+		t.Fatalf("windup emitted %v", cues)
 	}
 }
 

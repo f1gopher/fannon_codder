@@ -10,6 +10,8 @@ const (
 	CueGun
 	CueBoom
 	CueDeath
+	CueThrow
+	CueRocket
 )
 
 // maxCues bounds the queue when a frame is not drained. The newest shots

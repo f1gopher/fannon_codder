@@ -13,13 +13,17 @@ import (
 
 const (
 	// SampleRate is the one rate for every clip, including later music.
-	SampleRate  = 44100
-	gunVoices   = 8
-	gunVolume   = 0.45
-	boomVoices  = 4
-	boomVolume  = 0.7
-	deathVoices = 4
-	deathVolume = 0.55
+	SampleRate   = 44100
+	gunVoices    = 8
+	gunVolume    = 0.45
+	boomVoices   = 4
+	boomVolume   = 0.7
+	deathVoices  = 4
+	deathVolume  = 0.55
+	throwVoices  = 4
+	throwVolume  = 0.42
+	rocketVoices = 3
+	rocketVolume = 0.5
 )
 
 // Mixer is the clip registry and the voice pool.
@@ -40,7 +44,7 @@ type voiceBank struct {
 	next    int
 }
 
-// NewMixer opens the audio device and loads the gunshot, the blast, and the yell.
+// NewMixer opens the audio device and loads the battle clips.
 // Calling it twice in one process panics: Ebitengine allows one context.
 func NewMixer() *Mixer {
 	m := &Mixer{
@@ -50,6 +54,8 @@ func NewMixer() *Mixer {
 	m.Load(sim.CueGun, Gunshot(), gunVoices, gunVolume)
 	m.Load(sim.CueBoom, Boom(), boomVoices, boomVolume)
 	m.load(sim.CueDeath, [][]byte{DeathPCM(0), DeathPCM(1), DeathPCM(2)}, deathVoices, deathVolume)
+	m.Load(sim.CueThrow, Throw(), throwVoices, throwVolume)
+	m.Load(sim.CueRocket, Rocket(), rocketVoices, rocketVolume)
 	return m
 }
 

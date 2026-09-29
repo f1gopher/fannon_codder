@@ -33,7 +33,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 29 Distance
 - [x] 30 Engine loop
 - [x] 31 Scene stings
-- [ ] 32 The picture
+- [x] 32 The picture
 - [ ] 33 Style board
 - [ ] 34 Sprite stage
 - [ ] 35 Snake walks
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–31 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. Next is Chunk 32. Chunk 33 stops until the style board is accepted.
+Chunks 01–22 and 24–32 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. Next is Chunk 33. Chunk 33 stops until the style board is accepted.
 
 ## Log
 
@@ -176,6 +176,10 @@ Verify: `go test ./...`. Board the skidoo (`go run ./cmd/fannon -skidoo`) and th
 ### Chunk 31 done
 Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/audio/sting.go`, `internal/audio/sting_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `internal/app/briefing.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...`. Title → click or Enter clicks, then Boot Hill is quiet. The briefing clicks when it deploys. Clearing a phase plays a short rising sting as Boot Hill opens. Escape, or clicking through a wipe, plays a short falling sting. HUD icons do not click. `go run ./cmd/fannon`.
+
+### Chunk 32 done
+Files: `cmd/fannon/main.go`, `internal/app/game.go`, `internal/app/scale.go`, `internal/app/scale_test.go`, `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/briefing.go`, `internal/app/stub.go`, `internal/render/picture.go`, `internal/render/picture_test.go`, `internal/render/hud.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/pointer.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. The window opens at 1024×768 and will not resize outside 1024×768 … 3840×2160. Mission 1 still fills one view. Dragging the window wider adds bars and does not show more map. The cursor still selects a HUD name. Title, Boot Hill, briefing, and the battle sit in the fitted picture. Placeholders are still rectangles, drawn at the picture scale.
 
 ## Backlog
 

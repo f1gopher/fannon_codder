@@ -6,10 +6,13 @@ Read this file at the start of every implementation chunk. Do not invent a new a
 
 ## Display
 
-- Logical screen **320×256**. Integer scale (2×/3×/4×) into the window with letterboxing. Nearest-neighbour. No rotation, no camera zoom.
-- Default window 960×768 (3×). Resizable.
-- Playfield is most of the screen. Status panel is a **left strip** (~48–56 px). Not drawn until a later chunk.
-- Hide the OS cursor and draw our own pointer (Chunk 02).
+The world pixel space did not change. The frame is still **320×256**. A tile is 16 world pixels, a trooper is an 8-pixel body, and the playfield is the 268×256 view beside the 52-pixel status strip. The camera does not zoom. Audio distances stay in world pixels. A larger window is a sharper picture of that same frame, not a wider view of the map.
+
+The window opens at **1024×768** device-independent pixels. `SetWindowSizeLimits` keeps it inside **1024×768 … 3840×2160**. The 320×256 frame is fitted uniformly (it is not stretched to the window). On the windows this range produces, height is the fit: 1024×768 shows a 960×768 picture with 32 pixels of bar on each side (scale 3), and 3840×2160 shows a 2700×2160 picture (scale 8.4375) with bars on the sides.
+
+`Layout` / `LayoutF` receive the window in device-independent pixels and return the offscreen, `320×S` by `256×S`. `S` is that fit times `Monitor().DeviceScaleFactor()`, clamped so the offscreen never exceeds 3840×2160. `DrawFinalScreen` clears the bars and blits the offscreen at 1:1 in the centre. The filter on that blit is nearest, because the scale is 1. Placeholders are drawn into this offscreen — logical coordinate times `S` — and not painted into a 320×256 buffer and scaled up.
+
+HUD text is `ebiten/v2/text/v2` with the Go regular face. The size is 14 pixels when `S` is 3, and it scales with `S`. The OS cursor stays hidden. The pointer, the sim, the HUD hit tests, and edge scroll see the cursor divided by `S` and clamped to the frame. A click in the bar does not reach the game.
 
 ## Loop
 

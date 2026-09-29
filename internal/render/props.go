@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	"fannon-codder/internal/sim"
 )
@@ -28,11 +27,11 @@ func Solids(dst *ebiten.Image, w *sim.World) {
 		if !b.Alive {
 			continue
 		}
-		x := int(cam.ScreenX(b.X))
-		y := int(cam.ScreenY(b.Y))
-		fillRect(dst, x, y, int(b.W), int(b.H), hutFill)
+		x := cam.ScreenX(b.X)
+		y := cam.ScreenY(b.Y)
+		fillRectF(dst, x, y, b.W, b.H, hutFill)
 		if b.HasDoor {
-			fillRect(dst, x+int(b.W)/2-3, y+int(b.H)-8, 6, 6, doorFill)
+			fillRectF(dst, x+b.W/2-3, y+b.H-8, 6, 6, doorFill)
 		}
 	}
 	for i := range w.Pickups {
@@ -40,14 +39,14 @@ func Solids(dst *ebiten.Image, w *sim.World) {
 		if !p.Alive {
 			continue
 		}
-		x := int(cam.ScreenX(p.X)) - 6
-		y := int(cam.ScreenY(p.Y)) - 6
-		fillRect(dst, x, y, 12, 12, crateFill)
+		x := cam.ScreenX(p.X) - 6
+		y := cam.ScreenY(p.Y) - 6
+		fillRectF(dst, x, y, 12, 12, crateFill)
 		label := "G"
 		if p.Kind == sim.PickupRockets {
 			label = "R"
 		}
-		ebitenutil.DebugPrintAt(dst, label, x+3, y+2)
+		Text(dst, label, x+3, y+2)
 	}
 }
 
@@ -65,12 +64,12 @@ func Vehicles(dst *ebiten.Image, w *sim.World) {
 		if !v.Alive {
 			continue
 		}
-		x := int(cam.ScreenX(v.X)) - 10
-		y := int(cam.ScreenY(v.Y)) - 6
-		fillRect(dst, x, y, 20, 12, trim)
-		fillRect(dst, x+1, y+1, 18, 10, body)
+		x := cam.ScreenX(v.X) - 10
+		y := cam.ScreenY(v.Y) - 6
+		fillRectF(dst, x, y, 20, 12, trim)
+		fillRectF(dst, x+1, y+1, 18, 10, body)
 		if v.Side == sim.SideEnemy && int(v.Blink*6)%2 == 0 {
-			fillRect(dst, x+2, y+2, 3, 3, lamp)
+			fillRectF(dst, x+2, y+2, 3, 3, lamp)
 		}
 	}
 }
@@ -86,17 +85,17 @@ func Grenades(dst *ebiten.Image, w *sim.World) {
 		if !g.Alive {
 			continue
 		}
-		fillRect(dst, int(cam.ScreenX(g.X))-1, int(cam.ScreenY(g.Y-g.Height))-1, 3, 3, bombFill)
+		fillRectF(dst, cam.ScreenX(g.X)-1, cam.ScreenY(g.Y-g.Height)-1, 3, 3, bombFill)
 	}
 	for i := range w.Explosions {
 		e := &w.Explosions[i]
-		r := int(e.R)
-		x := int(cam.ScreenX(e.X)) - r
-		y := int(cam.ScreenY(e.Y)) - r
+		r := e.R
+		x := cam.ScreenX(e.X) - r
+		y := cam.ScreenY(e.Y) - r
 		s := r * 2
-		fillRect(dst, x, y, s, 1, blastFill)
-		fillRect(dst, x, y+s, s, 1, blastFill)
-		fillRect(dst, x, y, 1, s, blastFill)
-		fillRect(dst, x+s, y, 1, s, blastFill)
+		fillRectF(dst, x, y, s, 1, blastFill)
+		fillRectF(dst, x, y+s, s, 1, blastFill)
+		fillRectF(dst, x, y, 1, s, blastFill)
+		fillRectF(dst, x+s, y, 1, s, blastFill)
 	}
 }

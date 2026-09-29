@@ -5,9 +5,9 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"fannon-codder/internal/render"
 	"fannon-codder/internal/sim"
 )
 
@@ -44,13 +44,13 @@ func (b *Briefing) Draw(screen *ebiten.Image) {
 		title = b.prog.Phase.Title
 		body = b.prog.Phase.Briefing
 	}
-	ebitenutil.DebugPrint(screen, fmt.Sprintf(
+	render.Text(screen, fmt.Sprintf(
 		"BRIEFING\nMission %d  Phase %d\n\n%s\n%s\n\nClick or Enter to deploy",
 		b.prog.MissionNumber(),
 		phaseNum(b.prog),
 		title,
 		body,
-	))
+	), 8, 8)
 }
 
 func phaseNum(p *Progress) int {

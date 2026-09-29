@@ -3,9 +3,9 @@ package app
 import (
 	"image"
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/audio"
@@ -69,7 +69,7 @@ func (t *Title) Draw(screen *ebiten.Image) {
 	if t.continues {
 		msg += "\n\nThe campaign continues another day."
 	}
-	ebitenutil.DebugPrint(screen, msg)
+	render.Text(screen, msg, 8, 8)
 }
 
 // Battle is one phase on the map.
@@ -376,7 +376,9 @@ func (b *Battle) battlefieldColor() color.Color {
 
 func (b *Battle) Draw(screen *ebiten.Image) {
 	screen.Fill(b.battlefieldColor())
-	play := screen.SubImage(image.Rect(render.HUDWidth, 0, ScreenWidth, ScreenHeight)).(*ebiten.Image)
+	s := render.PictureScale()
+	left := int(math.Floor(float64(render.HUDWidth) * s))
+	play := screen.SubImage(image.Rect(left, 0, screen.Bounds().Dx(), screen.Bounds().Dy())).(*ebiten.Image)
 	render.Tiles(play, b.world.Map, b.world.Camera)
 	render.Solids(play, b.world)
 	render.Units(play, b.world)
@@ -389,8 +391,8 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	render.HUD(screen, b.world, b.remaining)
 	switch b.world.Status {
 	case sim.Won:
-		ebitenutil.DebugPrint(screen, "\n\n  PHASE COMPLETE\n  Click or Enter")
+		render.Text(screen, "PHASE COMPLETE\nClick or Enter", 70, 96)
 	case sim.Lost:
-		ebitenutil.DebugPrint(screen, "\n\n  PHASE FAILED\n  Click or Enter")
+		render.Text(screen, "PHASE FAILED\nClick or Enter", 70, 96)
 	}
 }

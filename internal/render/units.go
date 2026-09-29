@@ -113,18 +113,19 @@ func Units(dst *ebiten.Image, w *sim.World) {
 		if u.VehicleID != 0 {
 			continue
 		}
-		s, drop := unitPose(u)
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Scale(s, s)
-		op.GeoM.Translate(w.Camera.ScreenX(u.X)-half*s, w.Camera.ScreenY(u.Y)-half*s+drop)
-		dst.DrawImage(unitSprite(unitColor(u)), op)
+		pose, drop := unitPose(u)
+		blit(dst, unitSprite(unitColor(u)),
+			w.Camera.ScreenX(u.X)-half*pose,
+			w.Camera.ScreenY(u.Y)-half*pose+drop,
+			pose, pose,
+		)
 		if u.Living() {
 			// Nose so a grunt's turn is visible before he fires.
 			nx, ny := math.Cos(u.Facing), math.Sin(u.Facing)
-			fillRect(dst, int(w.Camera.ScreenX(u.X)+nx*5), int(w.Camera.ScreenY(u.Y)+ny*5), 2, 2, facingFill)
+			fillRectF(dst, w.Camera.ScreenX(u.X)+nx*5, w.Camera.ScreenY(u.Y)+ny*5, 2, 2, facingFill)
 		}
 		if u.Living() && (u.GrenadeWind > 0 || u.RocketWind > 0) {
-			fillRect(dst, int(w.Camera.ScreenX(u.X))-2, int(w.Camera.ScreenY(u.Y))-7, 4, 2, grenadeWindup)
+			fillRectF(dst, w.Camera.ScreenX(u.X)-2, w.Camera.ScreenY(u.Y)-7, 4, 2, grenadeWindup)
 		}
 	}
 }
@@ -144,11 +145,9 @@ func Projectiles(dst *ebiten.Image, w *sim.World) {
 			continue
 		}
 		if p.Kind == sim.ProjRocket {
-			fillRect(dst, int(w.Camera.ScreenX(p.X))-2, int(w.Camera.ScreenY(p.Y))-1, 5, 3, rocketShot)
+			fillRectF(dst, w.Camera.ScreenX(p.X)-2, w.Camera.ScreenY(p.Y)-1, 5, 3, rocketShot)
 			continue
 		}
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(w.Camera.ScreenX(p.X)-1, w.Camera.ScreenY(p.Y)-1)
-		dst.DrawImage(tracerSprite, op)
+		blit(dst, tracerSprite, w.Camera.ScreenX(p.X)-1, w.Camera.ScreenY(p.Y)-1, 1, 1)
 	}
 }

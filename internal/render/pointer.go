@@ -105,10 +105,10 @@ func drawBitmap(dst *ebiten.Image, ox, oy int, rows [][]int) {
 			for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
 				nx, ny := px+d[0], py+d[1]
 				if !filled(rows, i+d[0], j+d[1], h) {
-					dst.Set(nx, ny, pointerBlack)
+					fillRect(dst, nx, ny, 1, 1, pointerBlack)
 				}
 			}
-			dst.Set(px, py, pointerWhite)
+			fillRect(dst, px, py, 1, 1, pointerWhite)
 		}
 	}
 }

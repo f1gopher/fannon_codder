@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	"fannon-codder/internal/campaign"
 	"fannon-codder/internal/sim"
@@ -214,19 +213,17 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 	if w == nil {
 		return
 	}
-	dst.DrawImage(hudBG(), nil)
+	blit(dst, hudBG(), 0, 0, 1, 1)
 	lay := layoutHUD(w)
 	active := w.ActiveSquad()
 	logoID := sim.SquadSnake
 	if active != nil {
 		logoID = active.ID
 	}
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(lay.logo.x), float64(lay.logo.y))
-	dst.DrawImage(colorLogo(squadFill(logoID, false), hudLogoS), op)
-	ebitenutil.DebugPrintAt(dst, logoID.Letter(), lay.logo.x+2, lay.logo.y+1)
+	blit(dst, colorLogo(squadFill(logoID, false), hudLogoS), float64(lay.logo.x), float64(lay.logo.y), 1, 1)
+	Text(dst, logoID.Letter(), float64(lay.logo.x+2), float64(lay.logo.y+1))
 	if remaining >= 0 {
-		ebitenutil.DebugPrintAt(dst, fmt.Sprintf("R%d", remaining), 20, 6)
+		Text(dst, fmt.Sprintf("R%d", remaining), 20, 6)
 	}
 	gCount, rCount := 0, 0
 	if active != nil {
@@ -250,14 +247,12 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 	}
 	for _, h := range lay.headers {
 		swatch := colorLogo(squadFill(h.id, false), 8)
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(2, float64(h.y+2))
-		dst.DrawImage(swatch, op)
+		blit(dst, swatch, 2, float64(h.y+2), 1, 1)
 		mark := h.id.Letter()
 		if active != nil && active.ID == h.id {
 			mark = ">" + mark
 		}
-		ebitenutil.DebugPrintAt(dst, mark, 12, h.y+2)
+		Text(dst, mark, 12, float64(h.y+2))
 	}
 	for _, m := range lay.men {
 		u := w.Unit(m.id)
@@ -271,8 +266,8 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 		if name == "" {
 			name = "?"
 		}
-		ebitenutil.DebugPrintAt(dst, campaign.Rank(u.Rank).Abbrev(), 2, m.y)
-		ebitenutil.DebugPrintAt(dst, name, 2, m.y+8)
+		Text(dst, campaign.Rank(u.Rank).Abbrev(), 2, float64(m.y))
+		Text(dst, name, 2, float64(m.y+8))
 	}
 }
 
@@ -293,14 +288,12 @@ func rocketIcon() *ebiten.Image {
 }
 
 func drawAmmoIcon(dst *ebiten.Image, r hudRect, label string, n int, img *ebiten.Image, mode sim.AmmoShare, selected bool) {
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(r.x), float64(r.y))
-	dst.DrawImage(img, op)
+	blit(dst, img, float64(r.x), float64(r.y), 1, 1)
 	strokeShare(dst, r, mode)
 	if selected {
 		strokeRect(dst, r, selectSpec)
 	}
-	ebitenutil.DebugPrintAt(dst, fmt.Sprintf("%s%d", label, n), r.x+2, r.y+4)
+	Text(dst, fmt.Sprintf("%s%d", label, n), float64(r.x+2), float64(r.y+4))
 }
 
 func strokeRect(dst *ebiten.Image, r hudRect, c color.Color) {
@@ -330,7 +323,7 @@ func drawStance(dst *ebiten.Image, r hudRect, foot bool) {
 func drawMapIcon(dst *ebiten.Image, r hudRect) {
 	fillRect(dst, r.x, r.y, r.w, r.h, mapIconFill)
 	strokeRect(dst, r, overviewGrass)
-	ebitenutil.DebugPrintAt(dst, "M", r.x+4, r.y+4)
+	Text(dst, "M", float64(r.x+4), float64(r.y+4))
 }
 
 func strokeShare(dst *ebiten.Image, r hudRect, mode sim.AmmoShare) {
@@ -349,12 +342,21 @@ func strokeShare(dst *ebiten.Image, r hudRect, mode sim.AmmoShare) {
 }
 
 func fillRect(dst *ebiten.Image, x, y, w, h int, c color.Color) {
-	if w <= 0 || h <= 0 {
+	fillRectF(dst, float64(x), float64(y), float64(w), float64(h), c)
+}
+
+func fillRectF(dst *ebiten.Image, x, y, w, h float64, c color.Color) {
+	if dst == nil || w <= 0 || h <= 0 {
 		return
 	}
+	s := pictureScale
+	if s <= 0 {
+		s = 1
+	}
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(float64(w), float64(h))
-	op.GeoM.Translate(float64(x), float64(y))
+	op.Filter = ebiten.FilterNearest
+	op.GeoM.Scale(w*s, h*s)
+	op.GeoM.Translate(x*s, y*s)
 	op.ColorScale.ScaleWithColor(c)
 	dst.DrawImage(pixel(), op)
 }

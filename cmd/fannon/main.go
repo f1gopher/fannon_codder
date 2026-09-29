@@ -20,6 +20,7 @@ func main() {
 
 	ebiten.SetWindowTitle("Fannon Codder")
 	ebiten.SetWindowSize(app.DefaultWindowWidth, app.DefaultWindowHeight)
+	ebiten.SetWindowSizeLimits(app.MinWindowWidth, app.MinWindowHeight, app.MaxWindowWidth, app.MaxWindowHeight)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetTPS(app.TPS)
 

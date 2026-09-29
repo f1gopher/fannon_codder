@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/audio"
@@ -18,8 +17,8 @@ const (
 	ScreenHeight = 256
 	TPS          = 60
 
-	DefaultWindowWidth  = ScreenWidth * 3
-	DefaultWindowHeight = ScreenHeight * 3
+	DefaultWindowWidth  = 1024
+	DefaultWindowHeight = 768
 )
 
 // Game is the Ebitengine entry point: scale, input, and the current scene.
@@ -31,6 +30,13 @@ type Game struct {
 	prog    *Progress
 	sound   *audio.Mixer
 	quit    quitPrompt
+
+	// scale is offscreen pixels per world pixel. offW/offH is the picture.
+	// fbW/fbH is the final framebuffer. WindowSize stays at the size the game
+	// requested, so a window-manager resize has to be read from the frame.
+	scale      float64
+	offW, offH int
+	fbW, fbH   int
 }
 
 var quitPanel = color.RGBA{R: 0x10, G: 0x10, B: 0x10, A: 0xff}
@@ -38,9 +44,13 @@ var quitPanel = color.RGBA{R: 0x10, G: 0x10, B: 0x10, A: 0xff}
 // newShell is the window shell shared by every entry point, including the sandboxes.
 func newShell() *Game {
 	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	s, w, h := PictureSize(DefaultWindowWidth, DefaultWindowHeight, 1)
 	return &Game{
 		prog:  NewProgress(),
 		sound: audio.NewMixer(),
+		scale: s,
+		offW:  w,
+		offH:  h,
 	}
 }
 
@@ -144,25 +154,15 @@ func hearPoint(w *sim.World) (x, y float64) {
 }
 
 func (g *Game) Update() error {
-	x, y := ebiten.CursorPosition()
-	if x < 0 {
-		x = 0
+	x, y, inside := g.frameCursor()
+	left := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	right := ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
+	// The bars are outside the 320×256 frame. A click there is not a click.
+	if !inside {
+		left = false
+		right = false
 	}
-	if y < 0 {
-		y = 0
-	}
-	if x > ScreenWidth-1 {
-		x = ScreenWidth - 1
-	}
-	if y > ScreenHeight-1 {
-		y = ScreenHeight - 1
-	}
-	g.pointer = g.tracker.Update(
-		float64(x),
-		float64(y),
-		ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft),
-		ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight),
-	)
+	g.pointer = g.tracker.Update(x, y, left, right)
 
 	if g.next != nil {
 		// The hum belongs to the battle. A new scene starts it again if it
@@ -195,6 +195,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	render.SetPictureScale(g.scale)
 	if g.scene != nil {
 		g.scene.Draw(screen)
 	}
@@ -208,42 +209,61 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	if g.quit.open {
 		const x, y, w, h = 70, 96, 180, 64
-		ebitenutil.DrawRect(screen, x, y, w, h, quitPanel)
-		ebitenutil.DebugPrintAt(screen, "Quit the game?\n\nY or Enter  quit\nN or Escape  stay", x+8, y+6)
+		render.Rect(screen, x, y, w, h, quitPanel)
+		render.Text(screen, "Quit the game?\n\nY or Enter  quit\nN or Escape  stay", x+8, y+6)
 	}
 	render.Pointer(screen, g.pointer.X, g.pointer.Y, kind)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return ScreenWidth, ScreenHeight
+	return g.prepareLayout(float64(outsideWidth), float64(outsideHeight))
 }
 
-// DrawFinalScreen integer-scales the 320×256 offscreen into the window with
-// letterboxing. Nearest-neighbour; never a fractional scale.
+func (g *Game) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
+	w, h := g.prepareLayout(outsideWidth, outsideHeight)
+	return float64(w), float64(h)
+}
+
+func (g *Game) prepareLayout(outsideWidth, outsideHeight float64) (int, int) {
+	s, w, h := PictureSize(outsideWidth, outsideHeight, monitorScale())
+	g.scale = s
+	g.offW = w
+	g.offH = h
+	return w, h
+}
+
+// DrawFinalScreen clears the framebuffer and blits the offscreen at 1:1 in
+// the centre. The scale is 1, so the filter is nearest. The margin is the bars.
 func (g *Game) DrawFinalScreen(screen ebiten.FinalScreen, offscreen *ebiten.Image, _ ebiten.GeoM) {
 	b := screen.Bounds()
-	scale, ox, oy := integerScale(b.Dx(), b.Dy(), ScreenWidth, ScreenHeight)
+	g.fbW = b.Dx()
+	g.fbH = b.Dy()
+	screen.Fill(color.Black)
+	ob := offscreen.Bounds()
 	op := &ebiten.DrawImageOptions{}
 	op.Filter = ebiten.FilterNearest
-	op.GeoM.Scale(float64(scale), float64(scale))
-	op.GeoM.Translate(float64(ox), float64(oy))
+	op.GeoM.Translate(float64(b.Dx()-ob.Dx())/2, float64(b.Dy()-ob.Dy())/2)
 	screen.DrawImage(offscreen, op)
 }
 
-func integerScale(outsideW, outsideH, logicalW, logicalH int) (scale, offsetX, offsetY int) {
-	if logicalW <= 0 || logicalH <= 0 {
-		return 1, 0, 0
+// frameCursor returns the pointer in world-frame pixels. inside is false in the bars.
+func (g *Game) frameCursor() (x, y float64, inside bool) {
+	cx, cy := ebiten.CursorPosition()
+	// CursorPosition is where Ebitengine's own letterbox would put the pointer.
+	// The blit is 1:1 on the real framebuffer, which a resize can change while
+	// WindowSize stays at 1024×768.
+	ox, oy := OffscreenCursor(float64(cx), float64(cy), g.fbW, g.fbH, g.offW, g.offH)
+	return FramePoint(ox, oy, g.scale, g.offW, g.offH)
+}
+
+func monitorScale() float64 {
+	m := ebiten.Monitor()
+	if m == nil {
+		return 1
 	}
-	sx := outsideW / logicalW
-	sy := outsideH / logicalH
-	scale = sx
-	if sy < scale {
-		scale = sy
+	s := m.DeviceScaleFactor()
+	if s <= 0 {
+		return 1
 	}
-	if scale < 1 {
-		scale = 1
-	}
-	offsetX = (outsideW - logicalW*scale) / 2
-	offsetY = (outsideH - logicalH*scale) / 2
-	return scale, offsetX, offsetY
+	return s
 }

@@ -5,10 +5,10 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/campaign"
+	"fannon-codder/internal/render"
 )
 
 var (
@@ -77,33 +77,25 @@ func inRect(px, py, x, y, w, h float64) bool {
 
 func (b *BootHill) Draw(screen *ebiten.Image) {
 	screen.Fill(hillSky)
-	for y := 140; y < ScreenHeight; y++ {
-		for x := 0; x < ScreenWidth; x++ {
-			screen.Set(x, y, hillFill)
-		}
-	}
-	for x := 40; x < 280; x++ {
-		for y := 168; y < 176; y++ {
-			screen.Set(x, y, pathFill)
-		}
-	}
+	render.Rect(screen, 0, 140, ScreenWidth, ScreenHeight-140, hillFill)
+	render.Rect(screen, 40, 168, 240, 8, pathFill)
 	n := b.prog.Pool.Remaining()
 	if n > 24 {
 		n = 24
 	}
 	for i := 0; i < n; i++ {
-		fillRect(screen, 48+i*9, 160, 6, 8, manFill)
+		render.Rect(screen, 48+i*9, 160, 6, 8, manFill)
 	}
 	for i := 0; i < b.prog.Graves && i < 40; i++ {
-		fillRect(screen, 20+(i%10)*12, 190+(i/10)*14, 4, 8, graveFill)
+		render.Rect(screen, 20+(i%10)*12, 190+(i/10)*14, 4, 8, graveFill)
 	}
 
-	fillRect(screen, loadX, loadY, loadW, loadH, iconFill)
-	fillRect(screen, saveX, saveY, saveW, saveH, iconFill)
-	ebitenutil.DebugPrintAt(screen, "LOAD", loadX+4, loadY+2)
-	ebitenutil.DebugPrintAt(screen, "SAVE", saveX+4, saveY+2)
+	render.Rect(screen, loadX, loadY, loadW, loadH, iconFill)
+	render.Rect(screen, saveX, saveY, saveW, saveH, iconFill)
+	render.Text(screen, "LOAD", loadX+4, loadY+2)
+	render.Text(screen, "SAVE", saveX+4, saveY+2)
 
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf(
+	render.Text(screen, fmt.Sprintf(
 		"BOOT HILL  Mission %d  Graves %d  Queue %d",
 		b.prog.MissionNumber(), b.prog.Graves, b.prog.Pool.Remaining(),
 	), 8, 24)
@@ -115,8 +107,8 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 			if s.Rank <= campaign.Private {
 				continue
 			}
-			ebitenutil.DebugPrintAt(screen, s.Rank.Abbrev()+" "+s.Name, 8, y)
-			y += 10
+			render.Text(screen, s.Rank.Abbrev()+" "+s.Name, 8, float64(y))
+			y += 8
 			shown++
 			if shown >= 4 {
 				break
@@ -126,23 +118,15 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 
 	switch {
 	case b.prog.GameOver:
-		ebitenutil.DebugPrintAt(screen, "GAME OVER — no recruits left", 8, 88)
+		render.Text(screen, "GAME OVER — no recruits left", 8, 88)
 	case b.prog.AwaitingStub && b.prog.MissionsCompleted >= 5:
-		ebitenutil.DebugPrintAt(screen, "THE CAMPAIGN CONTINUES ANOTHER DAY", 8, 88)
+		render.Text(screen, "THE CAMPAIGN CONTINUES ANOTHER DAY", 8, 88)
 	case b.prog.AwaitingStub:
-		ebitenutil.DebugPrintAt(screen, "MISSION COMPLETE  Click — later missions", 8, 88)
+		render.Text(screen, "MISSION COMPLETE  Click — later missions", 8, 88)
 	default:
-		ebitenutil.DebugPrintAt(screen, "Click or Enter to start", 8, 88)
+		render.Text(screen, "Click or Enter to start", 8, 88)
 	}
 	if b.prog.SaveNotice != "" {
-		ebitenutil.DebugPrintAt(screen, b.prog.SaveNotice, 8, 100)
-	}
-}
-
-func fillRect(dst *ebiten.Image, x, y, w, h int, c color.Color) {
-	for j := 0; j < h; j++ {
-		for i := 0; i < w; i++ {
-			dst.Set(x+i, y+j, c)
-		}
+		render.Text(screen, b.prog.SaveNotice, 8, 108)
 	}
 }

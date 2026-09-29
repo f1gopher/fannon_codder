@@ -14,11 +14,13 @@ The window opens at **1024×768** device-independent pixels. `SetWindowSizeLimit
 
 HUD text is `ebiten/v2/text/v2` with the Go regular face. The size is 14 pixels when `S` is 3, and it scales with `S`. The OS cursor stays hidden. The pointer, the sim, the HUD hit tests, and edge scroll see the cursor divided by `S` and clamped to the frame. A click in the bar does not reach the game.
 
+A painted sheet is drawn at `S/8` with a linear filter. The blit of the offscreen stays nearest. `8` is source pixels per world pixel. A body with no sheet draws its coloured rectangle.
+
 ## Loop
 
 - `ebiten.TPS = 60`.
-- `Update` samples input, steps `sim.World` once.
-- `Draw` paints placeholders from sim state. **No gameplay in Draw.**
+- `Update` samples input, steps `sim.World` once, then advances the picture clock.
+- `Draw` paints the picture from sim state. **No gameplay in Draw.**
 
 ## Packages
 
@@ -28,7 +30,7 @@ internal/app/        # ebiten.Game, scene stack, scaling
 internal/input/      # pointer, buttons, both-buttons chord
 internal/sim/        # world, units, combat, AI, objectives — NO ebiten import
 internal/campaign/   # recruits, names, ranks, save JSON — NO ebiten import
-internal/render/     # placeholder draw of sim + HUD
+internal/render/     # picture: sheets, or the coloured rectangle when a sheet is missing
 internal/audio/      # cue playback — the only package that opens the audio device
 internal/data/       # load mission JSON
 assets/placeholder/  # later: real PNGs with the same filenames
@@ -97,6 +99,18 @@ Pointer-driven edge scroll, clamped to the map. The view is the playfield beside
 Ranks (low → high): Private, Corporal, Sergeant, Staff Sergeant, Sergeant First Class, Master Sergeant, Sergeant Major, Specialist 4, Specialist 6, Warrant Officer, Chief Warrant Officer, Captain, Major, Colonel, Brigadier General, General.
 
 Rank affects MG range, accuracy (spread), and rate of fire (Chunk 10). Until then all ranks shoot the same.
+
+## Sprites
+
+Sheets live in `assets/art` as one PNG and one JSON per animation. `internal/render` embeds that tree. The style board has no JSON, so it is not drawn. The key is the path without the extension.
+
+JSON fields are `frameW`, `frameH`, `anchorX`, `anchorY`, `fps`, `loop`, `rows`, and `mirrors`. `rows` is the order of rows in the PNG. A mirror names a stored row and is not stored itself. Directions are `E, SE, S, SW, W, NW, N, NE`. Facing `0` is east, `π/2` is south, `π` is west, and `−π/2` is north. Paint E, SE, S, N, and NE. Mirror E→W, SE→SW, and NE→NW.
+
+The anchor sits on the sim point the rectangle uses: a trooper, crate, or skidoo position; the bottom centre of a hut; the bottom centre of a tree's cell. A ground frame pins its top-left to the cell. Draw order is ground, a soft oval under each painted body, then trees, huts, crates, men, and vehicles by foot Y, then grenades, tracers, and blasts, then the HUD and the pointer. Scenery frames are offset by `tx*3+ty*5`.
+
+Pose, first match: death (once, then the corpse frame), sink (scrubbed by `Sink/SinkTime`), swim, throw (scrubbed across the windup or the 0.25s after launch), shoot (while `SinceShot < 0.12`), walk (speed above 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up each step and do not change combat. Death time is kept in the renderer by unit id. The battle `Update` advances the clock.
+
+Keys: `snake|eagle|panther|grunt|grenadier|rocketeer|civilian` with `idle|walk|shoot|throw|death|corpse|swim|sink`. Ground: `ground/grass`, `ground/snow`, `ground/water-shallow`, `ground/water-deep`, `ground/quicksand`, `ground/ice`, `ground/bridge`, `ground/cliff`, `ground/ramp`, `ground/mine`. Props: `tree/sway`, `hut/door`, `hut/plain`, `crate/grenade`, `crate/rocket`, `skidoo/idle`, `skidoo/move`.
 
 ## Placeholders
 

@@ -62,7 +62,9 @@ func tileImage(t sim.Tile) *ebiten.Image {
 	return img
 }
 
-// Tiles draws non-grass tiles. Grass is the scene background.
+// Tiles draws ground that is not the base fill and not a tree. Trees are
+// sorted with the bodies. Grass and snow are the scene fill, or a sheet
+// when one is loaded. A sheet replaces the rectangle for that cell.
 func Tiles(dst *ebiten.Image, m sim.Map, cam sim.Camera) {
 	if m.W == 0 {
 		return
@@ -70,15 +72,20 @@ func Tiles(dst *ebiten.Image, m sim.Map, cam sim.Camera) {
 	tx0, ty0, tx1, ty1 := visibleTiles(m, cam)
 	for ty := ty0; ty < ty1; ty++ {
 		for tx := tx0; tx < tx1; tx++ {
-			img := tileImage(m.At(tx, ty))
+			t := m.At(tx, ty)
+			if t == sim.TileGrass || t == sim.TileTree {
+				continue
+			}
+			x := cam.ScreenX(float64(tx * sim.TileSize))
+			y := cam.ScreenY(float64(ty * sim.TileSize))
+			if drawLoopSheet(dst, activeSheets().Get(tileSheetKey(t)), tx, ty, x, y) {
+				continue
+			}
+			img := tileImage(t)
 			if img == nil {
 				continue
 			}
-			blit(dst, img,
-				cam.ScreenX(float64(tx*sim.TileSize)),
-				cam.ScreenY(float64(ty*sim.TileSize)),
-				1, 1,
-			)
+			blit(dst, img, x, y, 1, 1)
 		}
 	}
 }

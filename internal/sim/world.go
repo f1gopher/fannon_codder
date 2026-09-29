@@ -216,12 +216,14 @@ func (w *World) SpawnPlayerSquad(id SquadID, positions []Vec2) *Squad {
 	s := Squad{ID: id, Active: len(w.Squads) == 0}
 	for _, p := range positions {
 		u := Unit{
-			ID:      w.nextID,
-			Side:    SidePlayer,
-			HP:      Alive,
-			X:       p.X,
-			Y:       p.Y,
-			SquadID: id,
+			ID:         w.nextID,
+			Side:       SidePlayer,
+			HP:         Alive,
+			X:          p.X,
+			Y:          p.Y,
+			SquadID:    id,
+			SinceShot:  animRest,
+			SinceThrow: animRest,
 		}
 		w.nextID++
 		w.Units = append(w.Units, u)
@@ -240,11 +242,13 @@ func (w *World) SpawnUnit(side Side, p Vec2) *Unit {
 		w.rng = newRNG()
 	}
 	u := Unit{
-		ID:   w.nextID,
-		Side: side,
-		HP:   Alive,
-		X:    p.X,
-		Y:    p.Y,
+		ID:         w.nextID,
+		Side:       side,
+		HP:         Alive,
+		X:          p.X,
+		Y:          p.Y,
+		SinceShot:  animRest,
+		SinceThrow: animRest,
 	}
 	if side == SideEnemy {
 		u.Facing = 0 // posted sentry, faces east
@@ -337,6 +341,16 @@ func (w *World) Step(dt float64) {
 	w.stepSpawners(dt)
 	w.stepBlasts(dt)
 	w.evaluateObjectives()
+	w.stepAnimClocks(dt)
+}
+
+// stepAnimClocks advances the shot and throw timers the picture reads.
+// Combat does not.
+func (w *World) stepAnimClocks(dt float64) {
+	for i := range w.Units {
+		w.Units[i].SinceShot += dt
+		w.Units[i].SinceThrow += dt
+	}
 }
 
 func (w *World) stepSquad(s *Squad, dt float64) {

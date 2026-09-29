@@ -57,8 +57,15 @@ type Unit struct {
 	ReactAt     float64 // SpotT must reach this before the first MG round. 0 means no live contact.
 	BurstN      int     // MG rounds fired in the current chatter.
 	BurstGap    float64 // seconds of silence left after a full burst.
+	SinceShot   float64 // seconds since this unit's last MG round. Render only.
+	SinceThrow  float64 // seconds since this unit's last grenade or rocket. Render only.
 	sampled     bool    // terrain has been read once; a man placed in water does not splash
 }
+
+// animRest is SinceShot and SinceThrow for a trooper who has not fired.
+// The picture treats the first 0.12s after a shot and the first 0.25s after
+// a throw as those poses. Zero would play them on the spawn frame.
+const animRest = 1
 
 func (u *Unit) Dead() bool { return u.HP == Dead }
 

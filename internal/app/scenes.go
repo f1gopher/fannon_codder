@@ -203,7 +203,7 @@ func nameSquad(w *sim.World, men []campaign.Soldier) {
 	}
 }
 
-func (b *Battle) Enter() {}
+func (b *Battle) Enter() { render.ResetAnim() }
 func (b *Battle) Leave() {}
 
 // CursorKind is the playfield pointer: board and exit sit on a skidoo.
@@ -227,6 +227,7 @@ func (b *Battle) CursorKind(p input.Pointer) int {
 
 func (b *Battle) Update(h Host) error {
 	defer func() {
+		render.Advance(1.0/TPS, b.world)
 		if b.world != nil {
 			x, y := hearPoint(b.world)
 			h.SetListener(x, y)
@@ -367,8 +368,12 @@ func (b *Battle) leaveBattle(h Host, won bool) {
 	h.Switch(NewBootHill(b.prog))
 }
 
+func (b *Battle) arctic() bool {
+	return !b.sandbox && b.prog != nil && b.prog.Phase != nil && b.prog.Phase.Terrain == "arctic"
+}
+
 func (b *Battle) battlefieldColor() color.Color {
-	if !b.sandbox && b.prog != nil && b.prog.Phase != nil && b.prog.Phase.Terrain == "arctic" {
+	if b.arctic() {
 		return snowColor
 	}
 	return battleColor
@@ -379,12 +384,11 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	s := render.PictureScale()
 	left := int(math.Floor(float64(render.HUDWidth) * s))
 	play := screen.SubImage(image.Rect(left, 0, screen.Bounds().Dx(), screen.Bounds().Dy())).(*ebiten.Image)
-	render.Tiles(play, b.world.Map, b.world.Camera)
-	render.Solids(play, b.world)
-	render.Units(play, b.world)
-	render.Vehicles(play, b.world)
-	render.Projectiles(play, b.world)
-	render.Grenades(play, b.world)
+	terrain := "grass"
+	if b.arctic() {
+		terrain = "snow"
+	}
+	render.Field(play, b.world, terrain)
 	if b.mapOpen {
 		render.Overview(screen, b.world)
 	}

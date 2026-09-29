@@ -152,6 +152,9 @@ func (w *World) addMG(x, y, ang, travel float64, owner int, side Side) {
 		Alive:     true,
 	})
 	w.emit(CueGun, x, y)
+	if u := w.Unit(owner); u != nil {
+		u.SinceShot = 0
+	}
 }
 
 func (w *World) stepProjectiles(dt float64) {

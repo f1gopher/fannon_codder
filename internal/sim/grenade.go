@@ -138,6 +138,7 @@ func (w *World) launchGrenade(u *Unit, x, y float64) {
 		dur = 0.2
 	}
 	u.Facing = math.Atan2(y-u.Y, x-u.X)
+	u.SinceThrow = 0
 	w.Grenades = append(w.Grenades, Grenade{
 		X:       u.X,
 		Y:       u.Y,

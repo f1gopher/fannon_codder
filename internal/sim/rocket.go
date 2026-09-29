@@ -63,6 +63,7 @@ func (w *World) launchRocket(owner int, side Side, x, y, tx, ty float64) {
 	nx, ny := math.Cos(math.Atan2(dy, dx)), math.Sin(math.Atan2(dy, dx))
 	if u := w.Unit(owner); u != nil {
 		u.Facing = math.Atan2(ny, nx)
+		u.SinceThrow = 0
 	}
 	muzzle := float64(UnitSize)
 	travel := dist - muzzle

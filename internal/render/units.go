@@ -67,8 +67,8 @@ func unitColor(u *sim.Unit) color.RGBA {
 	return squadFill(u.SquadID, u.InWater)
 }
 
-// unitPose shrinks a sinking trooper into the pool. Everyone else is full size.
-func unitPose(u *sim.Unit) (scale, drop float64) {
+// unitPoseScale shrinks a sinking trooper into the pool. Everyone else is full size.
+func unitPoseScale(u *sim.Unit) (scale, drop float64) {
 	if !u.Sinking || sim.SinkTime <= 0 {
 		return 1, 0
 	}
@@ -102,31 +102,28 @@ func squadFill(id sim.SquadID, swim bool) color.RGBA {
 	}
 }
 
-// Units draws placeholder troopers in screen space.
-func Units(dst *ebiten.Image, w *sim.World) {
-	if w == nil {
-		return
+// rectHook counts placeholder troopers. Tests use it with spriteHook.
+var rectHook func()
+
+// drawUnitRect is the placeholder trooper, used when no sheet matches.
+func drawUnitRect(dst *ebiten.Image, cam sim.Camera, u *sim.Unit) {
+	if rectHook != nil {
+		rectHook()
 	}
 	half := float64(sim.UnitSize) / 2
-	for i := range w.Units {
-		u := &w.Units[i]
-		if u.VehicleID != 0 {
-			continue
-		}
-		pose, drop := unitPose(u)
-		blit(dst, unitSprite(unitColor(u)),
-			w.Camera.ScreenX(u.X)-half*pose,
-			w.Camera.ScreenY(u.Y)-half*pose+drop,
-			pose, pose,
-		)
-		if u.Living() {
-			// Nose so a grunt's turn is visible before he fires.
-			nx, ny := math.Cos(u.Facing), math.Sin(u.Facing)
-			fillRectF(dst, w.Camera.ScreenX(u.X)+nx*5, w.Camera.ScreenY(u.Y)+ny*5, 2, 2, facingFill)
-		}
-		if u.Living() && (u.GrenadeWind > 0 || u.RocketWind > 0) {
-			fillRectF(dst, w.Camera.ScreenX(u.X)-2, w.Camera.ScreenY(u.Y)-7, 4, 2, grenadeWindup)
-		}
+	pose, drop := unitPoseScale(u)
+	blit(dst, unitSprite(unitColor(u)),
+		cam.ScreenX(u.X)-half*pose,
+		cam.ScreenY(u.Y)-half*pose+drop,
+		pose, pose,
+	)
+	if u.Living() {
+		// Nose so a grunt's turn is visible before he fires.
+		nx, ny := math.Cos(u.Facing), math.Sin(u.Facing)
+		fillRectF(dst, cam.ScreenX(u.X)+nx*5, cam.ScreenY(u.Y)+ny*5, 2, 2, facingFill)
+	}
+	if u.Living() && (u.GrenadeWind > 0 || u.RocketWind > 0) {
+		fillRectF(dst, cam.ScreenX(u.X)-2, cam.ScreenY(u.Y)-7, 4, 2, grenadeWindup)
 	}
 }
 

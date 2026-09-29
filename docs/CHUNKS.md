@@ -35,7 +35,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 31 Scene stings
 - [x] 32 The picture
 - [x] 33 Style board
-- [ ] 34 Sprite stage
+- [x] 34 Sprite stage
 - [ ] 35 Snake walks
 - [ ] 36 Snake fights and falls
 - [ ] 37 Snake in the water and the sand
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–33 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 34.
+Chunks 01–22 and 24–34 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 35.
 
 ## Log
 
@@ -184,6 +184,12 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. The window opens at 1024×7
 ### Chunk 33 done
 Files: `assets/art/style/` (contact sheet and the separate paintings). No game code.
 Verify: `go test ./...` and `go build ./cmd/fannon`. The board is accepted. Snake idles at 96px and the same figure is at 36px. Jungle grass is at 128 and at 48, with a 2×2 of the 48. Also on the board: a tree, a two-frame shallow-water strip, snow, a door hut, a three-quarter skidoo, the pointer, and a status-strip corner with Pte Jools in Go Regular at 14px. Nothing is loaded by the renderer. Later art follows this board.
+
+### Chunk 34 done
+Files: `assets/art/embed.go`, `internal/render/sheet.go`, `internal/render/stage.go`, `internal/render/shadow.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/sheet_test.go`, `internal/render/stage_test.go`, `internal/sim/unit.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/sim/grenade.go`, `internal/sim/rocket.go`, `internal/sim/anim_test.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. The battle still draws rectangles, because no production sheet is embedded. A test sheet plays its first frame, then the next, and west is the mirror of east. A missing sheet, or a facing the sheet does not carry, stays a rectangle. `addMG` zeroes `SinceShot` and one step of 1/60 increases it. `launchGrenade` and `launchRocket` zero `SinceThrow`. Tile (0,0) and tile (1,0) are on different scenery frames.
+
+The manifest and the keys are in `docs/ARCHITECTURE.md` under Sprites. The anchor sits on the sim point. Draw scale is `S/8`, filter linear. Pose is the first match in that section. Death time is per unit id in the renderer. The battle `Update` advances the clock after `Step`. A painted body gets a soft oval; a rectangle does not, so the field matches Chunk 32 until a sheet exists. Trees, huts, crates, men, and vehicles sort by foot Y, so a man south of a tree is drawn after it.
 
 ## Backlog
 

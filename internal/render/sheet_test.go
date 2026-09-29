@@ -56,7 +56,7 @@ func TestMirrorMustNameAStoredRow(t *testing.T) {
 	}
 }
 
-func TestEmbedHoldsStyleBoardAndNoSheets(t *testing.T) {
+func TestSnakeIdleAndWalkSheets(t *testing.T) {
 	f, err := art.Files.Open("style/contact-sheet.png")
 	if err != nil {
 		t.Fatal(err)
@@ -66,8 +66,37 @@ func TestEmbedHoldsStyleBoardAndNoSheets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sh := lib.Get("snake/idle"); sh != nil {
-		t.Fatal("a production snake sheet is embedded")
+	idle := lib.Get("snake/idle")
+	walk := lib.Get("snake/walk")
+	if idle == nil || walk == nil {
+		t.Fatal("snake idle and walk sheets should be embedded")
+	}
+	if idle.Frames != 4 || idle.FPS != 8 || !idle.Loop {
+		t.Fatalf("idle frames=%d fps=%v loop=%v", idle.Frames, idle.FPS, idle.Loop)
+	}
+	if walk.Frames != 6 || walk.FPS != 12 || !walk.Loop {
+		t.Fatalf("walk frames=%d fps=%v loop=%v", walk.Frames, walk.FPS, walk.Loop)
+	}
+	if idle.FrameW != walk.FrameW || idle.FrameH != walk.FrameH || idle.AnchorX != walk.AnchorX || idle.AnchorY != walk.AnchorY {
+		t.Fatalf("idle and walk cells differ: idle %dx%d @%d,%d walk %dx%d @%d,%d",
+			idle.FrameW, idle.FrameH, idle.AnchorX, idle.AnchorY,
+			walk.FrameW, walk.FrameH, walk.AnchorX, walk.AnchorY)
+	}
+	for _, d := range []string{"E", "SE", "S", "N", "NE"} {
+		if _, mirror, ok := idle.image(d, 0); !ok || mirror {
+			t.Fatalf("%s should be a stored row", d)
+		}
+		if _, _, ok := walk.image(d, 0); !ok {
+			t.Fatalf("walk missing %s", d)
+		}
+	}
+	for _, d := range []string{"W", "SW", "NW"} {
+		if _, mirror, ok := idle.image(d, 0); !ok || !mirror {
+			t.Fatalf("%s should mirror a stored row", d)
+		}
+	}
+	if lib.Get("eagle/idle") != nil || lib.Get("grunt/idle") != nil {
+		t.Fatal("only snake idle and walk are production sheets")
 	}
 }
 

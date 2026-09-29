@@ -36,7 +36,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 32 The picture
 - [x] 33 Style board
 - [x] 34 Sprite stage
-- [ ] 35 Snake walks
+- [x] 35 Snake walks
 - [ ] 36 Snake fights and falls
 - [ ] 37 Snake in the water and the sand
 - [ ] 38 Eagle and Panther
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–34 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 35.
+Chunks 01–22 and 24–35 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 36.
 
 ## Log
 
@@ -190,6 +190,10 @@ Files: `assets/art/embed.go`, `internal/render/sheet.go`, `internal/render/stage
 Verify: `go test ./...` and `go build ./cmd/fannon`. The battle still draws rectangles, because no production sheet is embedded. A test sheet plays its first frame, then the next, and west is the mirror of east. A missing sheet, or a facing the sheet does not carry, stays a rectangle. `addMG` zeroes `SinceShot` and one step of 1/60 increases it. `launchGrenade` and `launchRocket` zero `SinceThrow`. Tile (0,0) and tile (1,0) are on different scenery frames.
 
 The manifest and the keys are in `docs/ARCHITECTURE.md` under Sprites. The anchor sits on the sim point. Draw scale is `S/8`, filter linear. Pose is the first match in that section. Death time is per unit id in the renderer. The battle `Update` advances the clock after `Step`. A painted body gets a soft oval; a rectangle does not, so the field matches Chunk 32 until a sheet exists. Trees, huts, crates, men, and vehicles sort by foot Y, so a man south of a tree is drawn after it.
+
+### Chunk 35 done
+Files: `assets/art/snake/idle.png`, `assets/art/snake/idle.json`, `assets/art/snake/walk.png`, `assets/art/snake/walk.json`, `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s two Snake troopers idle and walk in the direction they face. West, south-west, and north-west are mirrors. Eagle, enemies, and the map are still rectangles. A shot, a throw, or a death still falls back to the rectangle until those sheets exist.
 
 ## Backlog
 

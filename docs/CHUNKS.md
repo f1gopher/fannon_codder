@@ -37,7 +37,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 33 Style board
 - [x] 34 Sprite stage
 - [x] 35 Snake walks
-- [ ] 36 Snake fights and falls
+- [x] 36 Snake fights and falls
 - [ ] 37 Snake in the water and the sand
 - [ ] 38 Eagle and Panther
 - [ ] 39 Enemy soldiers
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–35 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 36.
+Chunks 01–22 and 24–36 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 37.
 
 ## Log
 
@@ -194,6 +194,10 @@ The manifest and the keys are in `docs/ARCHITECTURE.md` under Sprites. The ancho
 ### Chunk 35 done
 Files: `assets/art/snake/idle.png`, `assets/art/snake/idle.json`, `assets/art/snake/walk.png`, `assets/art/snake/walk.json`, `internal/render/sheet_test.go`.
 Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s two Snake troopers idle and walk in the direction they face. West, south-west, and north-west are mirrors. Eagle, enemies, and the map are still rectangles. A shot, a throw, or a death still falls back to the rectangle until those sheets exist.
+
+### Chunk 36 done
+Files: `assets/art/snake/shoot.png`, `assets/art/snake/shoot.json`, `assets/art/snake/throw.png`, `assets/art/snake/throw.json`, `assets/art/snake/death.png`, `assets/art/snake/death.json`, `assets/art/snake/corpse.png`, `assets/art/snake/corpse.json`, `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Holding right plays the two-frame shot across 0.12s. A grenade plays the four-frame throw across the 0.25s after it leaves. A dead trooper plays the six-frame fall for 0.4s and then stays on the corpse, which is that fall’s last frame in the same cell. West, south-west, and north-west are mirrors. Swim, sink, Eagle, enemies, and the map stay rectangles. The north body stays upright when he is down. Prone frames are shorter than the standing body. Some throw frames still show a grenade in the hand.
 
 ## Backlog
 

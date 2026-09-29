@@ -96,8 +96,111 @@ func TestSnakeIdleAndWalkSheets(t *testing.T) {
 		}
 	}
 	if lib.Get("eagle/idle") != nil || lib.Get("grunt/idle") != nil {
-		t.Fatal("only snake idle and walk are production sheets")
+		t.Fatal("eagle and grunt have no sheets yet")
 	}
+	for _, key := range []string{"snake/shoot", "snake/throw", "snake/death", "snake/corpse"} {
+		if lib.Get(key) == nil {
+			t.Fatalf("missing %s", key)
+		}
+	}
+}
+
+func TestSnakeFightSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shoot := lib.Get("snake/shoot")
+	throw := lib.Get("snake/throw")
+	death := lib.Get("snake/death")
+	corpse := lib.Get("snake/corpse")
+	if shoot == nil || throw == nil || death == nil || corpse == nil {
+		t.Fatal("snake shoot, throw, death, and corpse should be embedded")
+	}
+	if shoot.Frames != 2 || shoot.Loop {
+		t.Fatalf("shoot frames=%d loop=%v", shoot.Frames, shoot.Loop)
+	}
+	if throw.Frames != 4 || throw.Loop {
+		t.Fatalf("throw frames=%d loop=%v", throw.Frames, throw.Loop)
+	}
+	if death.Frames != 6 || death.FPS != 15 || death.Loop {
+		t.Fatalf("death frames=%d fps=%v loop=%v", death.Frames, death.FPS, death.Loop)
+	}
+	if float64(death.Frames)/death.FPS != 0.4 {
+		t.Fatalf("death lasts %v, want 0.4s", float64(death.Frames)/death.FPS)
+	}
+	if FrameAt(0.39, death.FPS, death.Frames, false) != 5 {
+		t.Fatal("the last death frame should still be showing just before 0.4s")
+	}
+	if corpse.Frames != 1 || corpse.Loop {
+		t.Fatalf("corpse frames=%d loop=%v", corpse.Frames, corpse.Loop)
+	}
+	if corpse.FrameW != death.FrameW || corpse.FrameH != death.FrameH || corpse.AnchorX != death.AnchorX || corpse.AnchorY != death.AnchorY {
+		t.Fatalf("corpse cell %dx%d @%d,%d, death cell %dx%d @%d,%d",
+			corpse.FrameW, corpse.FrameH, corpse.AnchorX, corpse.AnchorY,
+			death.FrameW, death.FrameH, death.AnchorX, death.AnchorY)
+	}
+	for _, sh := range []*Sheet{shoot, throw, death, corpse} {
+		for _, d := range []string{"E", "SE", "S", "N", "NE"} {
+			if _, mirror, ok := sh.image(d, 0); !ok || mirror {
+				t.Fatalf("%s should be a stored row", d)
+			}
+		}
+		for _, d := range []string{"W", "SW", "NW"} {
+			if _, mirror, ok := sh.image(d, 0); !ok || !mirror {
+				t.Fatalf("%s should mirror a stored row", d)
+			}
+		}
+	}
+	if lib.Get("snake/swim") != nil || lib.Get("snake/sink") != nil || lib.Get("eagle/idle") != nil {
+		t.Fatal("swim, sink, and eagle are later chunks")
+	}
+	deathPNG := decodeArtPNG(t, "snake/death.png")
+	corpsePNG := decodeArtPNG(t, "snake/corpse.png")
+	if deathPNG.Bounds().Dx() != death.FrameW*death.Frames || deathPNG.Bounds().Dy() != death.FrameH*5 {
+		t.Fatalf("death png %v", deathPNG.Bounds())
+	}
+	if corpsePNG.Bounds().Dx() != corpse.FrameW || corpsePNG.Bounds().Dy() != corpse.FrameH*5 {
+		t.Fatalf("corpse png %v", corpsePNG.Bounds())
+	}
+	for row := 0; row < 5; row++ {
+		first := celBytes(deathPNG, 0, row, death.FrameW, death.FrameH)
+		last := celBytes(deathPNG, death.Frames-1, row, death.FrameW, death.FrameH)
+		body := celBytes(corpsePNG, 0, row, corpse.FrameW, corpse.FrameH)
+		if !bytes.Equal(last, body) {
+			t.Fatalf("row %d corpse is not the death sheet's last frame", row)
+		}
+		if bytes.Equal(first, body) {
+			t.Fatalf("row %d corpse is the death sheet's first frame", row)
+		}
+	}
+}
+
+func decodeArtPNG(t *testing.T, name string) image.Image {
+	t.Helper()
+	f, err := art.Files.Open(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	img, err := png.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return img
+}
+
+func celBytes(img image.Image, frame, row, fw, fh int) []byte {
+	var buf []byte
+	x0 := frame * fw
+	y0 := row * fh
+	for y := 0; y < fh; y++ {
+		for x := 0; x < fw; x++ {
+			r, g, b, a := img.At(x0+x, y0+y).RGBA()
+			buf = append(buf, byte(r>>8), byte(g>>8), byte(b>>8), byte(a>>8))
+		}
+	}
+	return buf
 }
 
 func TestSheetPlaysAFrame(t *testing.T) {

@@ -34,7 +34,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 30 Engine loop
 - [x] 31 Scene stings
 - [x] 32 The picture
-- [ ] 33 Style board
+- [x] 33 Style board
 - [ ] 34 Sprite stage
 - [ ] 35 Snake walks
 - [ ] 36 Snake fights and falls
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–32 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. Next is Chunk 33. Chunk 33 stops until the style board is accepted.
+Chunks 01–22 and 24–33 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 34.
 
 ## Log
 
@@ -180,6 +180,10 @@ Verify: `go test ./...`. Title → click or Enter clicks, then Boot Hill is quie
 ### Chunk 32 done
 Files: `cmd/fannon/main.go`, `internal/app/game.go`, `internal/app/scale.go`, `internal/app/scale_test.go`, `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/briefing.go`, `internal/app/stub.go`, `internal/render/picture.go`, `internal/render/picture_test.go`, `internal/render/hud.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/pointer.go`, `docs/ARCHITECTURE.md`.
 Verify: `go test ./...` and `go build ./cmd/fannon`. The window opens at 1024×768 and will not resize outside 1024×768 … 3840×2160. Mission 1 still fills one view. Dragging the window wider adds bars and does not show more map. The cursor still selects a HUD name. Title, Boot Hill, briefing, and the battle sit in the fitted picture. Placeholders are still rectangles, drawn at the picture scale.
+
+### Chunk 33 done
+Files: `assets/art/style/` (contact sheet and the separate paintings). No game code.
+Verify: `go test ./...` and `go build ./cmd/fannon`. The board is accepted. Snake idles at 96px and the same figure is at 36px. Jungle grass is at 128 and at 48, with a 2×2 of the 48. Also on the board: a tree, a two-frame shallow-water strip, snow, a door hut, a three-quarter skidoo, the pointer, and a status-strip corner with Pte Jools in Go Regular at 14px. Nothing is loaded by the renderer. Later art follows this board.
 
 ## Backlog
 

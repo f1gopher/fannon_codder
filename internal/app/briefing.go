@@ -37,20 +37,24 @@ func (b *Briefing) Update(h Host) error {
 }
 
 func (b *Briefing) Draw(screen *ebiten.Image) {
-	screen.Fill(briefBG)
+	if !render.DrawSheet(screen, "menu/briefing", "E", 0, 0, 0) {
+		screen.Fill(briefBG)
+	}
 	title := "Mission"
 	body := "Kill all enemy"
 	if b.prog.Phase != nil {
 		title = b.prog.Phase.Title
 		body = b.prog.Phase.Briefing
 	}
+	// The quiet panel of the map sits under this block.
+	render.Rect(screen, 56, 96, 200, 100, color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xaa})
 	render.Text(screen, fmt.Sprintf(
 		"BRIEFING\nMission %d  Phase %d\n\n%s\n%s\n\nClick or Enter to deploy",
 		b.prog.MissionNumber(),
 		phaseNum(b.prog),
 		title,
 		body,
-	), 8, 8)
+	), 64, 100)
 }
 
 func phaseNum(p *Progress) int {

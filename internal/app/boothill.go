@@ -28,6 +28,7 @@ const (
 // BootHill is the between-mission hill: queue, graves, mission number.
 type BootHill struct {
 	prog *Progress
+	t    float64
 }
 
 func NewBootHill(prog *Progress) *BootHill { return &BootHill{prog: prog} }
@@ -36,6 +37,7 @@ func (b *BootHill) Enter() {}
 func (b *BootHill) Leave() {}
 
 func (b *BootHill) Update(h Host) error {
+	b.t += 1.0 / 60
 	p := h.Pointer()
 	click := p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter)
 	if !click {
@@ -76,24 +78,40 @@ func inRect(px, py, x, y, w, h float64) bool {
 }
 
 func (b *BootHill) Draw(screen *ebiten.Image) {
-	screen.Fill(hillSky)
-	render.Rect(screen, 0, 140, ScreenWidth, ScreenHeight-140, hillFill)
-	render.Rect(screen, 40, 168, 240, 8, pathFill)
+	painted := render.DrawSheet(screen, "menu/hill", "E", 0, 0, 0)
+	if !painted {
+		screen.Fill(hillSky)
+		render.Rect(screen, 0, 140, ScreenWidth, ScreenHeight-140, hillFill)
+		render.Rect(screen, 40, 168, 240, 8, pathFill)
+	}
 	n := b.prog.Pool.Remaining()
 	if n > 24 {
 		n = 24
 	}
+	frame := render.FrameAt(b.t, 8, 4, true)
 	for i := 0; i < n; i++ {
-		render.Rect(screen, 48+i*9, 160, 6, 8, manFill)
+		x := 48 + float64(i)*9
+		if !render.DrawSheet(screen, "snake/idle", "SE", frame, x+3, 176) {
+			render.Rect(screen, int(x), 160, 6, 8, manFill)
+		}
 	}
 	for i := 0; i < b.prog.Graves && i < 40; i++ {
-		render.Rect(screen, 20+(i%10)*12, 190+(i/10)*14, 4, 8, graveFill)
+		x := 20 + (i%10)*12
+		y := 190 + (i/10)*14
+		if !render.DrawSheet(screen, "menu/grave", "E", 0, float64(x+2), float64(y+8)) {
+			render.Rect(screen, x, y, 4, 8, graveFill)
+		}
 	}
 
-	render.Rect(screen, loadX, loadY, loadW, loadH, iconFill)
-	render.Rect(screen, saveX, saveY, saveW, saveH, iconFill)
-	render.Text(screen, "LOAD", loadX+4, loadY+2)
-	render.Text(screen, "SAVE", saveX+4, saveY+2)
+	if !render.DrawSheet(screen, "menu/load", "E", 0, loadX+loadW/2, loadY+loadH/2) {
+		render.Rect(screen, loadX, loadY, loadW, loadH, iconFill)
+		render.Text(screen, "LOAD", loadX+4, loadY+2)
+	}
+	if !render.DrawSheet(screen, "menu/save", "E", 0, saveX+saveW/2, saveY+saveH/2) {
+		render.Rect(screen, saveX, saveY, saveW, saveH, iconFill)
+		render.Text(screen, "SAVE", saveX+4, saveY+2)
+	}
+	render.Rect(screen, 4, 22, 312, 100, color.RGBA{R: 0x14, G: 0x28, B: 0x18, A: 0xaa})
 
 	render.Text(screen, fmt.Sprintf(
 		"BOOT HILL  Mission %d  Graves %d  Queue %d",

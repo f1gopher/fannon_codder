@@ -528,6 +528,32 @@ func TestFireAndBlastSheets(t *testing.T) {
 	}
 }
 
+func TestMenuScenes(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"menu/title", "menu/briefing", "menu/hill"} {
+		sh := lib.Get(key)
+		if sh == nil || sh.Frames != 1 || sh.FrameW != 2560 || sh.FrameH != 2048 || sh.AnchorX != 0 || sh.AnchorY != 0 {
+			t.Fatalf("%s %+v", key, sh)
+		}
+	}
+	grave := lib.Get("menu/grave")
+	if grave == nil || grave.Frames != 1 || grave.AnchorX != grave.FrameW/2 || grave.AnchorY != grave.FrameH {
+		t.Fatalf("grave %+v", grave)
+	}
+	for _, key := range []string{"menu/save", "menu/load"} {
+		sh := lib.Get(key)
+		if sh == nil || sh.Frames != 1 || sh.AnchorX != sh.FrameW/2 || sh.AnchorY != sh.FrameH/2 {
+			t.Fatalf("%s %+v", key, sh)
+		}
+	}
+	if lib.Get("snake/idle") == nil {
+		t.Fatal("hill queue needs the snake idle sheet")
+	}
+}
+
 func TestPointerAndStatusIcons(t *testing.T) {
 	lib, err := Load(art.Files)
 	if err != nil {

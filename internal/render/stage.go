@@ -195,6 +195,25 @@ func SpriteScale() float64 {
 // Tests use it because a pixel read is not available before the game starts.
 var spriteHook func(img *ebiten.Image, mirror bool)
 
+// DrawSheet paints one frame of a loaded sheet. The anchor sits on x, y
+// in world-frame pixels. dir is a facing such as "S" or "SE".
+func DrawSheet(dst *ebiten.Image, key, dir string, frame int, x, y float64) bool {
+	lib := activeSheets()
+	if lib == nil {
+		return false
+	}
+	sh := lib.Get(key)
+	if sh == nil {
+		return false
+	}
+	img, mirror, ok := sh.image(dir, frame)
+	if !ok {
+		return false
+	}
+	DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, mirror, x, y)
+	return true
+}
+
 // DrawSprite puts the cel's anchor on a logical screen point. mirror flips
 // the cel around that anchor. The filter is linear.
 func DrawSprite(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y float64) {

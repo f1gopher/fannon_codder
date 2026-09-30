@@ -48,9 +48,9 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 44 Huts, crates, and the skidoo
 - [x] 45 Fire and blasts
 - [x] 46 Pointer and the status strip
-- [ ] 47 Title, briefing, Boot Hill
+- [x] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–46 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 47.
+Chunks 01–22 and 24–47 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left.
 
 ## Log
 
@@ -251,6 +251,12 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. The battle arrow is the sty
 
 The exit cursor on a skidoo you already occupy is still the small bitmap. The map button no longer draws the letter M over the painting. The grenade icon was keyed again so the magenta shadow did not stay.
 
+### Chunk 47 done
+Files: `assets/art/menu/` (title, briefing, hill, grave, save, load, each PNG plus JSON), `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/briefing.go`, `internal/render/stage.go`, `internal/render/sheet.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. A new game walks the painted title, then Boot Hill, then the briefing, then Mission 1. The title carries the words “Fannon Codder”. The hill queue is the Snake idle sheet. Graves are one cross per death. Save and load are the disk and the folder, on the same corners as before. The click prompt, the mission line, and the briefing copy stay text on a dark panel.
+
+The load folder still has a thin warm edge where the magenta shadow used to sit. There is no title tune.
+
 ## Backlog
 
 Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add chase or pathfinding.
@@ -260,7 +266,7 @@ Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add cha
 - Desert, moors, and underground tiles
 - Missions 6–24 as data
 - Wounded troopers and finishing them; corpse juggling
-- Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in. The picture is Chunks 32–47.
+- Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in. The picture, Chunks 32–47, is in.
 - Birds, snowmen, igloos
 - High Scoring Heroes
 - A fullscreen toggle

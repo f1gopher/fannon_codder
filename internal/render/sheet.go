@@ -71,6 +71,9 @@ type Library struct {
 // The cursor and the status strip use ui/pointer, ui/crosshair, ui/board,
 // ui/grenade, ui/rocket, ui/foot, ui/vehicle, ui/map, and ui/mark-snake,
 // ui/mark-eagle, ui/mark-panther. Those draw in screen space at S/8.
+// The menus use menu/title, menu/briefing, and menu/hill as full-frame
+// paintings (2560×2048, anchor at the top-left), plus menu/grave,
+// menu/save, and menu/load. The hill queue is the Snake idle sheet.
 //
 // Ground frames pin their top-left to the cell and ignore the anchor.
 // Every other anchor sits on the sim point: a trooper or crate or skidoo

@@ -64,12 +64,16 @@ func (t *Title) Update(h Host) error {
 }
 
 func (t *Title) Draw(screen *ebiten.Image) {
-	screen.Fill(titleColor)
-	msg := "FANNON CODDER\n\nClick or press Enter"
-	if t.continues {
-		msg += "\n\nThe campaign continues another day."
+	if !render.DrawSheet(screen, "menu/title", "E", 0, 0, 0) {
+		screen.Fill(titleColor)
+		render.Text(screen, "FANNON CODDER", 8, 8)
 	}
-	render.Text(screen, msg, 8, 8)
+	msg := "Click or press Enter"
+	if t.continues {
+		msg += "\nThe campaign continues another day."
+	}
+	render.Rect(screen, 8, 200, 220, 48, color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xaa})
+	render.Text(screen, msg, 12, 204)
 }
 
 // Battle is one phase on the map.

@@ -68,6 +68,9 @@ type Library struct {
 // Props use tree/sway, hut/door, hut/plain, crate/grenade, crate/rocket,
 // skidoo/idle, skidoo/move.
 // Fire uses fx/flash, fx/tracer, fx/grenade, fx/rocket, and fx/blast.
+// The cursor and the status strip use ui/pointer, ui/crosshair, ui/board,
+// ui/grenade, ui/rocket, ui/foot, ui/vehicle, ui/map, and ui/mark-snake,
+// ui/mark-eagle, ui/mark-panther. Those draw in screen space at S/8.
 //
 // Ground frames pin their top-left to the cell and ignore the anchor.
 // Every other anchor sits on the sim point: a trooper or crate or skidoo

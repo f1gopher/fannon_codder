@@ -9,15 +9,27 @@ import (
 )
 
 var (
-	overviewBG    = color.RGBA{R: 0x10, G: 0x14, B: 0x10, A: 0xff}
-	overviewGrass = color.RGBA{R: 0x1c, G: 0x4a, B: 0x1c, A: 0xff}
-	overviewView  = color.RGBA{R: 0xf0, G: 0xf0, B: 0xf0, A: 0xff}
-	overviewHut   = color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff}
-	overviewCrate = color.RGBA{R: 0xd0, G: 0xd0, B: 0xd0, A: 0xff}
+	overviewBG      = color.RGBA{R: 0x10, G: 0x14, B: 0x10, A: 0xff}
+	overviewGrass   = color.RGBA{R: 44, G: 81, B: 64, A: 0xff}
+	overviewSnow    = color.RGBA{R: 181, G: 199, B: 215, A: 0xff}
+	overviewView    = color.RGBA{R: 0xf0, G: 0xf0, B: 0xf0, A: 0xff}
+	overviewHut     = color.RGBA{R: 80, G: 62, B: 52, A: 0xff}
+	overviewCrate   = color.RGBA{R: 0xd0, G: 0xd0, B: 0xd0, A: 0xff}
+	overviewShallow = color.RGBA{R: 93, G: 156, B: 198, A: 0xff}
+	overviewDeep    = color.RGBA{R: 39, G: 69, B: 153, A: 0xff}
+	overviewSand    = color.RGBA{R: 197, G: 162, B: 74, A: 0xff}
+	overviewIce     = color.RGBA{R: 196, G: 214, B: 226, A: 0xff}
+	overviewBridge  = color.RGBA{R: 140, G: 108, B: 88, A: 0xff}
+	overviewCliff   = color.RGBA{R: 133, G: 136, B: 148, A: 0xff}
+	overviewRamp    = color.RGBA{R: 168, G: 169, B: 177, A: 0xff}
+	overviewTree    = color.RGBA{R: 66, G: 81, B: 58, A: 0xff}
+	overviewMine    = color.RGBA{R: 48, G: 82, B: 64, A: 0xff}
 )
 
 // Overview draws a fog-free schematic of the whole map on the playfield.
-func Overview(dst *ebiten.Image, w *sim.World) {
+// terrain is "snow" on an arctic phase and "grass" otherwise. The cell
+// colours are the means of the accepted ground paintings.
+func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
 		return
 	}
@@ -51,7 +63,7 @@ func Overview(dst *ebiten.Image, w *sim.World) {
 			if w.Map.W > 0 {
 				tile = w.Map.At(tx, ty)
 			}
-			fillRect(dst, ox+tx*scale, oy+ty*scale, scale, scale, overviewTile(tile))
+			fillRect(dst, ox+tx*scale, oy+ty*scale, scale, scale, overviewTile(tile, terrain == "snow"))
 		}
 	}
 	for i := range w.Buildings {
@@ -112,27 +124,33 @@ func Overview(dst *ebiten.Image, w *sim.World) {
 	strokeView(dst, ox, oy, drawW, drawH, pw, ph, w.Camera)
 }
 
-func overviewTile(t sim.Tile) color.RGBA {
+func overviewTile(t sim.Tile, snow bool) color.RGBA {
 	switch t {
 	case sim.TileTree:
-		return treeFill
+		if snow {
+			return overviewSnow
+		}
+		return overviewTree
 	case sim.TileWaterShallow:
-		return shallowFill
+		return overviewShallow
 	case sim.TileWaterDeep:
-		return deepFill
+		return overviewDeep
 	case sim.TileBridge:
-		return bridgeFill
+		return overviewBridge
 	case sim.TileIce:
-		return color.RGBA{R: 0xd8, G: 0xe4, B: 0xea, A: 0xff}
+		return overviewIce
 	case sim.TileCliff:
-		return cliffFill
+		return overviewCliff
 	case sim.TileRamp:
-		return rampFill
+		return overviewRamp
 	case sim.TileQuicksand:
-		return sandFill
+		return overviewSand
 	case sim.TileMine:
-		return mineFill
+		return overviewMine
 	default:
+		if snow {
+			return overviewSnow
+		}
 		return overviewGrass
 	}
 }

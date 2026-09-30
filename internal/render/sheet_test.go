@@ -528,6 +528,44 @@ func TestFireAndBlastSheets(t *testing.T) {
 	}
 }
 
+func TestPointerAndStatusIcons(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []struct {
+		key          string
+		w, h, ax, ay int
+	}{
+		{"ui/pointer", 64, 88, 7, 4},
+		{"ui/crosshair", 72, 72, 36, 36},
+		{"ui/board", 96, 80, 48, 40},
+		{"ui/grenade", 176, 128, 0, 0},
+		{"ui/rocket", 176, 128, 0, 0},
+		{"ui/foot", 64, 64, 0, 0},
+		{"ui/vehicle", 64, 64, 0, 0},
+		{"ui/map", 128, 128, 0, 0},
+		{"ui/mark-snake", 64, 64, 0, 0},
+		{"ui/mark-eagle", 64, 64, 0, 0},
+		{"ui/mark-panther", 64, 64, 0, 0},
+	}
+	for _, w := range want {
+		sh := lib.Get(w.key)
+		if sh == nil || sh.Frames != 1 || sh.FrameW != w.w || sh.FrameH != w.h || sh.AnchorX != w.ax || sh.AnchorY != w.ay {
+			t.Fatalf("%s %+v", w.key, sh)
+		}
+	}
+	if overviewTile(sim.TileGrass, false) != overviewGrass || overviewGrass.R != 44 {
+		t.Fatalf("grass %v", overviewTile(sim.TileGrass, false))
+	}
+	if overviewTile(sim.TileGrass, true) != overviewSnow {
+		t.Fatal("arctic overview should use the snow painting")
+	}
+	if overviewTile(sim.TileWaterDeep, false) != overviewDeep || overviewTile(sim.TileQuicksand, false) != overviewSand {
+		t.Fatal("water or sand colour drifted")
+	}
+}
+
 func cropRow(img image.Image, fw, fh, row int) image.Image {
 	sub, ok := img.(interface {
 		SubImage(image.Rectangle) image.Image

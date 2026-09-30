@@ -47,10 +47,10 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 43 Trees and the hard ground
 - [x] 44 Huts, crates, and the skidoo
 - [x] 45 Fire and blasts
-- [ ] 46 Pointer and the status strip
+- [x] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–45 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 46.
+Chunks 01–22 and 24–46 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 47.
 
 ## Log
 
@@ -244,6 +244,12 @@ Files: `assets/art/fx/flash.png`, `assets/art/fx/flash.json`, `assets/art/fx/tra
 Verify: `go test ./...` and `go build ./cmd/fannon`. A burst draws the muzzle flash for the 0.12s shot window, on foot at the rifle and on the skidoo at the mounted gun. The tracer and the rocket are painted and turned to follow their travel. A grenade tumbles on the arc. Grenades, rockets, mines, and crates share one blast of four frames over 0.2s. There is no second explosion painting.
 
 The flash is two frames. The grenade is a two-frame tumble. The tracer is one streak and the rocket is one side view; both rotate with velocity. The blast opens from a tight fireball into smoke and is not drawn after 0.2s, while the sim marker still lasts 0.35s. Backgrounds were keyed from the corner colour because the generator’s flat field was a dusty rose.
+
+### Chunk 46 done
+Files: `assets/art/ui/` (pointer, crosshair, board, grenade, rocket, foot, vehicle, map, mark-snake, mark-eagle, mark-panther, each PNG plus JSON), `internal/render/pointer.go`, `internal/render/hud.go`, `internal/render/overview.go`, `internal/app/scenes.go`, `internal/render/sheet.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. The battle arrow is the style-board pointer, the fire cursor is the cream crosshair, and hovering a skidoo you can board shows the painted skidoo. The strip keeps its place and its clicks. Grenade, rocket, boots, vehicle, map, and the three squad marks are painted. The selected special still has the white stroke. G and R counts, names, and ranks stay text. The overview uses the ground-painting colours, and an arctic phase uses snow for grass and trees. Text is the same Go Regular face, which scales with the window.
+
+The exit cursor on a skidoo you already occupy is still the small bitmap. The map button no longer draws the letter M over the painting. The grenade icon was keyed again so the magenta shadow did not stay.
 
 ## Backlog
 

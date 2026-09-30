@@ -120,6 +120,8 @@ Keys: `snake|eagle|panther|grunt|grenadier|rocketeer|civilian` with `idle|walk|s
 
 `fx/flash` is two frames over the 0.12s shot window, drawn at a man’s muzzle and at a skidoo’s gun while `SinceShot` is inside that window. `fx/tracer` and `fx/rocket` are one frame each and rotate with velocity. `fx/grenade` is a two-frame tumble at 8 fps, drawn on the arc. `fx/blast` is four frames at 20 fps (0.2s) and is the only explosion. Grenades, rockets, mines, and crates all use it. The marker in the sim still lasts 0.35s; the painting stops at the end of the sheet.
 
+The battle cursor is `ui/pointer` (the style-board arrow, hotspot on the tip), `ui/crosshair`, and `ui/board` (the skidoo, hotspot in the middle). They are drawn at `S/8`. The exit mark on a skidoo you already occupy stays the small bitmap. The status strip stays the flat dark panel. Its icons are `ui/grenade`, `ui/rocket`, `ui/foot`, `ui/vehicle`, `ui/map`, and `ui/mark-snake`, `ui/mark-eagle`, `ui/mark-panther`, also at `S/8`. Names, ranks, and the G and R counts stay text. The selected special is still the white stroke. The overview keeps its diagram and colours each tile from the accepted ground painting. Arctic grass and tree cells use the snow colour.
+
 ## Placeholders
 
 | Thing | Draw |

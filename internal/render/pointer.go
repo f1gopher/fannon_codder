@@ -18,20 +18,52 @@ var (
 	pointerBlack = color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff}
 )
 
-// Pointer draws the Amiga-style cursor at logical screen pixels.
-// Arrow is the destination pointer; crosshair is the weapon cursor.
+// Pointer draws the cursor at logical screen pixels.
+// The arrow, the crosshair, and the board cursor are painted at master
+// scale and drawn at S/8. The exit mark stays the small bitmap.
 func Pointer(dst *ebiten.Image, x, y float64, kind int) {
 	ix, iy := int(x), int(y)
 	switch kind {
 	case PointerCrosshair:
-		drawCrosshair(dst, ix, iy)
+		if !drawUIAt(dst, "ui/crosshair", x, y) {
+			drawCrosshair(dst, ix, iy)
+		}
 	case PointerBoard:
-		drawBoard(dst, ix, iy)
+		if !drawUIAt(dst, "ui/board", x, y) {
+			drawBoard(dst, ix, iy)
+		}
 	case PointerExit:
 		drawExit(dst, ix, iy)
 	default:
-		drawArrow(dst, ix, iy)
+		if !drawUIAt(dst, "ui/pointer", x, y) {
+			drawArrow(dst, ix, iy)
+		}
 	}
+}
+
+func drawUIAt(dst *ebiten.Image, key string, x, y float64) bool {
+	img, ax, ay, ok := uiCel(key)
+	if !ok {
+		return false
+	}
+	DrawSprite(dst, img, ax, ay, false, x, y)
+	return true
+}
+
+func uiCel(key string) (img *ebiten.Image, ax, ay int, ok bool) {
+	lib := activeSheets()
+	if lib == nil {
+		return nil, 0, 0, false
+	}
+	sh := lib.Get(key)
+	if sh == nil {
+		return nil, 0, 0, false
+	}
+	img, ok = sh.still(0)
+	if !ok {
+		return nil, 0, 0, false
+	}
+	return img, sh.AnchorX, sh.AnchorY, true
 }
 
 func drawBoard(dst *ebiten.Image, x, y int) {

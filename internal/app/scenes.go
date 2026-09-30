@@ -390,7 +390,7 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	}
 	render.Field(play, b.world, terrain)
 	if b.mapOpen {
-		render.Overview(screen, b.world)
+		render.Overview(screen, b.world, terrain)
 	}
 	render.HUD(screen, b.world, b.remaining)
 	switch b.world.Status {

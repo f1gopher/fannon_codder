@@ -220,7 +220,9 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 	if active != nil {
 		logoID = active.ID
 	}
-	blit(dst, colorLogo(squadFill(logoID, false), hudLogoS), float64(lay.logo.x), float64(lay.logo.y), 1, 1)
+	if !drawUIAt(dst, squadMark(logoID), float64(lay.logo.x), float64(lay.logo.y)) {
+		blit(dst, colorLogo(squadFill(logoID, false), hudLogoS), float64(lay.logo.x), float64(lay.logo.y), 1, 1)
+	}
 	Text(dst, logoID.Letter(), float64(lay.logo.x+2), float64(lay.logo.y+1))
 	if remaining >= 0 {
 		Text(dst, fmt.Sprintf("R%d", remaining), 20, 6)
@@ -229,8 +231,8 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 	if active != nil {
 		gCount, rCount = active.Grenades, active.Rockets
 	}
-	drawAmmoIcon(dst, lay.gren, "G", gCount, grenIcon(), w.GrenadeShare, w.Special == sim.SpecialGrenade)
-	drawAmmoIcon(dst, lay.rock, "R", rCount, rocketIcon(), w.RocketShare, w.Special == sim.SpecialRocket)
+	drawAmmoIcon(dst, lay.gren, "G", gCount, "ui/grenade", grenIcon(), w.GrenadeShare, w.Special == sim.SpecialGrenade)
+	drawAmmoIcon(dst, lay.rock, "R", rCount, "ui/rocket", rocketIcon(), w.RocketShare, w.Special == sim.SpecialRocket)
 	drawStance(dst, lay.foot, leaderOnFoot(w, active))
 	drawMapIcon(dst, lay.mapIcon)
 
@@ -246,8 +248,9 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 		fillRect(dst, b.x, b.y, 3, b.h, squadFill(b.id, false))
 	}
 	for _, h := range lay.headers {
-		swatch := colorLogo(squadFill(h.id, false), 8)
-		blit(dst, swatch, 2, float64(h.y+2), 1, 1)
+		if !drawUIAt(dst, squadMark(h.id), 2, float64(h.y+2)) {
+			blit(dst, colorLogo(squadFill(h.id, false), 8), 2, float64(h.y+2), 1, 1)
+		}
 		mark := h.id.Letter()
 		if active != nil && active.ID == h.id {
 			mark = ">" + mark
@@ -287,8 +290,21 @@ func rocketIcon() *ebiten.Image {
 	return rocketPanel
 }
 
-func drawAmmoIcon(dst *ebiten.Image, r hudRect, label string, n int, img *ebiten.Image, mode sim.AmmoShare, selected bool) {
-	blit(dst, img, float64(r.x), float64(r.y), 1, 1)
+func squadMark(id sim.SquadID) string {
+	switch id {
+	case sim.SquadEagle:
+		return "ui/mark-eagle"
+	case sim.SquadPanther:
+		return "ui/mark-panther"
+	default:
+		return "ui/mark-snake"
+	}
+}
+
+func drawAmmoIcon(dst *ebiten.Image, r hudRect, label string, n int, key string, img *ebiten.Image, mode sim.AmmoShare, selected bool) {
+	if !drawUIAt(dst, key, float64(r.x), float64(r.y)) {
+		blit(dst, img, float64(r.x), float64(r.y), 1, 1)
+	}
 	strokeShare(dst, r, mode)
 	if selected {
 		strokeRect(dst, r, selectSpec)
@@ -312,6 +328,13 @@ func leaderOnFoot(w *sim.World, s *sim.Squad) bool {
 }
 
 func drawStance(dst *ebiten.Image, r hudRect, foot bool) {
+	key := "ui/vehicle"
+	if foot {
+		key = "ui/foot"
+	}
+	if drawUIAt(dst, key, float64(r.x), float64(r.y)) {
+		return
+	}
 	if foot {
 		fillRect(dst, r.x, r.y+2, 3, r.h-2, footFill)
 		fillRect(dst, r.x+5, r.y+2, 3, r.h-2, footFill)
@@ -321,6 +344,9 @@ func drawStance(dst *ebiten.Image, r hudRect, foot bool) {
 }
 
 func drawMapIcon(dst *ebiten.Image, r hudRect) {
+	if drawUIAt(dst, "ui/map", float64(r.x), float64(r.y)) {
+		return
+	}
 	fillRect(dst, r.x, r.y, r.w, r.h, mapIconFill)
 	strokeRect(dst, r, overviewGrass)
 	Text(dst, "M", float64(r.x+4), float64(r.y+4))

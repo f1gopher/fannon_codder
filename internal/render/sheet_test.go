@@ -440,6 +440,56 @@ func TestGroundSheets(t *testing.T) {
 	}
 }
 
+func TestHutCrateAndSkidooSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"hut/door", "hut/plain"} {
+		sh := lib.Get(key)
+		if sh == nil || sh.Frames != 4 || sh.FPS != 5 || !sh.Loop || sh.FrameW != 256 || sh.FrameH != 320 {
+			t.Fatalf("%s %+v", key, sh)
+		}
+		if sh.AnchorX != 128 || sh.AnchorY != 312 {
+			t.Fatalf("%s anchor %d,%d", key, sh.AnchorX, sh.AnchorY)
+		}
+		img := decodeArtPNG(t, key+".png")
+		if img.Bounds().Dx() != 256*4 || img.Bounds().Dy() != 320 {
+			t.Fatalf("%s bounds %v", key, img.Bounds())
+		}
+		if frameDelta(img, 256, 0, 2) < 0.02 {
+			t.Fatalf("%s smoke does not move", key)
+		}
+	}
+	for _, key := range []string{"crate/grenade", "crate/rocket"} {
+		sh := lib.Get(key)
+		if sh == nil || sh.Frames != 1 || sh.FrameW != 128 || sh.FrameH != 128 || sh.AnchorX != 64 || sh.AnchorY != 64 {
+			t.Fatalf("%s %+v", key, sh)
+		}
+	}
+	idle := lib.Get("skidoo/idle")
+	move := lib.Get("skidoo/move")
+	if idle == nil || move == nil || idle.Frames != 4 || move.Frames != 4 || idle.RowCount() != 5 || move.RowCount() != 5 {
+		t.Fatalf("skidoo idle=%v move=%v", idle, move)
+	}
+	if idle.FrameW != 240 || idle.FrameH != 176 || idle.AnchorX != 120 || idle.AnchorY != 88 {
+		t.Fatalf("skidoo cell %dx%d anchor %d,%d", idle.FrameW, idle.FrameH, idle.AnchorX, idle.AnchorY)
+	}
+	if move.FPS != 8 || !move.Loop {
+		t.Fatalf("skidoo move fps=%v loop=%v", move.FPS, move.Loop)
+	}
+	if _, _, ok := move.image("W", 0); !ok {
+		t.Fatal("skidoo west should mirror east")
+	}
+	moveImg := decodeArtPNG(t, "skidoo/move.png")
+	if moveImg.Bounds().Dx() != 240*4 || moveImg.Bounds().Dy() != 176*5 {
+		t.Fatalf("skidoo move bounds %v", moveImg.Bounds())
+	}
+	if frameDelta(cropRow(moveImg, 240, 176, 0), 240, 0, 1) < 0.05 {
+		t.Fatal("skidoo track frames do not move")
+	}
+}
+
 func cropRow(img image.Image, fw, fh, row int) image.Image {
 	sub, ok := img.(interface {
 		SubImage(image.Rectangle) image.Image

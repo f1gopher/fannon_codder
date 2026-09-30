@@ -45,12 +45,12 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 41 Ground
 - [x] 42 Water, quicksand, ice
 - [x] 43 Trees and the hard ground
-- [ ] 44 Huts, crates, and the skidoo
+- [x] 44 Huts, crates, and the skidoo
 - [ ] 45 Fire and blasts
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–43 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 44.
+Chunks 01–22 and 24–44 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 45.
 
 ## Log
 
@@ -232,6 +232,12 @@ Files: `assets/art/tree/sway.png`, `assets/art/tree/sway.json`, `assets/art/grou
 Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s trees are three silhouettes, each a four-frame sway at 4 fps, and neighbours are not on the same shape or the same frame. The anchor is the trunk foot on the blocked cell, so a man south of a tree draws in front of the trunk and a man north of it draws behind the canopy. Cliff, ramp, and bridge are one frame each. The hazard-sandbox mine sits on the grass and glints on one frame of a four-frame loop. No new tile types. Huts, crates, and the skidoo stay the old shapes.
 
 Shallow water keeps the style-board ripples and scrolls the strokes. Deep water is the same strokes on a navy field, scrolling the other way. Quicksand is a tan field with a few bubbles rising. Ice is a pale field with short glints.
+
+### Chunk 44 done
+Files: `assets/art/hut/door.png`, `assets/art/hut/door.json`, `assets/art/hut/plain.png`, `assets/art/hut/plain.json`, `assets/art/crate/grenade.png`, `assets/art/crate/grenade.json`, `assets/art/crate/rocket.png`, `assets/art/crate/rocket.json`, `assets/art/skidoo/idle.png`, `assets/art/skidoo/idle.json`, `assets/art/skidoo/move.png`, `assets/art/skidoo/move.json`, `internal/render/props.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. `go run ./cmd/fannon -hut` shows the door hut with chimney smoke and the grenade crate. `go run ./cmd/fannon -skidoo`: the skidoo idles, the ski highlights step while it is driven, and it uses the facing row as it turns. The enemy lamp still blinks on that same body. Boarding still hides the troopers. No rubble and no destroyed-hut sprite.
+
+The door hut keeps the style-board doorway and side window. The doorless hut is the same building with a shuttered front and no doorway. Smoke is four soft puffs rising off the chimney, and the hut itself does not move. The grenade crate shows olive bombs and the rocket crate shows two grey tubes; neither painting has a letter. The skidoo hull is the same in every move frame; light ticks travel along the dark skis. North and south are top-down, and the ski posts on those rows are blockier than the side views. West, south-west, and north-west are mirrors.
 
 ## Backlog
 

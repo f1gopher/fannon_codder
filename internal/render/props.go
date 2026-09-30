@@ -55,9 +55,10 @@ func drawEnemyLamp(dst *ebiten.Image, cam sim.Camera, v *sim.Vehicle) {
 	if v.Side != sim.SideEnemy || int(v.Blink*6)%2 != 0 {
 		return
 	}
-	x := cam.ScreenX(v.X) - 10
-	y := cam.ScreenY(v.Y) - 6
-	fillRectF(dst, x+2, y+2, 3, 3, enemyLamp)
+	// Sits on the painted hull. The blink stays a render overlay, not a second sheet.
+	x := cam.ScreenX(v.X) - 6
+	y := cam.ScreenY(v.Y) - 10
+	fillRectF(dst, x, y, 3, 3, enemyLamp)
 }
 
 // Bombs draws grenades in the air.

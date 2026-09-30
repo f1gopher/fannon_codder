@@ -363,6 +363,54 @@ func TestGroundSheets(t *testing.T) {
 			t.Fatalf("%s seam %.1f", name, seam)
 		}
 	}
+	moving := []struct {
+		key    string
+		frames int
+		fps    float64
+	}{
+		{"ground/water-shallow", 8, 8},
+		{"ground/water-deep", 8, 8},
+		{"ground/quicksand", 6, 4},
+		{"ground/ice", 6, 4},
+	}
+	for _, tc := range moving {
+		sh := lib.Get(tc.key)
+		if sh == nil {
+			t.Fatalf("missing %s", tc.key)
+		}
+		if sh.Frames != tc.frames || sh.FPS != tc.fps || !sh.Loop || sh.FrameW != 128 || sh.FrameH != 128 {
+			t.Fatalf("%s frames=%d fps=%v loop=%v cell=%dx%d", tc.key, sh.Frames, sh.FPS, sh.Loop, sh.FrameW, sh.FrameH)
+		}
+		img := decodeArtPNG(t, tc.key+".png")
+		b := img.Bounds()
+		if b.Dx() != 128*tc.frames || b.Dy() != 128 {
+			t.Fatalf("%s bounds %v", tc.key, b)
+		}
+		seam := edgeDelta(img, 128)
+		if seam > 18 {
+			t.Fatalf("%s seam %.1f", tc.key, seam)
+		}
+		// A slow sparkle moves few pixels. An unchanged frame moves none.
+		if frameDelta(img, 128, 0, 1) < 0.4 {
+			t.Fatalf("%s frames do not move", tc.key)
+		}
+	}
+	if lib.Get("ground/bridge") != nil {
+		t.Fatal("bridge stays a coloured square")
+	}
+}
+
+func frameDelta(img image.Image, n, a, b int) float64 {
+	var acc, samples float64
+	for y := 0; y < n; y++ {
+		for x := 0; x < n; x++ {
+			r0, g0, b0, _ := img.At(a*n+x, y).RGBA()
+			r1, g1, b1, _ := img.At(b*n+x, y).RGBA()
+			acc += math.Abs(float64(r0)-float64(r1)) + math.Abs(float64(g0)-float64(g1)) + math.Abs(float64(b0)-float64(b1))
+			samples += 3
+		}
+	}
+	return acc / samples / 256
 }
 
 func edgeDelta(img image.Image, n int) float64 {

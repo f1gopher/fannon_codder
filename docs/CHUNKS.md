@@ -43,14 +43,14 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 39 Enemy soldiers
 - [x] 40 Civilians
 - [x] 41 Ground
-- [ ] 42 Water, quicksand, ice
+- [x] 42 Water, quicksand, ice
 - [ ] 43 Trees and the hard ground
 - [ ] 44 Huts, crates, and the skidoo
 - [ ] 45 Fire and blasts
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–41 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 42.
+Chunks 01–22 and 24–42 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 43.
 
 ## Log
 
@@ -222,6 +222,12 @@ The front and back walks are one stride alternating with the standing pose. The 
 ### Chunk 41 done
 Files: `assets/art/ground/grass.png`, `assets/art/ground/grass.json`, `assets/art/ground/snow.png`, `assets/art/ground/snow.json`, `internal/render/sheet_test.go`.
 Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s grass and Mission 3’s snow are four-frame loops at 8 fps, 128×128, pinned at the cell’s top-left. A 2×2 of either tile meets at the edges. Neighbouring cells are not on the same frame. Water, quicksand, ice, trees, and the other ground squares are unchanged. The rest pose is the accepted style tile. The other three frames shift the fine strokes, so the colour field stays put.
+
+### Chunk 42 done
+Files: `assets/art/ground/water-shallow.png`, `assets/art/ground/water-shallow.json`, `assets/art/ground/water-deep.png`, `assets/art/ground/water-deep.json`, `assets/art/ground/quicksand.png`, `assets/art/ground/quicksand.json`, `assets/art/ground/ice.png`, `assets/art/ground/ice.json`, `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Shallow and deep water are eight-frame loops at 8 fps, 128×128. Quicksand and ice are six-frame loops at 4 fps. A cell’s opposite edges meet. Neighbouring cells of the same kind are not on the same frame. `go run ./cmd/fannon -river` shows the two water loops and a still brown bridge. `go run ./cmd/fannon -hazards` boils the tan pool. Mission 3’s ice glints. Swim speed and the sink timer are unchanged. Trees, cliff, ramp, and the mine stay squares.
+
+Shallow water keeps the style-board ripples and scrolls the strokes. Deep water is the same strokes on a navy field, scrolling the other way. Quicksand is a tan field with a few bubbles rising. Ice is a pale field with short glints.
 
 ## Backlog
 

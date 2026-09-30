@@ -41,7 +41,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 37 Snake in the water and the sand
 - [x] 38 Eagle and Panther
 - [x] 39 Enemy soldiers
-- [ ] 40 Civilians
+- [x] 40 Civilians
 - [ ] 41 Ground
 - [ ] 42 Water, quicksand, ice
 - [ ] 43 Trees and the hard ground
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–39 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 40.
+Chunks 01–22 and 24–40 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 41.
 
 ## Log
 
@@ -212,6 +212,12 @@ Files: `assets/art/grunt/`, `assets/art/grenadier/`, `assets/art/rocketeer/` (id
 Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1 grunts idle and the shot plays across the 0.12s window. A grenadier’s throw shows the orange satchel. A rocketeer’s launch shows the tube. Death is six frames over 0.4s, then the corpse. There is no walk sheet. West, south-west, and north-west are mirrors. Civilians and the map stay rectangles.
 
 The idle breath is a one-pixel bob. Swim is the same side-on pose on every stored row. The rocketeer’s tube is the east painting on every row. Grenadier north-east reuses the south-east view. Grenadier and rocketeer shots, falls, swims, and sinks use the grunt body. The north corpse is the back view, and the other corpses are the side view. The sink is the idle cropped down to the helmet.
+
+### Chunk 40 done
+Files: `assets/art/civilian/` (idle, walk, death, corpse, each PNG plus JSON), `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. `go run ./cmd/fannon -hazards`: the yellow wanderer is a man in a pale shirt and dark trousers. He idles and walks. Shooting him plays a six-frame fall over 0.4s, then the corpse. West, south-west, and north-west are mirrors. He has no weapon. Killing him still does not end or fail the phase. The map stays rectangles.
+
+The front and back walks are one stride alternating with the standing pose. The north-east corpse is the south-east body. The middle of the fall is the standing figure tipped, then the painted body on the ground.
 
 ## Backlog
 

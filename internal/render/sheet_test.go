@@ -223,8 +223,8 @@ func TestEnemySheets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if lib.Get("grunt/walk") != nil || lib.Get("civilian/idle") != nil {
-		t.Fatal("grunts have no walk, and civilians are still a rectangle")
+	if lib.Get("grunt/walk") != nil {
+		t.Fatal("grunts have no walk")
 	}
 	grunt := []struct {
 		key    string
@@ -280,6 +280,56 @@ func TestEnemySheets(t *testing.T) {
 	}
 	if opaqueCount(idle, 0, 0, 104, 124) < 200 {
 		t.Fatal("grunt east idle is empty")
+	}
+}
+
+func TestCivilianSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []struct {
+		key    string
+		frames int
+		fps    float64
+		loop   bool
+	}{
+		{"civilian/idle", 4, 8, true},
+		{"civilian/walk", 6, 12, true},
+		{"civilian/death", 6, 15, false},
+		{"civilian/corpse", 1, 1, false},
+	}
+	for _, tc := range want {
+		sh := lib.Get(tc.key)
+		if sh == nil {
+			t.Fatalf("missing %s", tc.key)
+		}
+		if sh.Frames != tc.frames || sh.FPS != tc.fps || sh.Loop != tc.loop {
+			t.Fatalf("%s frames=%d fps=%v loop=%v", tc.key, sh.Frames, sh.FPS, sh.Loop)
+		}
+		for _, d := range []string{"E", "SE", "S", "N", "NE"} {
+			if _, mirror, ok := sh.image(d, 0); !ok || mirror {
+				t.Fatalf("%s %s should be stored", tc.key, d)
+			}
+		}
+		for _, d := range []string{"W", "SW", "NW"} {
+			if _, mirror, ok := sh.image(d, 0); !ok || !mirror {
+				t.Fatalf("%s %s should mirror", tc.key, d)
+			}
+		}
+	}
+	idle := decodeArtPNG(t, "civilian/idle.png")
+	if idle.Bounds().Dx() != 112*4 || idle.Bounds().Dy() != 128*5 {
+		t.Fatalf("civilian idle png %v", idle.Bounds())
+	}
+	if opaqueCount(idle, 0, 0, 112, 128) < 200 {
+		t.Fatal("civilian east idle is empty")
+	}
+	death := decodeArtPNG(t, "civilian/death.png")
+	stand := opaqueCount(death, 0, 0, 200, 128)
+	down := opaqueCount(death, 5, 0, 200, 128)
+	if stand < 200 || down < 200 {
+		t.Fatalf("civilian death empty stand=%d down=%d", stand, down)
 	}
 }
 

@@ -95,8 +95,8 @@ func TestSnakeIdleAndWalkSheets(t *testing.T) {
 			t.Fatalf("%s should mirror a stored row", d)
 		}
 	}
-	if lib.Get("eagle/idle") != nil || lib.Get("grunt/idle") != nil {
-		t.Fatal("eagle and grunt have no sheets yet")
+	if lib.Get("grunt/idle") != nil {
+		t.Fatal("grunt has no sheet yet")
 	}
 	for _, key := range []string{"snake/shoot", "snake/throw", "snake/death", "snake/corpse"} {
 		if lib.Get(key) == nil {
@@ -152,8 +152,8 @@ func TestSnakeFightSheets(t *testing.T) {
 			}
 		}
 	}
-	if lib.Get("eagle/idle") != nil {
-		t.Fatal("eagle has no sheet yet")
+	if lib.Get("grunt/idle") != nil {
+		t.Fatal("grunt has no sheet yet")
 	}
 	deathPNG := decodeArtPNG(t, "snake/death.png")
 	corpsePNG := decodeArtPNG(t, "snake/corpse.png")
@@ -222,6 +222,124 @@ func TestSnakeWaterSheets(t *testing.T) {
 			t.Fatalf("row %d last sink frame is empty (%d)", row, last)
 		}
 	}
+}
+
+func TestEagleAndPantherRecolorSnake(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	poses := []string{"idle", "walk", "shoot", "throw", "death", "corpse", "swim", "sink"}
+	for _, pose := range poses {
+		snake := lib.Get("snake/" + pose)
+		if snake == nil {
+			t.Fatalf("missing snake/%s", pose)
+		}
+		for _, squad := range []string{"eagle", "panther"} {
+			sh := lib.Get(squad + "/" + pose)
+			if sh == nil {
+				t.Fatalf("missing %s/%s", squad, pose)
+			}
+			if sh.Frames != snake.Frames || sh.FPS != snake.FPS || sh.Loop != snake.Loop ||
+				sh.FrameW != snake.FrameW || sh.FrameH != snake.FrameH ||
+				sh.AnchorX != snake.AnchorX || sh.AnchorY != snake.AnchorY {
+				t.Fatalf("%s/%s does not match the snake cell", squad, pose)
+			}
+			for _, d := range []string{"E", "SE", "S", "N", "NE"} {
+				if _, mirror, ok := sh.image(d, 0); !ok || mirror {
+					t.Fatalf("%s/%s %s should be stored", squad, pose, d)
+				}
+			}
+			for _, d := range []string{"W", "SW", "NW"} {
+				if _, mirror, ok := sh.image(d, 0); !ok || !mirror {
+					t.Fatalf("%s/%s %s should mirror", squad, pose, d)
+				}
+			}
+		}
+		base := decodeArtPNG(t, "snake/"+pose+".png")
+		eagle := decodeArtPNG(t, "eagle/"+pose+".png")
+		panther := decodeArtPNG(t, "panther/"+pose+".png")
+		if base.Bounds() != eagle.Bounds() || base.Bounds() != panther.Bounds() {
+			t.Fatalf("%s png size differs", pose)
+		}
+		var same, moved int
+		var eB, pR int
+		b := base.Bounds()
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			for x := b.Min.X; x < b.Max.X; x++ {
+				sb := nrgba(base.At(x, y))
+				eb := nrgba(eagle.At(x, y))
+				pb := nrgba(panther.At(x, y))
+				if sb.A != eb.A || sb.A != pb.A {
+					t.Fatalf("%s alpha changed at %d,%d", pose, x, y)
+				}
+				if sb.A == 0 {
+					continue
+				}
+				if !greenCloth(sb) {
+					if sb != eb || sb != pb {
+						t.Fatalf("%s recolored a non-uniform pixel at %d,%d snake %v eagle %v panther %v", pose, x, y, sb, eb, pb)
+					}
+					same++
+					continue
+				}
+				if sb == eb || sb == pb {
+					t.Fatalf("%s left uniform green at %d,%d", pose, x, y)
+				}
+				moved++
+				if eb.B > eb.R {
+					eB++
+				}
+				if pb.R > pb.G && pb.G > pb.B {
+					pR++
+				}
+			}
+		}
+		if moved < 100 || eB < moved*8/10 || pR < moved*8/10 {
+			t.Fatalf("%s moved=%d blue=%d amber=%d same=%d", pose, moved, eB, pR, same)
+		}
+	}
+}
+
+func nrgba(c color.Color) color.NRGBA {
+	return color.NRGBAModel.Convert(c).(color.NRGBA)
+}
+
+// greenCloth matches the fatigues and helmet. Skin, boots, and the rifle are warmer or greyer.
+func greenCloth(c color.NRGBA) bool {
+	rf, gf, bf := float64(c.R)/255, float64(c.G)/255, float64(c.B)/255
+	max := rf
+	if gf > max {
+		max = gf
+	}
+	if bf > max {
+		max = bf
+	}
+	min := rf
+	if gf < min {
+		min = gf
+	}
+	if bf < min {
+		min = bf
+	}
+	if max < 0.06 || max-min < 0.14*max {
+		return false
+	}
+	d := max - min
+	var h float64
+	switch max {
+	case rf:
+		h = (gf - bf) / d
+		if h < 0 {
+			h += 6
+		}
+	case gf:
+		h = (bf-rf)/d + 2
+	default:
+		h = (rf-gf)/d + 4
+	}
+	h *= 60
+	return h >= 68 && h <= 188
 }
 
 func opaqueCount(img image.Image, frame, row, fw, fh int) int {

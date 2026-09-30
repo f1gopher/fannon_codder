@@ -1,0 +1,14 @@
+{
+  "frameW": 208,
+  "frameH": 128,
+  "anchorX": 103,
+  "anchorY": 111,
+  "fps": 15,
+  "loop": false,
+  "rows": ["E", "SE", "S", "N", "NE"],
+  "mirrors": {
+    "W": "E",
+    "SW": "SE",
+    "NW": "NE"
+  }
+}

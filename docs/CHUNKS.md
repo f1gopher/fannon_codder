@@ -39,7 +39,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 35 Snake walks
 - [x] 36 Snake fights and falls
 - [x] 37 Snake in the water and the sand
-- [ ] 38 Eagle and Panther
+- [x] 38 Eagle and Panther
 - [ ] 39 Enemy soldiers
 - [ ] 40 Civilians
 - [ ] 41 Ground
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–36 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 38.
+Chunks 01–22 and 24–38 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 39.
 
 ## Log
 
@@ -202,6 +202,10 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. Holding right plays the two
 ### Chunk 37 done
 Files: `assets/art/snake/swim.png`, `assets/art/snake/swim.json`, `assets/art/snake/sink.png`, `assets/art/snake/sink.json`, `internal/render/sheet_test.go`.
 Verify: `go test ./...` and `go build ./cmd/fannon`. Swim is 4 frames at 8 fps, looping, cell 112×77, anchor at the body centre. Sink is 8 frames in the idle cell (85×113, feet at 45,108), scrubbed across the 2 second sink, and the last frame is the helmet at the sand. West, south-west, and north-west are mirrors. `go run ./cmd/fannon -river` swims in deep water. `go run ./cmd/fannon -hazards` plays the sink in the tan pool, then the death and the corpse. Eagle, enemies, and the map stay rectangles. The swim brush is a little smoother than the idle sheet. North and north-east swim repeat a pose with a small bob. The north sink still shows the slung rifle beside the helmet.
+
+### Chunk 38 done
+Files: `assets/art/eagle/` and `assets/art/panther/` (idle, walk, shoot, throw, death, corpse, swim, sink, each PNG plus the Snake manifest), `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Eagle is the Snake sheets in blue fatigues. Panther is the same pixels in amber. Face, rifle, boots, and the tan sink line are the Snake pixels. Cells, anchors, frame counts, and mirrors match. Split on the river sandbox shows green, blue, and amber, and merging back uses the squad colour. Enemies and the map stay rectangles. Rank is still HUD text.
 
 ## Backlog
 

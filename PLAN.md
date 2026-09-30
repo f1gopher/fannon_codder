@@ -1078,7 +1078,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–22 and 24–36 are in. Chunk 23 is dropped. The sound chunks are done. Chunk 32 (the picture) is in. The Chunk 33 style board in `assets/art/style/` is accepted. Chunk 34 (the sprite stage) is in. Chunk 35 (Snake walks) is in. Chunk 36 (Snake fights and falls) is in. Chunk 37 (Snake in the water and the sand) is in. Next is Chunk 38.
+Chunks 01–22 and 24–38 are in. Chunk 23 is dropped. The sound chunks are done. Chunk 32 (the picture) is in. The Chunk 33 style board in `assets/art/style/` is accepted. Chunk 34 (the sprite stage) is in. Chunk 35 (Snake walks) is in. Chunk 36 (Snake fights and falls) is in. Chunk 37 (Snake in the water and the sand) is in. Chunk 38 (Eagle and Panther) is in. Next is Chunk 39.
 
 ---
 

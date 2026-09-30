@@ -152,8 +152,8 @@ func TestSnakeFightSheets(t *testing.T) {
 			}
 		}
 	}
-	if lib.Get("snake/swim") != nil || lib.Get("snake/sink") != nil || lib.Get("eagle/idle") != nil {
-		t.Fatal("swim, sink, and eagle are later chunks")
+	if lib.Get("eagle/idle") != nil {
+		t.Fatal("eagle has no sheet yet")
 	}
 	deathPNG := decodeArtPNG(t, "snake/death.png")
 	corpsePNG := decodeArtPNG(t, "snake/corpse.png")
@@ -174,6 +174,69 @@ func TestSnakeFightSheets(t *testing.T) {
 			t.Fatalf("row %d corpse is the death sheet's first frame", row)
 		}
 	}
+}
+
+func TestSnakeWaterSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	swim := lib.Get("snake/swim")
+	sink := lib.Get("snake/sink")
+	if swim == nil || sink == nil {
+		t.Fatal("snake swim and sink should be embedded")
+	}
+	if swim.Frames != 4 || swim.FPS != 8 || !swim.Loop {
+		t.Fatalf("swim frames=%d fps=%v loop=%v", swim.Frames, swim.FPS, swim.Loop)
+	}
+	if sink.Frames != 8 || sink.Loop {
+		t.Fatalf("sink frames=%d loop=%v", sink.Frames, sink.Loop)
+	}
+	if sink.FrameW != 85 || sink.FrameH != 113 || sink.AnchorX != 45 || sink.AnchorY != 108 {
+		t.Fatalf("sink cell %dx%d @%d,%d", sink.FrameW, sink.FrameH, sink.AnchorX, sink.AnchorY)
+	}
+	for _, sh := range []*Sheet{swim, sink} {
+		for _, d := range []string{"E", "SE", "S", "N", "NE"} {
+			if _, mirror, ok := sh.image(d, 0); !ok || mirror {
+				t.Fatalf("%s should be a stored row", d)
+			}
+		}
+		for _, d := range []string{"W", "SW", "NW"} {
+			if _, mirror, ok := sh.image(d, sh.Frames-1); !ok || !mirror {
+				t.Fatalf("%s should mirror a stored row", d)
+			}
+		}
+	}
+	// The sink is scrubbed across SinkTime. The last frame is the one at p=1.
+	if FrameScrub(0, sink.Frames) != 0 || FrameScrub(1, sink.Frames) != sink.Frames-1 {
+		t.Fatal("sink scrub should span the sheet, ending on the last frame")
+	}
+	sinkPNG := decodeArtPNG(t, "snake/sink.png")
+	for row := 0; row < 5; row++ {
+		first := opaqueCount(sinkPNG, 0, row, sink.FrameW, sink.FrameH)
+		last := opaqueCount(sinkPNG, sink.Frames-1, row, sink.FrameW, sink.FrameH)
+		if last >= first/3 {
+			t.Fatalf("row %d last sink frame still has %d opaque pixels, first has %d", row, last, first)
+		}
+		if last < 8 {
+			t.Fatalf("row %d last sink frame is empty (%d)", row, last)
+		}
+	}
+}
+
+func opaqueCount(img image.Image, frame, row, fw, fh int) int {
+	n := 0
+	x0 := frame * fw
+	y0 := row * fh
+	for y := 0; y < fh; y++ {
+		for x := 0; x < fw; x++ {
+			_, _, _, a := img.At(x0+x, y0+y).RGBA()
+			if a > 0x2000 {
+				n++
+			}
+		}
+	}
+	return n
 }
 
 func decodeArtPNG(t *testing.T, name string) image.Image {

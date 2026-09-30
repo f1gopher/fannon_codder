@@ -38,7 +38,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 34 Sprite stage
 - [x] 35 Snake walks
 - [x] 36 Snake fights and falls
-- [ ] 37 Snake in the water and the sand
+- [x] 37 Snake in the water and the sand
 - [ ] 38 Eagle and Panther
 - [ ] 39 Enemy soldiers
 - [ ] 40 Civilians
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–36 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 37.
+Chunks 01–22 and 24–36 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 38.
 
 ## Log
 
@@ -198,6 +198,10 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s two Snake tro
 ### Chunk 36 done
 Files: `assets/art/snake/shoot.png`, `assets/art/snake/shoot.json`, `assets/art/snake/throw.png`, `assets/art/snake/throw.json`, `assets/art/snake/death.png`, `assets/art/snake/death.json`, `assets/art/snake/corpse.png`, `assets/art/snake/corpse.json`, `internal/render/sheet_test.go`.
 Verify: `go test ./...` and `go build ./cmd/fannon`. Holding right plays the two-frame shot across 0.12s. A grenade plays the four-frame throw across the 0.25s after it leaves. A dead trooper plays the six-frame fall for 0.4s and then stays on the corpse, which is that fall’s last frame in the same cell. West, south-west, and north-west are mirrors. Swim, sink, Eagle, enemies, and the map stay rectangles. The north body stays upright when he is down. Prone frames are shorter than the standing body. Some throw frames still show a grenade in the hand.
+
+### Chunk 37 done
+Files: `assets/art/snake/swim.png`, `assets/art/snake/swim.json`, `assets/art/snake/sink.png`, `assets/art/snake/sink.json`, `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Swim is 4 frames at 8 fps, looping, cell 112×77, anchor at the body centre. Sink is 8 frames in the idle cell (85×113, feet at 45,108), scrubbed across the 2 second sink, and the last frame is the helmet at the sand. West, south-west, and north-west are mirrors. `go run ./cmd/fannon -river` swims in deep water. `go run ./cmd/fannon -hazards` plays the sink in the tan pool, then the death and the corpse. Eagle, enemies, and the map stay rectangles. The swim brush is a little smoother than the idle sheet. North and north-east swim repeat a pose with a small bob. The north sink still shows the slung rifle beside the helmet.
 
 ## Backlog
 

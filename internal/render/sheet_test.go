@@ -333,6 +333,56 @@ func TestCivilianSheets(t *testing.T) {
 	}
 }
 
+func TestGroundSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"ground/grass", "ground/snow"} {
+		sh := lib.Get(key)
+		if sh == nil {
+			t.Fatalf("missing %s", key)
+		}
+		if sh.Frames != 4 || sh.FPS != 8 || !sh.Loop || sh.FrameW != 128 || sh.FrameH != 128 {
+			t.Fatalf("%s frames=%d fps=%v loop=%v cell=%dx%d", key, sh.Frames, sh.FPS, sh.Loop, sh.FrameW, sh.FrameH)
+		}
+		img, ok := sh.still(0)
+		if !ok || img == nil {
+			t.Fatalf("%s has no still frame", key)
+		}
+	}
+	for _, name := range []string{"ground/grass.png", "ground/snow.png"} {
+		img := decodeArtPNG(t, name)
+		b := img.Bounds()
+		if b.Dx() != 128*4 || b.Dy() != 128 {
+			t.Fatalf("%s bounds %v", name, b)
+		}
+		// Opposite edges of one cell should meet. A hard seam is tens of levels.
+		seam := edgeDelta(img, 128)
+		if seam > 18 {
+			t.Fatalf("%s seam %.1f", name, seam)
+		}
+	}
+}
+
+func edgeDelta(img image.Image, n int) float64 {
+	var acc float64
+	samples := 0.0
+	add := func(x0, y0, x1, y1 int) {
+		r0, g0, b0, _ := img.At(x0, y0).RGBA()
+		r1, g1, b1, _ := img.At(x1, y1).RGBA()
+		acc += math.Abs(float64(r0)-float64(r1)) + math.Abs(float64(g0)-float64(g1)) + math.Abs(float64(b0)-float64(b1))
+		samples += 3
+	}
+	for y := 0; y < n; y++ {
+		add(0, y, n-1, y)
+	}
+	for x := 0; x < n; x++ {
+		add(x, 0, x, n-1)
+	}
+	return acc / samples / 256
+}
+
 func TestEagleAndPantherRecolorSnake(t *testing.T) {
 	lib, err := Load(art.Files)
 	if err != nil {

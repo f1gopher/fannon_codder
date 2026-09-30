@@ -42,7 +42,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 38 Eagle and Panther
 - [x] 39 Enemy soldiers
 - [x] 40 Civilians
-- [ ] 41 Ground
+- [x] 41 Ground
 - [ ] 42 Water, quicksand, ice
 - [ ] 43 Trees and the hard ground
 - [ ] 44 Huts, crates, and the skidoo
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–40 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 41.
+Chunks 01–22 and 24–41 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 42.
 
 ## Log
 
@@ -218,6 +218,10 @@ Files: `assets/art/civilian/` (idle, walk, death, corpse, each PNG plus JSON), `
 Verify: `go test ./...` and `go build ./cmd/fannon`. `go run ./cmd/fannon -hazards`: the yellow wanderer is a man in a pale shirt and dark trousers. He idles and walks. Shooting him plays a six-frame fall over 0.4s, then the corpse. West, south-west, and north-west are mirrors. He has no weapon. Killing him still does not end or fail the phase. The map stays rectangles.
 
 The front and back walks are one stride alternating with the standing pose. The north-east corpse is the south-east body. The middle of the fall is the standing figure tipped, then the painted body on the ground.
+
+### Chunk 41 done
+Files: `assets/art/ground/grass.png`, `assets/art/ground/grass.json`, `assets/art/ground/snow.png`, `assets/art/ground/snow.json`, `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s grass and Mission 3’s snow are four-frame loops at 8 fps, 128×128, pinned at the cell’s top-left. A 2×2 of either tile meets at the edges. Neighbouring cells are not on the same frame. Water, quicksand, ice, trees, and the other ground squares are unchanged. The rest pose is the accepted style tile. The other three frames shift the fine strokes, so the colour field stays put.
 
 ## Backlog
 

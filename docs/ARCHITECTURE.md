@@ -112,6 +112,8 @@ Pose, first match: death (once, then the corpse frame), sink (scrubbed by `Sink/
 
 Keys: `snake|eagle|panther|grunt|grenadier|rocketeer|civilian` with `idle|walk|shoot|throw|death|corpse|swim|sink`. Ground: `ground/grass`, `ground/snow`, `ground/water-shallow`, `ground/water-deep`, `ground/quicksand`, `ground/ice`, `ground/bridge`, `ground/cliff`, `ground/ramp`, `ground/mine`. Props: `tree/sway`, `hut/door`, `hut/plain`, `crate/grenade`, `crate/rocket`, `skidoo/idle`, `skidoo/move`.
 
+`ground/grass` and `ground/snow` are in: four frames, 8 fps, looping, 128×128. The battle uses snow when the phase terrain is `arctic`, and grass otherwise. Grass and tree cells take that loop. The other ground keys are still the coloured squares.
+
 ## Placeholders
 
 | Thing | Draw |

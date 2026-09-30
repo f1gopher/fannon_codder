@@ -44,13 +44,13 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 40 Civilians
 - [x] 41 Ground
 - [x] 42 Water, quicksand, ice
-- [ ] 43 Trees and the hard ground
+- [x] 43 Trees and the hard ground
 - [ ] 44 Huts, crates, and the skidoo
 - [ ] 45 Fire and blasts
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–42 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 43.
+Chunks 01–22 and 24–43 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 44.
 
 ## Log
 
@@ -226,6 +226,10 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s grass and Mis
 ### Chunk 42 done
 Files: `assets/art/ground/water-shallow.png`, `assets/art/ground/water-shallow.json`, `assets/art/ground/water-deep.png`, `assets/art/ground/water-deep.json`, `assets/art/ground/quicksand.png`, `assets/art/ground/quicksand.json`, `assets/art/ground/ice.png`, `assets/art/ground/ice.json`, `internal/render/sheet_test.go`.
 Verify: `go test ./...` and `go build ./cmd/fannon`. Shallow and deep water are eight-frame loops at 8 fps, 128×128. Quicksand and ice are six-frame loops at 4 fps. A cell’s opposite edges meet. Neighbouring cells of the same kind are not on the same frame. `go run ./cmd/fannon -river` shows the two water loops and a still brown bridge. `go run ./cmd/fannon -hazards` boils the tan pool. Mission 3’s ice glints. Swim speed and the sink timer are unchanged. Trees, cliff, ramp, and the mine stay squares.
+
+### Chunk 43 done
+Files: `assets/art/tree/sway.png`, `assets/art/tree/sway.json`, `assets/art/ground/cliff.png`, `assets/art/ground/cliff.json`, `assets/art/ground/ramp.png`, `assets/art/ground/ramp.json`, `assets/art/ground/bridge.png`, `assets/art/ground/bridge.json`, `assets/art/ground/mine.png`, `assets/art/ground/mine.json`, `internal/render/sheet.go`, `internal/render/stage.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s trees are three silhouettes, each a four-frame sway at 4 fps, and neighbours are not on the same shape or the same frame. The anchor is the trunk foot on the blocked cell, so a man south of a tree draws in front of the trunk and a man north of it draws behind the canopy. Cliff, ramp, and bridge are one frame each. The hazard-sandbox mine sits on the grass and glints on one frame of a four-frame loop. No new tile types. Huts, crates, and the skidoo stay the old shapes.
 
 Shallow water keeps the style-board ripples and scrolls the strokes. Deep water is the same strokes on a navy field, scrolling the other way. Quicksand is a tan field with a few bubbles rising. Ice is a pale field with short glints.
 

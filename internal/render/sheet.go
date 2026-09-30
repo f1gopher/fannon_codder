@@ -220,16 +220,30 @@ func (s *Sheet) image(dir string, frame int) (img *ebiten.Image, mirror bool, ok
 
 // still is the first stored row, used by scenery that has no facing.
 func (s *Sheet) still(frame int) (*ebiten.Image, bool) {
+	return s.Row(0, frame)
+}
+
+// RowCount is the number of stored rows. tree/sway keeps one silhouette per row.
+func (s *Sheet) RowCount() int {
+	if s == nil {
+		return 0
+	}
+	return len(s.cels)
+}
+
+// Row is one stored row. The index wraps, so a forest can pick a silhouette from the tile.
+func (s *Sheet) Row(row, frame int) (*ebiten.Image, bool) {
 	if s == nil || len(s.cels) == 0 || s.Frames == 0 {
 		return nil, false
 	}
+	row = mod(row, len(s.cels))
 	if frame < 0 {
 		frame = 0
 	}
 	if frame >= s.Frames {
 		frame = s.Frames - 1
 	}
-	return s.cels[0][frame], true
+	return s.cels[row][frame], true
 }
 
 // FrameAt is the column for a clock. A loop wraps. A one-shot holds the

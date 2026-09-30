@@ -395,9 +395,72 @@ func TestGroundSheets(t *testing.T) {
 			t.Fatalf("%s frames do not move", tc.key)
 		}
 	}
-	if lib.Get("ground/bridge") != nil {
-		t.Fatal("bridge stays a coloured square")
+	for _, key := range []string{"ground/cliff", "ground/ramp", "ground/bridge"} {
+		sh := lib.Get(key)
+		if sh == nil || sh.Frames != 1 || sh.FrameW != 128 || sh.FrameH != 128 {
+			t.Fatalf("%s missing or not a still 128 cell", key)
+		}
+		img := decodeArtPNG(t, key+".png")
+		if seam := edgeDelta(img, 128); seam > 18 {
+			t.Fatalf("%s seam %.1f", key, seam)
+		}
 	}
+	mine := lib.Get("ground/mine")
+	if mine == nil || mine.Frames != 4 || mine.FPS != 2 || !mine.Loop || mine.FrameW != 128 {
+		t.Fatalf("mine %+v", mine)
+	}
+	mineImg := decodeArtPNG(t, "ground/mine.png")
+	if mineImg.Bounds().Dx() != 128*4 || mineImg.Bounds().Dy() != 128 {
+		t.Fatalf("mine bounds %v", mineImg.Bounds())
+	}
+	if frameDelta(mineImg, 128, 0, 1) > 0.05 {
+		t.Fatal("mine rest frames should match")
+	}
+	if frameDelta(mineImg, 128, 0, 3) < 0.05 {
+		t.Fatal("mine glint frame should differ")
+	}
+	tree := lib.Get("tree/sway")
+	if tree == nil || tree.Frames != 4 || tree.FPS != 4 || !tree.Loop || tree.RowCount() != 3 {
+		t.Fatalf("tree sway frames=%v", tree)
+	}
+	if tree.FrameW != 256 || tree.FrameH != 288 || tree.AnchorX != 128 || tree.AnchorY != 282 {
+		t.Fatalf("tree cell %dx%d anchor %d,%d", tree.FrameW, tree.FrameH, tree.AnchorX, tree.AnchorY)
+	}
+	treeImg := decodeArtPNG(t, "tree/sway.png")
+	if treeImg.Bounds().Dx() != 256*4 || treeImg.Bounds().Dy() != 288*3 {
+		t.Fatalf("tree sway bounds %v", treeImg.Bounds())
+	}
+	ab := frameDeltaRow(treeImg, 256, 288, 0, 1)
+	ac := frameDeltaRow(treeImg, 256, 288, 0, 2)
+	if ab < 8 || ac < 8 {
+		t.Fatalf("tree silhouettes too alike ab=%.1f ac=%.1f", ab, ac)
+	}
+	if sway := frameDelta(cropRow(treeImg, 256, 288, 0), 256, 0, 2); sway < 0.4 {
+		t.Fatal("tree sway frames do not move")
+	}
+}
+
+func cropRow(img image.Image, fw, fh, row int) image.Image {
+	sub, ok := img.(interface {
+		SubImage(image.Rectangle) image.Image
+	})
+	if !ok {
+		return img
+	}
+	return sub.SubImage(image.Rect(0, row*fh, fw*4, (row+1)*fh))
+}
+
+func frameDeltaRow(img image.Image, fw, fh, rowA, rowB int) float64 {
+	var acc, samples float64
+	for y := 0; y < fh; y += 4 {
+		for x := 0; x < fw; x += 4 {
+			r0, g0, b0, a0 := img.At(x, rowA*fh+y).RGBA()
+			r1, g1, b1, a1 := img.At(x, rowB*fh+y).RGBA()
+			acc += math.Abs(float64(r0)-float64(r1)) + math.Abs(float64(g0)-float64(g1)) + math.Abs(float64(b0)-float64(b1)) + math.Abs(float64(a0)-float64(a1))
+			samples += 4
+		}
+	}
+	return acc / samples / 256
 }
 
 func frameDelta(img image.Image, n, a, b int) float64 {

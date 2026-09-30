@@ -408,7 +408,9 @@ func treeBody(cam sim.Camera, tx, ty int) body {
 	sh := activeSheets().Get("tree/sway")
 	var img *ebiten.Image
 	if sh != nil {
-		img, _ = sh.still(SceneryFrame(tx, ty, sh.Frames, animTime, sh.FPS))
+		// Rows are the three silhouettes. Neighbours take different shapes and different sway frames.
+		row := mod(tx+ty*2, sh.RowCount())
+		img, _ = sh.Row(row, SceneryFrame(tx, ty, sh.Frames, animTime, sh.FPS))
 	}
 	if img == nil {
 		return body{y: y, draw: func(dst *ebiten.Image) {

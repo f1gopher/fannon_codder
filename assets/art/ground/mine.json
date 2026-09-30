@@ -1,0 +1,9 @@
+{
+  "frameW": 128,
+  "frameH": 128,
+  "anchorX": 0,
+  "anchorY": 0,
+  "fps": 2,
+  "loop": true,
+  "rows": ["E"]
+}

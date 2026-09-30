@@ -46,11 +46,11 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 42 Water, quicksand, ice
 - [x] 43 Trees and the hard ground
 - [x] 44 Huts, crates, and the skidoo
-- [ ] 45 Fire and blasts
+- [x] 45 Fire and blasts
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–44 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 45.
+Chunks 01–22 and 24–45 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 46.
 
 ## Log
 
@@ -238,6 +238,12 @@ Files: `assets/art/hut/door.png`, `assets/art/hut/door.json`, `assets/art/hut/pl
 Verify: `go test ./...` and `go build ./cmd/fannon`. `go run ./cmd/fannon -hut` shows the door hut with chimney smoke and the grenade crate. `go run ./cmd/fannon -skidoo`: the skidoo idles, the ski highlights step while it is driven, and it uses the facing row as it turns. The enemy lamp still blinks on that same body. Boarding still hides the troopers. No rubble and no destroyed-hut sprite.
 
 The door hut keeps the style-board doorway and side window. The doorless hut is the same building with a shuttered front and no doorway. Smoke is four soft puffs rising off the chimney, and the hut itself does not move. The grenade crate shows olive bombs and the rocket crate shows two grey tubes; neither painting has a letter. The skidoo hull is the same in every move frame; light ticks travel along the dark skis. North and south are top-down, and the ski posts on those rows are blockier than the side views. West, south-west, and north-west are mirrors.
+
+### Chunk 45 done
+Files: `assets/art/fx/flash.png`, `assets/art/fx/flash.json`, `assets/art/fx/tracer.png`, `assets/art/fx/tracer.json`, `assets/art/fx/grenade.png`, `assets/art/fx/grenade.json`, `assets/art/fx/rocket.png`, `assets/art/fx/rocket.json`, `assets/art/fx/blast.png`, `assets/art/fx/blast.json`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/stage.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. A burst draws the muzzle flash for the 0.12s shot window, on foot at the rifle and on the skidoo at the mounted gun. The tracer and the rocket are painted and turned to follow their travel. A grenade tumbles on the arc. Grenades, rockets, mines, and crates share one blast of four frames over 0.2s. There is no second explosion painting.
+
+The flash is two frames. The grenade is a two-frame tumble. The tracer is one streak and the rocket is one side view; both rotate with velocity. The blast opens from a tight fireball into smoke and is not drawn after 0.2s, while the sim marker still lasts 0.35s. Backgrounds were keyed from the corner colour because the generator’s flat field was a dusty rose.
 
 ## Backlog
 

@@ -1078,7 +1078,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–22 and 24–44 are in. Chunk 23 is dropped. The sound chunks are done. Chunk 32 (the picture) is in. The Chunk 33 style board in `assets/art/style/` is accepted. Chunk 34 (the sprite stage) is in. Chunk 35 (Snake walks) is in. Chunk 36 (Snake fights and falls) is in. Chunk 37 (Snake in the water and the sand) is in. Chunk 38 (Eagle and Panther) is in. Chunk 39 (enemy soldiers) is in. Chunk 40 (civilians) is in. Chunk 41 (ground) is in. Chunk 42 (water, quicksand, ice) is in. Chunk 43 (trees and the hard ground) is in. Chunk 44 (huts, crates, and the skidoo) is in. Next is Chunk 45.
+Chunks 01–22 and 24–45 are in. Chunk 23 is dropped. The sound chunks are done. Chunk 32 (the picture) is in. The Chunk 33 style board in `assets/art/style/` is accepted. Chunk 34 (the sprite stage) is in. Chunk 35 (Snake walks) is in. Chunk 36 (Snake fights and falls) is in. Chunk 37 (Snake in the water and the sand) is in. Chunk 38 (Eagle and Panther) is in. Chunk 39 (enemy soldiers) is in. Chunk 40 (civilians) is in. Chunk 41 (ground) is in. Chunk 42 (water, quicksand, ice) is in. Chunk 43 (trees and the hard ground) is in. Chunk 44 (huts, crates, and the skidoo) is in. Chunk 45 (fire and blasts) is in. Next is Chunk 46.
 
 ---
 

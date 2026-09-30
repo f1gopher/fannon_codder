@@ -127,7 +127,52 @@ func drawUnitRect(dst *ebiten.Image, cam sim.Camera, u *sim.Unit) {
 	}
 }
 
-// Projectiles draws MG tracers.
+// Muzzles draws the shot flash while SinceShot is inside the 0.12s window.
+// A man on foot flashes at his muzzle. A mounted gun flashes on the vehicle,
+// because the troopers are hidden while they ride.
+func Muzzles(dst *ebiten.Image, w *sim.World) {
+	if w == nil {
+		return
+	}
+	sh := activeSheets().Get("fx/flash")
+	if sh == nil {
+		return
+	}
+	cam := w.Camera
+	for i := range w.Units {
+		u := &w.Units[i]
+		if !u.Living() || u.VehicleID != 0 || u.SinceShot >= shotWindow {
+			continue
+		}
+		nx, ny := math.Cos(u.Facing), math.Sin(u.Facing)
+		x := cam.ScreenX(u.X + nx*float64(sim.UnitSize)/2)
+		y := cam.ScreenY(u.Y + ny*float64(sim.UnitSize)/2)
+		drawStill(dst, sh, FrameAt(u.SinceShot, sh.FPS, sh.Frames, false), x, y, 0, false)
+	}
+	for i := range w.Vehicles {
+		v := &w.Vehicles[i]
+		if !v.Alive {
+			continue
+		}
+		age := shotWindow
+		for _, id := range v.Occupants {
+			u := w.Unit(id)
+			if u == nil || !u.Living() || u.SinceShot >= age {
+				continue
+			}
+			age = u.SinceShot
+		}
+		if age >= shotWindow {
+			continue
+		}
+		nx, ny := math.Cos(v.Facing), math.Sin(v.Facing)
+		x := cam.ScreenX(v.X + nx*10)
+		y := cam.ScreenY(v.Y + ny*10)
+		drawStill(dst, sh, FrameAt(age, sh.FPS, sh.Frames, false), x, y, 0, false)
+	}
+}
+
+// Projectiles draws MG tracers and rockets.
 func Projectiles(dst *ebiten.Image, w *sim.World) {
 	if w == nil {
 		return
@@ -136,15 +181,26 @@ func Projectiles(dst *ebiten.Image, w *sim.World) {
 		tracerSprite = ebiten.NewImage(2, 2)
 		tracerSprite.Fill(tracerFill)
 	}
+	tracer := activeSheets().Get("fx/tracer")
+	rocket := activeSheets().Get("fx/rocket")
 	for i := range w.Projectiles {
 		p := &w.Projectiles[i]
 		if !p.Alive {
 			continue
 		}
+		ang := math.Atan2(p.VY, p.VX)
+		x := w.Camera.ScreenX(p.X)
+		y := w.Camera.ScreenY(p.Y)
 		if p.Kind == sim.ProjRocket {
-			fillRectF(dst, w.Camera.ScreenX(p.X)-2, w.Camera.ScreenY(p.Y)-1, 5, 3, rocketShot)
+			if rocket != nil && drawStill(dst, rocket, 0, x, y, ang, true) {
+				continue
+			}
+			fillRectF(dst, x-2, y-1, 5, 3, rocketShot)
 			continue
 		}
-		blit(dst, tracerSprite, w.Camera.ScreenX(p.X)-1, w.Camera.ScreenY(p.Y)-1, 1, 1)
+		if tracer != nil && drawStill(dst, tracer, 0, x, y, ang, true) {
+			continue
+		}
+		blit(dst, tracerSprite, x-1, y-1, 1, 1)
 	}
 }

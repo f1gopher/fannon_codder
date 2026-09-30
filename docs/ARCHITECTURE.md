@@ -118,6 +118,8 @@ Keys: `snake|eagle|panther|grunt|grenadier|rocketeer|civilian` with `idle|walk|s
 
 `hut/door` and `hut/plain` are four-frame chimney-smoke loops at 5 fps. The cell is 256×320, and the anchor (128, 312) is the bottom centre of a 2×2 hut. `crate/grenade` and `crate/rocket` are one frame each, 128×128, anchor at the centre (64, 64), and neither painting carries a letter. `skidoo/idle` and `skidoo/move` are four frames, cell 240×176, anchor (120, 88) on the vehicle point. Stored rows are E, SE, S, N, NE; W, SW, and NW are mirrors. Move runs at 8 fps and idle at 4. The enemy lamp is still drawn on top of that body.
 
+`fx/flash` is two frames over the 0.12s shot window, drawn at a man’s muzzle and at a skidoo’s gun while `SinceShot` is inside that window. `fx/tracer` and `fx/rocket` are one frame each and rotate with velocity. `fx/grenade` is a two-frame tumble at 8 fps, drawn on the arc. `fx/blast` is four frames at 20 fps (0.2s) and is the only explosion. Grenades, rockets, mines, and crates all use it. The marker in the sim still lasts 0.35s; the painting stops at the end of the sheet.
+
 ## Placeholders
 
 | Thing | Draw |

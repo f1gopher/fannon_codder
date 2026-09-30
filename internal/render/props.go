@@ -67,12 +67,17 @@ func Bombs(dst *ebiten.Image, w *sim.World) {
 		return
 	}
 	cam := w.Camera
+	sh := activeSheets().Get("fx/grenade")
 	for i := range w.Grenades {
 		g := &w.Grenades[i]
 		if !g.Alive {
 			continue
 		}
-		fillRectF(dst, cam.ScreenX(g.X)-1, cam.ScreenY(g.Y-g.Height)-1, 3, 3, bombFill)
+		x := cam.ScreenX(g.X)
+		y := cam.ScreenY(g.Y - g.Height)
+		if sh == nil || !drawStill(dst, sh, FrameAt(animTime, sh.FPS, sh.Frames, sh.Loop), x, y, 0, false) {
+			fillRectF(dst, x-1, y-1, 3, 3, bombFill)
+		}
 	}
 }
 
@@ -87,10 +92,37 @@ func Blasts(dst *ebiten.Image, w *sim.World) {
 		r := e.R
 		x := cam.ScreenX(e.X) - r
 		y := cam.ScreenY(e.Y) - r
+		sh := activeSheets().Get("fx/blast")
+		if sh != nil && sh.FPS > 0 && e.Age < float64(sh.Frames)/sh.FPS {
+			sx := cam.ScreenX(e.X)
+			sy := cam.ScreenY(e.Y)
+			frame := FrameAt(e.Age, sh.FPS, sh.Frames, false)
+			if drawStill(dst, sh, frame, sx, sy, 0, false) {
+				continue
+			}
+		}
 		s := r * 2
 		fillRectF(dst, x, y, s, 1, blastFill)
 		fillRectF(dst, x, y+s, s, 1, blastFill)
 		fillRectF(dst, x, y, 1, s, blastFill)
 		fillRectF(dst, x+s, y, 1, s, blastFill)
 	}
+}
+
+// drawStill paints one stored frame. spin rotates the cel clockwise so a
+// right-facing painting follows a shot.
+func drawStill(dst *ebiten.Image, sh *Sheet, frame int, x, y, angle float64, spin bool) bool {
+	if sh == nil {
+		return false
+	}
+	img, ok := sh.still(frame)
+	if !ok || img == nil {
+		return false
+	}
+	if spin {
+		DrawSpriteAngle(dst, img, sh.AnchorX, sh.AnchorY, x, y, angle)
+	} else {
+		DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, false, x, y)
+	}
+	return true
 }

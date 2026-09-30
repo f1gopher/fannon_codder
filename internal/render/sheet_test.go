@@ -490,6 +490,44 @@ func TestHutCrateAndSkidooSheets(t *testing.T) {
 	}
 }
 
+func TestFireAndBlastSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flash := lib.Get("fx/flash")
+	if flash == nil || flash.Frames != 2 || flash.FrameW != 64 || flash.FrameH != 64 || flash.Loop {
+		t.Fatalf("flash %+v", flash)
+	}
+	if math.Abs(float64(flash.Frames)/flash.FPS-0.12) > 1e-9 {
+		t.Fatalf("flash lasts %v, want 0.12s", float64(flash.Frames)/flash.FPS)
+	}
+	blast := lib.Get("fx/blast")
+	if blast == nil || blast.Frames != 4 || blast.FPS != 20 || blast.Loop || blast.FrameW != 384 {
+		t.Fatalf("blast %+v", blast)
+	}
+	if math.Abs(float64(blast.Frames)/blast.FPS-0.2) > 1e-9 {
+		t.Fatalf("blast lasts %v, want 0.2s", float64(blast.Frames)/blast.FPS)
+	}
+	gren := lib.Get("fx/grenade")
+	if gren == nil || gren.Frames != 2 || !gren.Loop || gren.FPS != 8 || gren.FrameW != 48 {
+		t.Fatalf("grenade %+v", gren)
+	}
+	tracer := lib.Get("fx/tracer")
+	rocket := lib.Get("fx/rocket")
+	if tracer == nil || tracer.Frames != 1 || tracer.FrameW != 64 || rocket == nil || rocket.Frames != 1 || rocket.FrameW != 96 {
+		t.Fatalf("tracer=%v rocket=%v", tracer, rocket)
+	}
+	flashImg := decodeArtPNG(t, "fx/flash.png")
+	if frameDelta(flashImg, 64, 0, 1) < 1 {
+		t.Fatal("muzzle frames do not change")
+	}
+	blastImg := decodeArtPNG(t, "fx/blast.png")
+	if frameDelta(blastImg, 384, 0, 3) < 1 {
+		t.Fatal("blast frames do not change")
+	}
+}
+
 func cropRow(img image.Image, fw, fh, row int) image.Image {
 	sub, ok := img.(interface {
 		SubImage(image.Rectangle) image.Image

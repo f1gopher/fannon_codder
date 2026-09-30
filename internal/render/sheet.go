@@ -67,6 +67,7 @@ type Library struct {
 // ground/cliff, ground/ramp, ground/mine.
 // Props use tree/sway, hut/door, hut/plain, crate/grenade, crate/rocket,
 // skidoo/idle, skidoo/move.
+// Fire uses fx/flash, fx/tracer, fx/grenade, fx/rocket, and fx/blast.
 //
 // Ground frames pin their top-left to the cell and ignore the anchor.
 // Every other anchor sits on the sim point: a trooper or crate or skidoo

@@ -221,6 +221,30 @@ func DrawSprite(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y 
 	dst.DrawImage(img, op)
 }
 
+// DrawSpriteAngle is DrawSprite with a clockwise spin around the anchor.
+// angle 0 keeps the cel's right side pointing east, which matches a velocity
+// of atan2(vy, vx) because GeoM.Rotate is clockwise in screen space.
+func DrawSpriteAngle(dst, img *ebiten.Image, anchorX, anchorY int, x, y, angle float64) {
+	if dst == nil || img == nil {
+		return
+	}
+	if spriteHook != nil {
+		spriteHook(img, false)
+	}
+	sc := SpriteScale()
+	ps := pictureScale
+	if ps <= 0 {
+		ps = 1
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterLinear
+	op.GeoM.Translate(-float64(anchorX), -float64(anchorY))
+	op.GeoM.Rotate(angle)
+	op.GeoM.Scale(sc, sc)
+	op.GeoM.Translate(x*ps, y*ps)
+	dst.DrawImage(img, op)
+}
+
 // drawTopLeft pins a ground frame to the cell. Seamless tiles keep anchor
 // out of it; a wrong anchor would open a seam.
 func drawTopLeft(dst, img *ebiten.Image, x, y float64) {
@@ -304,6 +328,7 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	for i := range bodies {
 		bodies[i].draw(dst)
 	}
+	Muzzles(dst, w)
 	Bombs(dst, w)
 	Projectiles(dst, w)
 	Blasts(dst, w)

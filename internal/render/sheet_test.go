@@ -95,9 +95,6 @@ func TestSnakeIdleAndWalkSheets(t *testing.T) {
 			t.Fatalf("%s should mirror a stored row", d)
 		}
 	}
-	if lib.Get("grunt/idle") != nil {
-		t.Fatal("grunt has no sheet yet")
-	}
 	for _, key := range []string{"snake/shoot", "snake/throw", "snake/death", "snake/corpse"} {
 		if lib.Get(key) == nil {
 			t.Fatalf("missing %s", key)
@@ -151,9 +148,6 @@ func TestSnakeFightSheets(t *testing.T) {
 				t.Fatalf("%s should mirror a stored row", d)
 			}
 		}
-	}
-	if lib.Get("grunt/idle") != nil {
-		t.Fatal("grunt has no sheet yet")
 	}
 	deathPNG := decodeArtPNG(t, "snake/death.png")
 	corpsePNG := decodeArtPNG(t, "snake/corpse.png")
@@ -221,6 +215,71 @@ func TestSnakeWaterSheets(t *testing.T) {
 		if last < 8 {
 			t.Fatalf("row %d last sink frame is empty (%d)", row, last)
 		}
+	}
+}
+
+func TestEnemySheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lib.Get("grunt/walk") != nil || lib.Get("civilian/idle") != nil {
+		t.Fatal("grunts have no walk, and civilians are still a rectangle")
+	}
+	grunt := []struct {
+		key    string
+		frames int
+		fps    float64
+		loop   bool
+	}{
+		{"grunt/idle", 4, 8, true},
+		{"grunt/shoot", 2, 16.67, false},
+		{"grunt/death", 6, 15, false},
+		{"grunt/corpse", 1, 1, false},
+		{"grunt/swim", 4, 8, true},
+		{"grunt/sink", 8, 4, false},
+	}
+	for _, tc := range grunt {
+		sh := lib.Get(tc.key)
+		if sh == nil {
+			t.Fatalf("missing %s", tc.key)
+		}
+		if sh.Frames != tc.frames || sh.FPS != tc.fps || sh.Loop != tc.loop {
+			t.Fatalf("%s frames=%d fps=%v loop=%v", tc.key, sh.Frames, sh.FPS, sh.Loop)
+		}
+		for _, d := range []string{"E", "SE", "S", "N", "NE"} {
+			if _, mirror, ok := sh.image(d, 0); !ok || mirror {
+				t.Fatalf("%s %s should be stored", tc.key, d)
+			}
+		}
+		for _, d := range []string{"W", "SW", "NW"} {
+			if _, mirror, ok := sh.image(d, 0); !ok || !mirror {
+				t.Fatalf("%s %s should mirror", tc.key, d)
+			}
+		}
+	}
+	if float64(6)/15 != 0.4 {
+		t.Fatal("death timing")
+	}
+	for _, key := range []string{"grenadier/idle", "grenadier/throw", "rocketeer/idle", "rocketeer/throw", "grenadier/death", "rocketeer/sink"} {
+		if lib.Get(key) == nil {
+			t.Fatalf("missing %s", key)
+		}
+	}
+	throw := lib.Get("grenadier/throw")
+	if throw.Frames != 4 || throw.FPS != 16 || throw.Loop {
+		t.Fatalf("grenadier throw frames=%d fps=%v loop=%v", throw.Frames, throw.FPS, throw.Loop)
+	}
+	launch := lib.Get("rocketeer/throw")
+	if launch.Frames != 4 || launch.Loop {
+		t.Fatalf("rocketeer launch frames=%d loop=%v", launch.Frames, launch.Loop)
+	}
+	idle := decodeArtPNG(t, "grunt/idle.png")
+	if idle.Bounds().Dx() != 104*4 || idle.Bounds().Dy() != 124*5 {
+		t.Fatalf("grunt idle png %v", idle.Bounds())
+	}
+	if opaqueCount(idle, 0, 0, 104, 124) < 200 {
+		t.Fatal("grunt east idle is empty")
 	}
 }
 

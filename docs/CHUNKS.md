@@ -40,7 +40,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 36 Snake fights and falls
 - [x] 37 Snake in the water and the sand
 - [x] 38 Eagle and Panther
-- [ ] 39 Enemy soldiers
+- [x] 39 Enemy soldiers
 - [ ] 40 Civilians
 - [ ] 41 Ground
 - [ ] 42 Water, quicksand, ice
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [ ] 46 Pointer and the status strip
 - [ ] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–38 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 39.
+Chunks 01–22 and 24–39 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. Next is Chunk 40.
 
 ## Log
 
@@ -206,6 +206,12 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. Swim is 4 frames at 8 fps, 
 ### Chunk 38 done
 Files: `assets/art/eagle/` and `assets/art/panther/` (idle, walk, shoot, throw, death, corpse, swim, sink, each PNG plus the Snake manifest), `internal/render/sheet_test.go`.
 Verify: `go test ./...` and `go build ./cmd/fannon`. Eagle is the Snake sheets in blue fatigues. Panther is the same pixels in amber. Face, rifle, boots, and the tan sink line are the Snake pixels. Cells, anchors, frame counts, and mirrors match. Split on the river sandbox shows green, blue, and amber, and merging back uses the squad colour. Enemies and the map stay rectangles. Rank is still HUD text.
+
+### Chunk 39 done
+Files: `assets/art/grunt/`, `assets/art/grenadier/`, `assets/art/rocketeer/` (idle, shoot, death, corpse, swim, sink; grenadier and rocketeer also have throw), `internal/render/sheet_test.go`.
+Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1 grunts idle and the shot plays across the 0.12s window. A grenadier’s throw shows the orange satchel. A rocketeer’s launch shows the tube. Death is six frames over 0.4s, then the corpse. There is no walk sheet. West, south-west, and north-west are mirrors. Civilians and the map stay rectangles.
+
+The idle breath is a one-pixel bob. Swim is the same side-on pose on every stored row. The rocketeer’s tube is the east painting on every row. Grenadier north-east reuses the south-east view. Grenadier and rocketeer shots, falls, swims, and sinks use the grunt body. The north corpse is the back view, and the other corpses are the side view. The sink is the idle cropped down to the helmet.
 
 ## Backlog
 

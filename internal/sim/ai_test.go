@@ -109,6 +109,140 @@ func TestBrokenLOSResetsReaction(t *testing.T) {
 	}
 }
 
+func TestHeardShotTurnsAGruntBehindTrees(t *testing.T) {
+	const row = 0
+	player := Vec2{X: 8, Y: 8}
+	near := Vec2{X: 8 + 60, Y: 8}
+	far := Vec2{X: 8 + 150, Y: 8}
+	w := aiWorld(player, near)
+	w.SpawnUnit(SideEnemy, far)
+	tiles := make([]Tile, 12)
+	for i := range tiles {
+		tiles[i] = TileGrass
+	}
+	tiles[2] = TileTree
+	w.Map = Map{W: 12, H: 1, Tiles: tiles}
+
+	p := playerOf(w)
+	// The round goes north so it is noise beside the grunt, not a hit.
+	w.addMG(p.X, p.Y, -math.Pi/2, 80, p.ID, SidePlayer)
+	w.Step(0.25)
+
+	n := enemyAt(w, near.X)
+	f := enemyAt(w, far.X)
+	if n.SpotT <= 0 || n.ReactAt == 0 {
+		t.Fatalf("a shot 60px away starts the clock, SpotT=%v ReactAt=%v", n.SpotT, n.ReactAt)
+	}
+	if n.Facing == 0 {
+		t.Fatal("he should be turning toward the shooter")
+	}
+	if n.X != near.X || n.VX != 0 || n.VY != 0 {
+		t.Fatal("hearing does not pull him off the post")
+	}
+	if enemyRounds(w, n.ID) != 0 {
+		t.Fatal("trees hold, so the heard shot does not let him fire")
+	}
+	if f.SpotT != 0 || f.ReactAt != 0 || f.HearID != 0 {
+		t.Fatalf("150px is outside hearing, SpotT=%v HearID=%v", f.SpotT, f.HearID)
+	}
+
+	w.Step(1)
+	if enemyRounds(w, n.ID) != 0 {
+		t.Fatal("a finished reaction still cannot shoot through the tree")
+	}
+	if n.X != near.X {
+		t.Fatal("he is still posted")
+	}
+}
+
+func TestHeardShotStillOwesTheReaction(t *testing.T) {
+	player := Vec2{X: 8, Y: 8}
+	near := Vec2{X: 8 + 60, Y: 8}
+	w := aiWorld(player, near)
+	tiles := make([]Tile, 8)
+	for i := range tiles {
+		tiles[i] = TileGrass
+	}
+	tiles[2] = TileTree
+	w.Map = Map{W: 8, H: 1, Tiles: tiles}
+
+	p := playerOf(w)
+	w.addMG(p.X, p.Y, -math.Pi/2, 80, p.ID, SidePlayer)
+	w.Step(0.2)
+	e := enemyOf(w)
+	if e.SpotT <= 0 || e.SpotT >= e.ReactAt {
+		t.Fatalf("hearing should be part-way through the reaction, SpotT=%v ReactAt=%v", e.SpotT, e.ReactAt)
+	}
+	heard := e.SpotT
+
+	w.Map.Set(2, 0, TileGrass)
+	w.Step(1.0 / 60)
+	if enemyRounds(w, e.ID) != 0 {
+		t.Fatal("opening the line does not skip the rest of the reaction")
+	}
+	if e.SpotT+1e-9 < heard {
+		t.Fatal("LOS should continue the heard clock")
+	}
+
+	// Short frames so a round is still in the air when we look. The player is west of a man facing east.
+	fired := false
+	for i := 0; i < 90; i++ {
+		w.Step(1.0 / 60)
+		if enemyRounds(w, e.ID) > 0 {
+			fired = true
+			break
+		}
+	}
+	if !fired {
+		t.Fatal("once the remaining reaction and the turn are done he fires")
+	}
+}
+
+func TestHeardShotEndsWhenTheShooterDies(t *testing.T) {
+	player := Vec2{X: 8, Y: 8}
+	near := Vec2{X: 8 + 60, Y: 8}
+	w := aiWorld(player, near)
+	tiles := make([]Tile, 8)
+	for i := range tiles {
+		tiles[i] = TileGrass
+	}
+	tiles[2] = TileTree
+	w.Map = Map{W: 8, H: 1, Tiles: tiles}
+	p := playerOf(w)
+	w.addMG(p.X, p.Y, -math.Pi/2, 80, p.ID, SidePlayer)
+	w.Step(0.2)
+	e := enemyOf(w)
+	if e.HearID == 0 || e.SpotT <= 0 {
+		t.Fatal("the shot should be a live contact")
+	}
+	w.kill(p)
+	w.Step(1.0 / 60)
+	if e.SpotT != 0 || e.ReactAt != 0 || e.HearID != 0 {
+		t.Fatalf("a dead shooter with no LOS drops the clock, SpotT=%v HearID=%v", e.SpotT, e.HearID)
+	}
+}
+
+func enemyAt(w *World, x float64) *Unit {
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side == SideEnemy && u.X == x {
+			return u
+		}
+	}
+	return nil
+}
+
+func enemyRounds(w *World, id int) int {
+	n := 0
+	for i := range w.Projectiles {
+		p := &w.Projectiles[i]
+		if p.Alive && p.OwnerID == id {
+			n++
+		}
+	}
+	return n
+}
+
 func TestKillAllEnemiesWins(t *testing.T) {
 	w := NewDemoWorld()
 	w.Spread = 0

@@ -583,7 +583,7 @@ Chunk 05’s rule is still what runs: a grunt who can see a player inside 70px s
 
 He also walks in from 140px before he has spotted anyone. On Mission 1 the south grunt spawns 80px from the squad (tiles (14,10) vs (10,13)), so he closes and opens fire without the player moving. The other two sit near 193px and only join once you step into the open. The Amiga mission is the opposite lesson: the manual’s “shoot them before they shoot you.” Posted men, a visible turn, a late first shot, then a sloppy burst you can sidestep.
 
-Chunks 21 and 22 are in. Chunk 23 is dropped. These chunks do not retune maps, gun range, or “one hit kills.”
+Chunks 21, 22, and 23 are in. These chunks do not retune maps, gun range, or “one hit kills.”
 
 Grenade windups and rocket windups stay as they are. Do not stack the grunt reaction on top of them. A grenadier who is too close to throw uses the grunt MG rules. Enemy vehicles stay on their current “drive at the player and shoot in range” rule. Inactive player squads stay snappy. No A*, no flanking, no chase.
 
@@ -646,11 +646,7 @@ Grenade windups and rocket windups stay as they are. Do not stack the grunt reac
 
 **Do not.** Hearing, chase, map edits, changing `EnemyMGRoF` or `EnemyMGRange`.
 
-### Chunk 23 — dropped
-
-**Do not implement this.** Hearing would wake the next post and make Mission 1 harder. The opener stays three separate duels. The old spec is kept below so the idea is not reinvented later.
-
-### Chunk 23 (record only) — Gunfire turns the next man
+### Chunk 23 — Gunfire turns the next man
 
 **Goal.** A shot near a posted grunt starts the same Chunk 21 reaction, even without LOS. He still does not leave his tile, and he still cannot shoot through the tree. He turns toward the noise and fires only once contact (range + LOS) is real.
 
@@ -1055,7 +1051,94 @@ Facing matches the sim. `atan2(dy, dx)` with Y down the screen: 0 is east, π/2 
 
 ---
 
-## After Chunk 47 (not this plan)
+## Chunks 48–51 — The AI that is still a laser or a statue
+
+Chunks 21–23 finished the posted grunt: hold the tile, turn, react, burst, and look toward a nearby shot. This block does not add chase, flanking, patrols, or A*. It does not retune Mission 1, gun range, or one-hit kills.
+
+What is already in, and stays:
+
+- Posted grunts, grenadier MG between bombs, and rocketeer windup clocks.
+- Player file-follow and pointer steering. The leader slides on blocked axes. That is the movement rule, not a pathfinder.
+- Door huts spawn grunts up to six living enemies. Civilians wander. Unarmed and armed enemy skidoos drive straight at the nearest player and, if armed, hose the mounted gun the moment they have range and LOS.
+- The squad you are driving aims on the frame you hold fire.
+
+What is still missing, and is these four chunks:
+
+- A squad you are not driving snaps its facing and fires every cooldown at rank rate and rank spread. There is no turn and no burst gap. Leaving a man on a bridge is a laser turret.
+- A grunt born at a door stands on the doorstep for the rest of the phase. He never takes a post in the open.
+- A grenadier and a rocketeer snap to the target on the windup frame. The windup clock is the only delay.
+- An armed enemy skidoo rams through the squad while firing. It does not hold a gun line, and the mounted gun has no burst.
+
+### Chunk 48 — Parked squads turn and burst
+
+**Goal.** A squad you are not controlling uses the grunt’s turn rate, reaction, and burst shape, with that man’s own rank gun (range, rate, spread). The squad you are aiming still fires on the frame you hold the button.
+
+**Rules**
+
+- `stepInactiveFire` stops calling `shootAt`. Each living on-foot member of a non-active squad runs the Chunk 21–22 contact clock: `SpotT`, `ReactAt`, `BurstN`, `BurstGap`, `EnemyTurnRate`, `EnemyFaceTol`, `EnemyBurst`, `EnemyBurstPause`.
+- Range, rounds per second, and cone stay `GunStatsFor(u.Rank)`. Do not copy `EnemyMGRange`, `EnemyMGRoF`, or `EnemyMGSpread` onto players.
+- Contact is a living enemy inside that range with clear LOS. Losing it resets the clock the same way `resetGruntContact` does.
+- Men in a vehicle, sinking, or unable to shoot stay as they are. The active squad is unchanged.
+- Grenades and rockets stay player-ordered. A parked man does not throw.
+
+**Tests.** A parked Private already facing an enemy at 40px fires no round before the reaction. Facing the wrong way, he still has not fired when the turn is unfinished. After `EnemyBurst` rounds he is silent for `EnemyBurstPause`. Stepping the enemy out of LOS resets the clock. The active squad still fires on the first firing frame. A Corporal’s range stays longer than a Private’s.
+
+**Done when.** `go test ./...`. On the river sandbox, peel one man off, walk the others away, and the parked man turns, waits, then chatters in threes. Holding fire on the active squad is still instant.
+
+**Do not.** Hearing. Map edits. Enemy stat changes.
+
+### Chunk 49 — Door grunts take a post
+
+**Goal.** A grunt spawned by a door hut walks straight out from the door and then becomes a posted sentry. Map-placed enemies do not move.
+
+**Rules**
+
+- `SpawnUnit` from `stepSpawners` sets a post a few tiles straight out from the hut, away from the building, on a walkable cell. Slide on blocked axes, same as the player. No path search.
+- Until he arrives, he does not shoot. He does not chase the player. If the walk cannot advance, he posts where he is.
+- On arrival, clear the post and use `stepGruntGun`. Grenadiers and rocketeers are not what doors spawn.
+- The living-enemy cap stays six.
+
+**Tests.** A spawned grunt is not on the doorstep after a couple of seconds of open ground, and he has not fired during the walk. A grunt loaded from mission JSON stays on his tile. A tree in the way slides him; he still ends posted.
+
+**Done when.** `go test ./...`. Trash Enemy HQ: reds come out of the hut and stop in the yard. They do not stream across the map.
+
+**Do not.** A*. Chase. Extra spawn kinds.
+
+### Chunk 50 — Specialists turn through the windup
+
+**Goal.** A grenadier and a rocketeer use `EnemyTurnRate` during the windup. The throw or the launch waits until they are inside `EnemyFaceTol`. The windup lengths stay `GrenadierWindup` and `RocketeerWindup`.
+
+**Rules**
+
+- Replace the snap `u.Facing = Atan2(...)` in those two windups with `turnToward`. If the clock expires while they are still turning, they finish the turn and release on the first frame they face the target. They do not restart the windup.
+- Grenades still fly over trees. Rockets still need LOS to start the windup. Rocketeer approach and tree-hide stay as they are.
+- A grenadier inside `GrenadierMinRange` stays on the grunt MG path from Chunks 21–22.
+
+**Tests.** A grenadier facing away does not release at the old windup instant. A grenadier already facing still releases at `GrenadierWindup`. A rocketeer beside a tree does not walk. Approach distance is unchanged.
+
+**Done when.** `go test ./...`. On Quicksand, an orange man turns, shows the yellow bar, then throws. On Valley of Ice, a rocketeer by a tree holds and turns the tube before the rocket leaves.
+
+**Do not.** New ranges. Lead on moving targets. Hearing.
+
+### Chunk 51 — Armed enemy skidoos hold a gun line
+
+**Goal.** An armed enemy skidoo stops outside ramming distance and fires the mounted gun in the same burst shape as a grunt. An unarmed enemy skidoo still drives at the player and rams.
+
+**Rules**
+
+- Armed: steer toward the nearest living player until the distance is inside `VehicleMGRange` and short of the hull. Then zero the drive hold and keep the hull turning toward that player with the existing ice and grass drive code. Shoot only with LOS, after the same reaction and facing tolerance as a grunt, then `EnemyBurst` rounds and `EnemyBurstPause`. The mounted gun keeps `VehicleMGRange` and its current rate; the burst is the new part.
+- Unarmed: current “drive at the player” rule, including ram.
+- Obstacle handling stays axis slide. No path search. Player driving is unchanged.
+
+**Tests.** An armed enemy skidoo on open ground stops before it overlaps the squad and does not fire before the reaction. After a burst it is silent for the pause. An unarmed one still closes and rams. A tree still only slides the hull.
+
+**Done when.** `go test ./...`. My Beautiful Skidoo: the red-blinker skidoo shoots from a gap instead of parking on top of the squad. The player skidoo still rams when you drive it into someone.
+
+**Do not.** Tanks, jeeps, turrets, choppers. Those stay on the backlog.
+
+---
+
+## After Chunk 51 (not this plan)
 
 Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 
@@ -1078,7 +1161,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–22 and 24–47 are in. Chunk 23 is dropped. The sound chunks are done. The picture chunks 32–47 are in. The Chunk 33 style board in `assets/art/style/` is accepted. What remains is the backlog in `docs/CHUNKS.md`.
+Chunks 01–47 are in. The sound chunks are done. The picture chunks 32–47 are in. The Chunk 33 style board in `assets/art/style/` is accepted. The next work is Chunks 48–51 (parked squads, door posts, specialist facing, armed skidoos). After that, the backlog in `docs/CHUNKS.md`.
 
 ---
 
@@ -1113,7 +1196,7 @@ Grok must not skip tests to “save time”; they are how the next session knows
 - **Right-click** may be eaten by the window manager. If so, add a fallback (`Ctrl` = fire) in Chunk 04 without removing right-click.
 - **Both-buttons grenade** is fiddly on some mice; keep it and also accept `Space` as “special at pointer” from Chunk 14.
 - **Soft-locks** (exploding all crates) are authentic; still make Mission 2 phase 2 have a crate you do not have to shoot-walk through.
-- **Scope creep** (A*, chase AI, a second art style mid-stream) will blow the budget. Grunt feel is Chunks 21–22 only: hold the post, turn, burst. The picture is Chunks 32–47, one chunk at a time. Architecture.md is the brake.
+- **Scope creep** (A*, chase AI, a second art style mid-stream) will blow the budget. Posted grunts are Chunks 21–22. Hearing is Chunk 23 only: turn toward a nearby shot, still no shot through a tree, still no chase. The picture is Chunks 32–47. The remaining AI after that is Chunks 48–51: parked squads, door posts, specialist facing, armed skidoos. Architecture.md is the brake.
 - **Do not rebalance Mission 1 by deleting grunts or shortening the gun.** The south man walks in because approach is 140 px and he spawns at 80. Chunk 21 stops the walk; Chunk 22 stops the laser.
 
 ## First message to Grok after you accept this plan

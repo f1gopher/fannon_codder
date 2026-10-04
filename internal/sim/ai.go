@@ -12,6 +12,7 @@ const (
 	EnemyBurst       = 3    // MG rounds, then silence
 	EnemyBurstPause  = 0.75 // seconds with no MG round; he keeps turning
 	EnemyMGSpread    = 0.20 // rad. Wider than a Private's 0.12
+	EnemyHear        = 96.0 // px. An infantry MG round starts a reaction with no LOS
 )
 
 // stepAI posts grunts: they hold their tile, turn toward a player in gun
@@ -54,15 +55,20 @@ func (w *World) stepAI(dt float64) {
 }
 
 // stepGruntGun is the MG path for a grunt and for a grenadier who is not
-// throwing. He never leaves his tile. Contact is a living player inside
-// gun range with clear LOS; anything else zeroes the reaction and the burst.
+// throwing. He never leaves his tile. A round needs a living player inside
+// gun range with clear LOS. A heard infantry shot turns him toward the
+// shooter and runs the same clock, and it never fires by itself.
 func (w *World) stepGruntGun(u *Unit, dt float64) {
 	u.VX = 0
 	u.VY = 0
-	px, py, ok := w.gruntContact(u)
-	if !ok {
+	px, py, see := w.gruntContact(u)
+	nx, ny, hear := w.gruntNoise(u)
+	if !see && !hear {
 		resetGruntContact(u)
 		return
+	}
+	if !see {
+		px, py = nx, ny
 	}
 	if u.ReactAt == 0 {
 		if w.rng == nil {
@@ -72,6 +78,9 @@ func (w *World) stepGruntGun(u *Unit, dt float64) {
 	}
 	u.SpotT += dt
 	w.turnToward(u, px, py, dt)
+	if !see {
+		return
+	}
 	if u.SpotT+1e-9 < u.ReactAt {
 		return
 	}
@@ -117,6 +126,44 @@ func resetGruntContact(u *Unit) {
 	u.ReactAt = 0
 	u.BurstN = 0
 	u.BurstGap = 0
+	u.HearID = 0
+}
+
+// gruntNoise is the living infantry shooter who woke this grunt. The shot
+// that set HearID can be anywhere inside EnemyHear. Dead shooters drop it.
+func (w *World) gruntNoise(u *Unit) (x, y float64, ok bool) {
+	if u == nil || u.HearID == 0 {
+		return 0, 0, false
+	}
+	s := w.Unit(u.HearID)
+	if s == nil || !s.Living() {
+		u.HearID = 0
+		return 0, 0, false
+	}
+	return s.X, s.Y, true
+}
+
+// wakeFromMG starts a posted grunt's reaction when an infantry machine-gun
+// round lands inside EnemyHear. He must be idle. Grenades, rockets, and
+// vehicle guns never call this. The grunt does not move.
+func (w *World) wakeFromMG(x, y float64, owner int) {
+	src := w.Unit(owner)
+	if src == nil || !src.Living() || src.VehicleID != 0 {
+		return
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != SideEnemy || u.Kind != KindInfantry || !u.Living() || u.VehicleID != 0 {
+			continue
+		}
+		if u.ReactAt != 0 || u.HearID != 0 {
+			continue
+		}
+		if hypot(u.X-x, u.Y-y) > EnemyHear {
+			continue
+		}
+		u.HearID = owner
+	}
 }
 
 // gruntContact is the nearest living player inside gun range with LOS.

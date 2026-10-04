@@ -24,7 +24,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
 - [x] 21 Grunts spot, turn, and hold the post
 - [x] 22 Grunt bursts and a wide cone
-- 23 dropped — gunfire does not wake the next post
+- [x] 23 Gunfire turns the next posted man
 - [x] 24 Sound bus and gunshot
 - [x] 25 Blasts
 - [x] 26 Death
@@ -50,7 +50,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 46 Pointer and the status strip
 - [x] 47 Title, briefing, Boot Hill
 
-Chunks 01–22 and 24–47 are in. Chunk 23 will not be built. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left.
+Chunks 01–47 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. AI still to do is Chunks 48–51 in `PLAN.md`. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left after 51.
 
 ## Log
 
@@ -142,8 +142,9 @@ Verify: `go test ./...`. Mission 1 spawn: the three grunts stay on their tiles a
 Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go`.
 Verify: `go test ./...`. Mission 1 again. Winning the opening aim is clean. Missing it means three rounds, a visible gap of about three quarters of a second while he keeps turning, then another burst. Shots go wide of a moving man; standing still in the open still gets him killed. Grenadiers still telegraph throws. Rocketeers are unchanged. `go run ./cmd/fannon`.
 
-### Chunk 23 dropped
-Gunfire does not wake a posted man. Mission 1 stays three separate duels.
+### Chunk 23 done
+Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/combat.go`, `internal/sim/unit.go`.
+Verify: `go test ./...`. An infantry machine-gun round within 96px starts the next posted grunt’s reaction. He turns toward the shooter and stays on his tile. A tree still blocks the shot. Opening the line does not skip the rest of the reaction or the turn. A grunt 150px away does not wake. A dead shooter with no line of sight drops the clock. Grenades, rockets, and vehicle guns do not wake anyone. Mission 1’s other two posts sit about 193px from the south fight, so that opener stays three duels. `go run ./cmd/fannon`.
 
 ### Chunk 24 done
 Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/sim/vehicle.go`, `internal/audio/audio.go`, `internal/audio/gun.go`, `internal/audio/gun_test.go`, `internal/app/game.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
@@ -257,9 +258,20 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. A new game walks the painte
 
 The load folder still has a thin warm edge where the magenta shadow used to sit. There is no title tune.
 
+## Next — Chunks 48–51
+
+Chunk 23 is in. Specs for the rest are in `PLAN.md`. Do one chunk per session. Grunts stay posted. No chase and no pathfinding.
+
+- [ ] 48 Parked squads turn and burst (rank gun, grunt timing)
+- [ ] 49 Door grunts walk out and post
+- [ ] 50 Grenadier and rocketeer turn through the windup
+- [ ] 51 Armed enemy skidoo holds a gun line and bursts
+
+Start at 48. A man left on a bridge is the laser you meet on every split.
+
 ## Backlog
 
-Grunt behaviour is Chunks 21–22. Chunk 23 (hearing) is dropped. Do not add chase or pathfinding.
+These are not AI chunks. Do not pull them forward to “finish the AI”.
 
 - Jeeps (skin of the skidoo), tanks, static turrets, choppers
 - Hostages, kidnap, factories, protect-civilians fail

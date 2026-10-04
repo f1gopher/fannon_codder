@@ -155,6 +155,7 @@ func (w *World) addMG(x, y, ang, travel float64, owner int, side Side) {
 	if u := w.Unit(owner); u != nil {
 		u.SinceShot = 0
 	}
+	w.wakeFromMG(x, y, owner)
 }
 
 func (w *World) stepProjectiles(dt float64) {

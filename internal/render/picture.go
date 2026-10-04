@@ -64,6 +64,28 @@ func Text(dst *ebiten.Image, str string, x, y float64) {
 	text.Draw(dst, str, face, op)
 }
 
+// TextCentered draws str in the middle of dst. Each line is centered, and
+// the block sits on the vertical middle of the frame.
+func TextCentered(dst *ebiten.Image, str string) {
+	if dst == nil || str == "" {
+		return
+	}
+	s := pictureScale
+	if s <= 0 {
+		s = 1
+	}
+	size := TextPixels(s)
+	face := &text.GoTextFace{Source: uiFont, Size: size}
+	op := &text.DrawOptions{}
+	op.PrimaryAlign = text.AlignCenter
+	op.SecondaryAlign = text.AlignCenter
+	op.LineSpacing = size * 1.25
+	b := dst.Bounds()
+	op.GeoM.Translate(float64(b.Min.X+b.Max.X)/2, float64(b.Min.Y+b.Max.Y)/2)
+	op.ColorScale.ScaleWithColor(color.White)
+	text.Draw(dst, str, face, op)
+}
+
 // Rect fills a rectangle given in world-frame pixels.
 func Rect(dst *ebiten.Image, x, y, w, h int, c color.Color) {
 	fillRect(dst, x, y, w, h, c)

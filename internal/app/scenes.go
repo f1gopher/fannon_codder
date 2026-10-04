@@ -450,6 +450,6 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	case sim.Won:
 		render.Text(screen, "PHASE COMPLETE\nClick or Enter", 70, 96)
 	case sim.Lost:
-		render.Text(screen, "PHASE FAILED\nClick or Enter", 70, 96)
+		render.TextCentered(screen, "PHASE FAILED\nClick or Enter")
 	}
 }

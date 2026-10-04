@@ -31,6 +31,11 @@ func (w *World) stepAI(dt float64) {
 		if u.Sinking {
 			u.VX = 0
 			u.VY = 0
+			u.HasPost = false
+			continue
+		}
+		if u.HasPost {
+			w.stepDoorPost(u, dt)
 			continue
 		}
 		px, py, ok := w.nearestLiving(SidePlayer, u.X, u.Y)
@@ -51,6 +56,18 @@ func (w *World) stepAI(dt float64) {
 			continue
 		}
 		w.stepGruntGun(u, dt)
+	}
+}
+
+// stepDoorPost walks a door grunt straight to his post. He does not shoot
+// and he does not follow the player. A step that cannot move posts him there.
+func (w *World) stepDoorPost(u *Unit, dt float64) {
+	prevX, prevY := u.X, u.Y
+	arrived := w.steerToward(u, u.PostX, u.PostY, WalkSpeed, dt, ArrivalRadius)
+	if arrived || (u.X == prevX && u.Y == prevY) {
+		u.HasPost = false
+		u.VX = 0
+		u.VY = 0
 	}
 }
 

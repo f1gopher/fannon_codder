@@ -58,6 +58,9 @@ type Unit struct {
 	HearID      int     // infantry shooter whose MG round woke an idle grunt. 0 means none.
 	BurstN      int     // MG rounds fired in the current chatter.
 	BurstGap    float64 // seconds of silence left after a full burst.
+	HasPost     bool    // walking from a door to PostX, PostY. Map spawns leave this false.
+	PostX       float64
+	PostY       float64
 	SinceShot   float64 // seconds since this unit's last MG round. Render only.
 	SinceThrow  float64 // seconds since this unit's last grenade or rocket. Render only.
 	sampled     bool    // terrain has been read once; a man placed in water does not splash

@@ -51,7 +51,7 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 47 Title, briefing, Boot Hill
 - [x] 48 Parked squads turn and burst
 
-Chunks 01–48 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. AI still to do is Chunks 49–51 in `PLAN.md`. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left after 51.
+Chunks 01–49 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. AI still to do is Chunks 50–51 in `PLAN.md`. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left after 51.
 
 ## Log
 
@@ -263,15 +263,19 @@ The load folder still has a thin warm edge where the magenta shadow used to sit.
 Files: `internal/sim/combat.go`, `internal/sim/squad_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
 Verify: `go test ./...`. A squad you are not controlling turns at the grunt rate, waits out the reaction, then fires three rounds and pauses. Range, rate, and cone stay that man's rank. The squad you are aiming still fires on the frame you hold the button. He does not hear shots and he does not throw.
 
-## Next — Chunks 49–51
+### Chunk 49 done
+Files: `internal/sim/building.go`, `internal/sim/ai.go`, `internal/sim/unit.go`, `internal/sim/building_test.go`, `internal/data/mission_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
+Verify: `go test ./...`. A door grunt walks a few tiles straight out and does not fire on the way. A tree slides him, and he posts when he arrives or when the walk cannot advance. A grunt loaded from mission JSON stays on his tile. The living-enemy cap stays six.
+
+## Next — Chunks 50–51
 
 Specs are in `PLAN.md`. Do one chunk per session. Grunts stay posted. No chase and no pathfinding.
 
-- [ ] 49 Door grunts walk out and post
+- [x] 49 Door grunts walk out and post
 - [ ] 50 Grenadier and rocketeer turn through the windup
 - [ ] 51 Armed enemy skidoo holds a gun line and bursts
 
-Start at 49. A grunt born in a doorway still stands on the step.
+Start at 50. A grenadier and a rocketeer still snap their facing on the windup frame.
 
 ## Backlog
 

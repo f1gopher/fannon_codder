@@ -6,6 +6,8 @@ const (
 	// maxDoorSpawns caps living enemies so a hut spews reds without flooding the map.
 	maxDoorSpawns = 6
 	buildingHP    = 1
+	// DoorPostTiles is how far a door grunt walks, straight out from the step.
+	DoorPostTiles = 3
 )
 
 // Building is a hut. Door huts spawn grunts until a grenade destroys them.
@@ -75,11 +77,48 @@ func (w *World) stepSpawners(dt float64) {
 			continue
 		}
 		b.SpawnCD = b.SpawnEvery
-		w.SpawnUnit(SideEnemy, b.DoorSpawn())
+		w.spawnDoorGrunt(b)
 		if w.livingCount(SideEnemy) >= maxDoorSpawns {
 			return
 		}
 	}
+}
+
+// spawnDoorGrunt stands a grunt on the step and aims him a few tiles
+// straight out, on a walkable cell. He is ordinary infantry.
+func (w *World) spawnDoorGrunt(b *Building) *Unit {
+	u := w.SpawnUnit(SideEnemy, b.DoorSpawn())
+	p := w.doorPost(b)
+	u.HasPost = true
+	u.PostX = p.X
+	u.PostY = p.Y
+	return u
+}
+
+// doorPost is a walkable cell straight south of the door, away from the hut.
+// A blocked cell steps sideways, then closer, still outside the walls.
+func (w *World) doorPost(b *Building) Vec2 {
+	spawn := b.DoorSpawn()
+	type off struct{ x, y int }
+	cands := []off{
+		{0, DoorPostTiles},
+		{1, DoorPostTiles},
+		{-1, DoorPostTiles},
+		{0, DoorPostTiles - 1},
+		{1, DoorPostTiles - 1},
+		{-1, DoorPostTiles - 1},
+		{0, 1},
+	}
+	for _, c := range cands {
+		p := Vec2{
+			X: spawn.X + float64(c.x*TileSize),
+			Y: spawn.Y + float64(c.y*TileSize),
+		}
+		if w.walkableUnit(p.X, p.Y) {
+			return p
+		}
+	}
+	return spawn
 }
 
 func (w *World) livingCount(side Side) int {

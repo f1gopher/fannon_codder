@@ -90,6 +90,47 @@ func TestMission1GruntsHoldAtSpawn(t *testing.T) {
 	}
 }
 
+func TestMissionJSONGruntStaysOnHisTile(t *testing.T) {
+	p, err := LoadPhase("m01p01.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w, err := p.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var x, y float64
+	n := 0
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != sim.SideEnemy {
+			continue
+		}
+		if u.HasPost {
+			t.Fatal("a mission grunt must not take a door post")
+		}
+		x, y = u.X, u.Y
+		n++
+		break
+	}
+	if n == 0 {
+		t.Fatal("mission 1 has no grunt")
+	}
+	for i := 0; i < 120; i++ {
+		w.Step(1.0 / 60)
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != sim.SideEnemy {
+			continue
+		}
+		if u.X != x || u.Y != y {
+			t.Fatalf("mission grunt moved (%v,%v) -> (%v,%v)", x, y, u.X, u.Y)
+		}
+		return
+	}
+}
+
 func TestPhaseLoadsHutAndCrate(t *testing.T) {
 	rows := make([]string, 8)
 	for i := range rows {

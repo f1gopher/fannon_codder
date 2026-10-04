@@ -96,7 +96,7 @@ A grenadier carries `GrenadierBombs` (2), winds up for `GrenadierWindup` (0.8 s)
 
 During a windup he turns at the grunt rate and releases on the first frame inside `EnemyFaceTol`. The opening frame sets the clock and does not snap `Facing`. If the clock ends while he is still turning, `WindHeld` finishes the turn and releases. The windup does not restart.
 
-A player squad you are not controlling uses that same turn, reaction, burst, and pause. Range, rate, and spread stay `GunStatsFor`. He does not hear and does not throw. The active squad fires on the first frame fire is held. `World.Spread == 0` still zeros the parked cone.
+A player squad you are not controlling uses that same turn, reaction, burst, and pause once it has no move order. Selecting another squad leaves a click-move running until the leader arrives. Range, rate, and spread stay `GunStatsFor`. He does not hear and does not throw. The active squad fires on the first frame fire is held. `World.Spread == 0` still zeros the parked cone.
 
 Mission 1 grunts are at tiles (17, 3), (1, 5), and (14, 10). The south man starts about 80 px from the squad. The other two are about 193 px out. None of that is inside `EnemyHear`, and mission 1 does not close, so the opener is three duels.
 

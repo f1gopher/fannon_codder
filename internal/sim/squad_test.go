@@ -206,6 +206,35 @@ func TestMergeFollowsActiveSquad(t *testing.T) {
 	}
 }
 
+func TestSwitchLeavesTheMoveGoing(t *testing.T) {
+	w := threeMan()
+	middle := w.ActiveSquad().MemberIDs[1]
+	w.ToggleSelect(middle)
+	if !w.Split() {
+		t.Fatal("split failed")
+	}
+	snake := w.SquadByID(SquadSnake)
+	leader := w.Unit(snake.LeaderID)
+	start := leader.X
+	w.CommandMove(leader.X+80, leader.Y, true)
+	if !w.SetActiveSquad(SquadEagle) {
+		t.Fatal("switch")
+	}
+	if !w.SquadByID(SquadSnake).HasDest {
+		t.Fatal("selecting the other squad must leave the move in place")
+	}
+	for i := 0; i < 240; i++ {
+		w.Step(1.0 / 60)
+	}
+	leader = w.Unit(w.SquadByID(SquadSnake).LeaderID)
+	if leader.X < start+70 {
+		t.Fatalf("snake stopped at %v, started %v", leader.X, start)
+	}
+	if w.SquadByID(SquadSnake).HasDest {
+		t.Fatal("the ordered move should finish")
+	}
+}
+
 func TestInactiveSquadHoldsAndFires(t *testing.T) {
 	w, g := parkedAt(Vec2{X: 240, Y: 100})
 	guard := g.ID

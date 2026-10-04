@@ -81,7 +81,8 @@ func (w *World) stepFire(dt float64) {
 	}
 }
 
-// stepInactiveFire: a squad you are not controlling holds, turns, and bursts.
+// stepInactiveFire: a squad you are not controlling, and that has no
+// destination, holds, turns, and bursts.
 // Range, rate, and cone stay that man's rank gun. He does not hear shots,
 // and he does not throw. The active squad is stepFire.
 func (w *World) stepInactiveFire(dt float64) {
@@ -89,6 +90,10 @@ func (w *World) stepInactiveFire(dt float64) {
 	for i := range w.Squads {
 		s := &w.Squads[i]
 		if active != nil && s.ID == active.ID {
+			continue
+		}
+		// Still walking to a click. The parked burst starts when they arrive.
+		if s.HasDest {
 			continue
 		}
 		for _, id := range s.MemberIDs {

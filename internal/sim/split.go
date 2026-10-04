@@ -25,7 +25,8 @@ func (w *World) CycleGrenadeShare() { w.GrenadeShare = w.GrenadeShare.Next() }
 
 func (w *World) CycleRocketShare() { w.RocketShare = w.RocketShare.Next() }
 
-// SetActiveSquad makes id the controlled squad. The one left behind holds.
+// SetActiveSquad makes id the controlled squad. A move already given
+// keeps its destination, so that squad finishes the walk.
 func (w *World) SetActiveSquad(id SquadID) bool {
 	idx := -1
 	for i := range w.Squads {
@@ -38,10 +39,6 @@ func (w *World) SetActiveSquad(id SquadID) bool {
 		return false
 	}
 	for i := range w.Squads {
-		if w.Squads[i].Active && i != idx {
-			w.Squads[i].HasDest = false
-			w.Squads[i].JoinSeek = false
-		}
 		w.Squads[i].Active = i == idx
 	}
 	w.Selected = nil

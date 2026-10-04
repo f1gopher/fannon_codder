@@ -465,7 +465,13 @@ func paintTerrain(dst *ebiten.Image, m sim.Map, cam sim.Camera, terrain string) 
 			if t != sim.TileGrass && t != sim.TileTree {
 				continue
 			}
-			drawLoopSheet(dst, sh, tx, ty,
+			// Frame 0 is the rest pose. The other frames only shift fine
+			// strokes, and that shimmer reads as noise, so the fill stays put.
+			img, ok := sh.still(0)
+			if !ok {
+				continue
+			}
+			drawTopLeft(dst, img,
 				cam.ScreenX(float64(tx*sim.TileSize)),
 				cam.ScreenY(float64(ty*sim.TileSize)),
 			)

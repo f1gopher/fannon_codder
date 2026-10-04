@@ -256,6 +256,10 @@ func (w *World) explode(x, y float64, ownerID int) {
 			b.HP = 0
 		}
 	}
+	// Enemy fire, bombs, and rockets leave crates for the player.
+	if w.enemyOwned(ownerID) {
+		return
+	}
 	for i := range w.Pickups {
 		p := &w.Pickups[i]
 		if !p.Alive {
@@ -269,7 +273,16 @@ func (w *World) explode(x, y float64, ownerID int) {
 	}
 }
 
+// enemyOwned is true when id is a living or dead enemy soldier.
+func (w *World) enemyOwned(id int) bool {
+	u := w.Unit(id)
+	return u != nil && u.Side == SideEnemy
+}
+
 func (w *World) tryHitCrate(p *Projectile, x0, y0, x1, y1 float64) {
+	if p.OwnerSide == SideEnemy {
+		return
+	}
 	for i := range w.Pickups {
 		c := &w.Pickups[i]
 		if !c.Alive {

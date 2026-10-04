@@ -85,6 +85,36 @@ func TestShootingCrateExplodes(t *testing.T) {
 	}
 }
 
+func TestEnemyCannotDestroyCrates(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	enemy := w.SpawnUnit(SideEnemy, Vec2{X: 0, Y: 0})
+	w.AddGrenadeCrate(Vec2{X: 40, Y: 0})
+	w.AddRocketCrate(Vec2{X: 40, Y: 20})
+	w.Projectiles = append(w.Projectiles, Projectile{
+		X: 10, Y: 0, VX: MGSpeed, VY: 0, Left: 80,
+		Alive: true, OwnerID: enemy.ID, OwnerSide: SideEnemy,
+	})
+	w.Step(1.0 / 60)
+	if !w.Pickups[0].Alive || !w.Pickups[1].Alive {
+		t.Fatal("enemy MG destroyed a crate")
+	}
+	w.launchGrenade(enemy, 40, 0)
+	for i := 0; i < 120; i++ {
+		w.Step(1.0 / 60)
+	}
+	if !w.Pickups[0].Alive || !w.Pickups[1].Alive {
+		t.Fatal("enemy grenade destroyed a crate")
+	}
+	w.launchRocket(enemy.ID, SideEnemy, 0, 0, 40, 0)
+	for i := 0; i < 30; i++ {
+		w.Step(1.0 / 60)
+	}
+	if !w.Pickups[0].Alive || !w.Pickups[1].Alive {
+		t.Fatal("enemy rocket destroyed a crate")
+	}
+}
+
 func TestGrenadeHurtsFriendlies(t *testing.T) {
 	w := NewEmpty()
 	w.AI = false

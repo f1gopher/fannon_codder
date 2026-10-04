@@ -54,7 +54,7 @@ Tiles: grass, tree, waterShallow, waterDeep, ice, quicksand, cliff, bridge, mine
 
 A building with a door spawns grunts until destroyed. Cap is `maxDoorSpawns` (6). Doors do not spawn grenadiers or rocketeers. A doorless hut is scenery and is not a `destroy_enemy_buildings` target. MG fire does not damage a hut.
 
-A crate holds 4 grenades or 4 rockets (`CrateAmount`). Shooting a crate explodes it.
+A crate holds 4 grenades or 4 rockets (`CrateAmount`). A player shot, grenade, or rocket explodes it. Enemy fire leaves it.
 
 The only vehicle is the skidoo. A jeep would be the same struct with another skin.
 

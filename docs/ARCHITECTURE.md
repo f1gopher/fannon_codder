@@ -66,13 +66,13 @@ Player MG range, rate, and spread come from `GunStatsFor`. Private is 80 px, 8/s
 
 `NewEmpty` sets `WoundChance` to `WoundOdds` (0.34). A `World` literal in a test leaves it at 0, so those shots still kill. `rollWound` treats 0 as always kill and 1 as always wound.
 
-An MG hit on a standing man kills him, or wounds him. A wounded man leaves the file, cannot shoot, and squirms on the corpse frame until another MG round, a blast, or a ram finishes him. The yell and the kill point happen on the finish.
+An MG hit on a standing enemy or civilian kills him, or wounds him. A player is never wounded: the round kills him. A wounded man leaves the file, cannot shoot, and squirms on the corpse frame until another MG round, a blast, or a ram finishes him. The yell and the kill point happen on the finish.
 
 Player MG passes through a standing friendly and finishes a wounded friendly. Explosives and rams kill anyone who is not already dead, including the owner.
 
 `Living()` means alive. A wounded enemy still blocks kill-all. The phase is lost when no player is `Living()`.
 
-Shooting a corpse shoves it about one tile. Keep it that short. In `combat.go`, `juggleKick` is 36 px/s along the shot and does not stack past that, `juggleHop` is 64 px/s upward and refreshes, gravity is 420, bounce is 0.28, ground drag is 200, and rest is 12. Three seconds after death (`juggleLife`), further MG hits leave the body still. A hop already in the air finishes. Corpses do not sink or walk off cliffs. The shadow stays on the ground while the sprite lifts.
+Shooting an enemy or civilian corpse shoves it about one tile. A dead player stays put. Keep the shove that short. In `combat.go`, `juggleKick` is 36 px/s along the shot and does not stack past that, `juggleHop` is 64 px/s upward and refreshes, gravity is 420, bounce is 0.28, ground drag is 200, and rest is 12. Three seconds after death (`juggleLife`), further MG hits leave the body still. A hop already in the air finishes. Corpses do not sink or walk off cliffs. The shadow stays on the ground while the sprite lifts.
 
 Rounds are fast (`MGSpeed` 500). The cone is the miss chance.
 
@@ -182,7 +182,7 @@ The anchor sits on the sim point. Ground frames pin their top-left to the cell. 
 
 Draw order: ground, a soft oval under each painted body, then trees, huts, crates, men, and vehicles by foot Y, then grenades, tracers, and blasts, then birds, then the HUD and the pointer. Rectangles cast no oval.
 
-Pose, first match: wounded (corpse frame, rocked), death (once, then the corpse), sink (scrubbed by `Sink/SinkTime`), swim, throw (the windup, or 0.25 s after launch), shoot (`SinceShot < 0.12`), walk (faster than 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up in `Step` and do not change combat. Gunfire draws no muzzle flash, on foot or mounted. Death time is per unit id in the renderer. The battle `Update` calls `render.Advance` after `Step`.
+Pose, first match: wounded (corpse frame, rocked), death (once, then the corpse; a dead player skips this and holds the corpse frame), sink (scrubbed by `Sink/SinkTime`), swim, throw (the windup, or 0.25 s after launch), shoot (`SinceShot < 0.12`), walk (faster than 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up in `Step` and do not change combat. Gunfire draws no muzzle flash, on foot or mounted. Death time is per unit id in the renderer. The battle `Update` calls `render.Advance` after `Step`.
 
 A missing walk sheet uses that actor's idle. Any other missing sheet, or a facing the sheet does not store, draws the coloured rectangle.
 

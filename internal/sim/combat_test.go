@@ -64,6 +64,35 @@ func TestMGCanWoundThenFinish(t *testing.T) {
 	}
 }
 
+func TestPlayerMGKillsInsteadOfWounding(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.WoundChance = 1
+	vid := w.SpawnUnit(SidePlayer, Vec2{X: 40, Y: 0}).ID
+	sid := w.SpawnUnit(SideEnemy, Vec2{X: 0, Y: 0}).ID
+	shot := func() {
+		w.Projectiles = append(w.Projectiles, Projectile{
+			X: 30, Y: 0, VX: MGSpeed, VY: 0, Left: 80,
+			Alive: true, OwnerID: sid, OwnerSide: SideEnemy,
+		})
+	}
+	shot()
+	w.Step(1.0 / 60)
+	body := w.Unit(vid)
+	if !body.Dead() {
+		t.Fatalf("HP=%v, want dead", body.HP)
+	}
+	x, y := body.X, body.Y
+	shot()
+	for i := 0; i < 20; i++ {
+		w.Step(1.0 / 60)
+	}
+	body = w.Unit(vid)
+	if body.X != x || body.Y != y || body.Hop != 0 || body.VX != 0 || body.VY != 0 || body.VZ != 0 {
+		t.Fatalf("dead player moved: x=%v y=%v hop=%v v=(%v,%v,%v)", body.X, body.Y, body.Hop, body.VX, body.VY, body.VZ)
+	}
+}
+
 func TestFinishWoundedFriendly(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 0, Y: 0}, {X: 20, Y: 0}}, Vec2{X: 200, Y: 200})
 	friend := w.Unit(w.ActiveSquad().MemberIDs[1])

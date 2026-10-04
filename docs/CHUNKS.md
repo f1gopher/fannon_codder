@@ -81,5 +81,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - High Scoring Heroes on Boot Hill. `19a2322`
 - Birds, scrub, snowmen, igloos. They do not block movement or fire. `bd3d66c`
 - Pause. `5b97066`
-- An MG hit can wound. Another round, a blast, or a ram finishes him. `edeaab7`
-- Shooting a corpse shoves it about one tile. Kick is capped. The hop refreshes. Three seconds after death the body stops reacting.
+- An MG hit can wound an enemy or a civilian. A player dies on the hit. Another round, a blast, or a ram finishes a wounded man. `edeaab7`
+- Shooting an enemy or civilian corpse shoves it about one tile. A dead player stays put. Kick is capped. The hop refreshes. Three seconds after death the body stops reacting.

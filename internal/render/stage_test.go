@@ -68,6 +68,7 @@ func TestPoseFirstMatch(t *testing.T) {
 		t.Fatalf("wounded = %s", got.name())
 	}
 	u.HP = sim.Dead
+	u.Side = sim.SideEnemy
 	if got := unitPose(u, 0, 0.4); got != poseDeath {
 		t.Fatalf("dying = %s", got.name())
 	}
@@ -76,6 +77,10 @@ func TestPoseFirstMatch(t *testing.T) {
 	}
 	if got := unitPose(u, 0, 0); got != poseCorpse {
 		t.Fatalf("no death sheet = %s, want corpse", got.name())
+	}
+	u.Side = sim.SidePlayer
+	if got := unitPose(u, 0, 0.4); got != poseCorpse {
+		t.Fatalf("dead player = %s, want corpse", got.name())
 	}
 }
 

@@ -301,13 +301,17 @@ func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 }
 
 // mgStrike wounds or kills a man on his feet, finishes a wounded man, and
-// launches a corpse. Player MG still ignores a friendly who is on his feet.
+// launches a corpse. A player is never wounded: the round kills him, and
+// further rounds leave the body where it fell. Player MG still ignores a
+// friendly who is on his feet.
 func (w *World) mgStrike(p *Projectile, u *Unit) {
 	if u.Dead() {
-		w.juggle(u, p)
+		if u.Side != SidePlayer {
+			w.juggle(u, p)
+		}
 		return
 	}
-	if u.Wounded() || u.Sinking || !w.rollWound() {
+	if u.Side == SidePlayer || u.Wounded() || u.Sinking || !w.rollWound() {
 		w.kill(u)
 		w.creditKill(p.OwnerID, u)
 		return

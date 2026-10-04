@@ -60,7 +60,8 @@ func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
 		return poseWounded
 	}
 	if u.Dead() {
-		if deathDur > 0 && deathAge < deathDur {
+		// A player corpse is the still frame. The death cycle is for enemies.
+		if u.Side != sim.SidePlayer && deathDur > 0 && deathAge < deathDur {
 			return poseDeath
 		}
 		return poseCorpse

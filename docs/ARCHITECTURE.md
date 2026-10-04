@@ -110,7 +110,7 @@ An armed enemy skidoo drops the throttle inside `VehicleMGRange` (110) and outsi
 
 The view is the playfield. Origin is (`HUDWidth`, 0), so a map as wide as the frame still pans by the strip. `LeaderMargin` is 32. `Camera.Contain` keeps the active leader, or the driven vehicle via `CameraFocus`, inside that margin. Edge scroll uses playfield coordinates.
 
-The strip is opaque. Rank is a `ui/rank-*` flash above the name. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. Arctic grass and tree cells use the snow colour.
+The strip is opaque. Rank is a `ui/rank-*` flash above the name. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. M, or the M icon, opens and closes it. A left click on the open map closes it. Arctic grass and tree cells use the snow colour.
 
 ## Campaign
 

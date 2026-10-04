@@ -52,7 +52,7 @@ This page is generated from the control list in `internal/app/controls.go`. When
 - **Left click when the cursor shows exit** — The leader dismounts.
 - **Left click or hold, while the leader is in a vehicle** — Drives toward the pointer. Releasing the button stops the drive order.
 - **P, or left click the pause button** — Pauses the battle. Men, guns, vehicles, and the skidoo hum stop. Press P or click the button again to continue. A finished phase does not pause.
-- **Left click the M icon** — Opens or closes the map overlay. A left click on the open map closes it.
+- **M, or left click the M icon** — Opens or closes the map overlay. A left click on the open map closes it.
 
 ## Battle — end of a phase
 

@@ -161,9 +161,9 @@ func controls() []binding {
 		},
 		{
 			section: "Battle — vehicles and map",
-			input:   "Left click the M icon",
+			input:   "M, or left click the M icon",
 			action:  "Opens or closes the map overlay. A left click on the open map closes it.",
-			tokens:  []string{"MouseButtonLeft"},
+			tokens:  []string{"KeyM", "MouseButtonLeft"},
 		},
 		{
 			section: "Battle — end of a phase",

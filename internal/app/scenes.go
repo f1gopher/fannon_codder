@@ -314,6 +314,9 @@ func (b *Battle) Update(h Host) error {
 	} else if inVeh {
 		b.world.SetDrive(wx, wy, false)
 	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
+		b.mapOpen = !b.mapOpen
+	}
 	if onHUD || b.mapOpen {
 		b.world.SetFire(b.world.AimX, b.world.AimY, false)
 	} else {

@@ -370,6 +370,113 @@ func TestGrenadierWaitsBetweenThrows(t *testing.T) {
 	}
 }
 
+func TestGrenadierAlreadyFacingReleasesAtWindup(t *testing.T) {
+	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 60, Y: 0})
+	e := enemyOf(w)
+	e.Kind = KindGrenadier
+	e.Bombs = GrenadierBombs
+	e.GrenadeCD = 0
+	e.Facing = math.Pi
+	w.Step(1.0 / 60)
+	if e.GrenadeWind != GrenadierWindup || len(w.Grenades) != 0 {
+		t.Fatal("the windup should start on the first frame")
+	}
+	if math.Abs(wrapAngle(e.Facing-math.Pi)) > 1e-9 {
+		t.Fatal("the opening frame should not turn someone who is already facing")
+	}
+	w.Step(GrenadierWindup)
+	if len(w.Grenades) != 1 {
+		t.Fatalf("grenades=%d, want the throw at the windup", len(w.Grenades))
+	}
+	if e.WindHeld || e.GrenadeWind != 0 {
+		t.Fatal("a finished throw should clear the telegraph")
+	}
+}
+
+func TestGrenadierFacingAwayDoesNotReleaseAtWindup(t *testing.T) {
+	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 60, Y: 0})
+	e := enemyOf(w)
+	e.Kind = KindGrenadier
+	e.Bombs = GrenadierBombs
+	e.GrenadeCD = 0
+	e.Facing = 0 // east; the squad is west
+	w.Step(1.0 / 60)
+	if e.GrenadeWind != GrenadierWindup {
+		t.Fatal("expected a windup")
+	}
+	if e.Facing != 0 {
+		t.Fatal("the windup must not snap his facing")
+	}
+	// A full half-turn takes longer than one frame of clock. Leave a sliver
+	// so the telegraph expires while he is still turning.
+	e.GrenadeWind = 1.0 / 60
+	w.Step(1.0 / 60)
+	if len(w.Grenades) != 0 {
+		t.Fatal("facing away, the bomb waits for the turn")
+	}
+	if e.GrenadeWind != 0 || !e.WindHeld {
+		t.Fatalf("wind=%v held=%v, the clock should finish without restarting", e.GrenadeWind, e.WindHeld)
+	}
+	if e.GrenadeCD != 0 {
+		t.Fatal("the cooldown starts when the bomb leaves")
+	}
+	left := facingError(e, 0, 0)
+	w.Step(left / EnemyTurnRate)
+	if len(w.Grenades) != 0 && facingError(e, 0, 0) > EnemyFaceTol {
+		t.Fatal("he should not throw before he is facing")
+	}
+	if len(w.Grenades) == 0 {
+		w.Step(1.0 / 60)
+	}
+	if len(w.Grenades) != 1 {
+		t.Fatalf("grenades=%d, want the held throw", len(w.Grenades))
+	}
+	if e.WindHeld || e.GrenadeWind != 0 {
+		t.Fatal("the held throw must not restart the windup")
+	}
+	if e.GrenadeCD != GrenadierCooldown {
+		t.Fatalf("cooldown=%v", e.GrenadeCD)
+	}
+}
+
+func TestRocketeerFacingAwayHoldsTheLaunch(t *testing.T) {
+	w := NewEmpty()
+	w.Spread = 0
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 0, Y: 0}})
+	e := w.SpawnUnit(SideEnemy, Vec2{X: 120, Y: 0})
+	e.Kind = KindRocketeer
+	e.RocketCD = 0
+	e.Facing = 0
+	x := e.X
+	w.Step(1.0 / 60)
+	if e.RocketWind != RocketeerWindup || e.Facing != 0 {
+		t.Fatalf("wind=%v facing=%v, want a windup with no snap", e.RocketWind, e.Facing)
+	}
+	w.Step(RocketeerWindup)
+	if len(w.Projectiles) != 0 {
+		t.Fatal("a half-turn does not finish inside the rocket windup")
+	}
+	if e.RocketWind != 0 || !e.WindHeld {
+		t.Fatalf("wind=%v held=%v, the clock should finish without restarting", e.RocketWind, e.WindHeld)
+	}
+	if e.X != x || e.VX != 0 {
+		t.Fatal("he holds still through the rest of the turn")
+	}
+	for n := 0; n < 60 && len(w.Projectiles) == 0; n++ {
+		w.Step(1.0 / 60)
+		if e.RocketWind > 0 {
+			t.Fatal("the windup must not restart while he finishes the turn")
+		}
+	}
+	if len(w.Projectiles) != 1 || w.Projectiles[0].Kind != ProjRocket {
+		t.Fatalf("projectiles=%d", len(w.Projectiles))
+	}
+	if e.WindHeld || e.RocketCD != RocketeerCooldown {
+		t.Fatalf("held=%v cd=%v", e.WindHeld, e.RocketCD)
+	}
+}
+
 func TestGrenadierTooCloseShootsInstead(t *testing.T) {
 	w := aiWorld(Vec2{X: 0, Y: 0}, Vec2{X: 20, Y: 0})
 	e := enemyOf(w)

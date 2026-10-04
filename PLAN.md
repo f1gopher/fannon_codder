@@ -1161,7 +1161,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–49 are in. The sound chunks are done. The picture chunks 32–47 are in. The Chunk 33 style board in `assets/art/style/` is accepted. The next work is Chunks 50–51 (specialist facing, armed skidoos). After that, the backlog in `docs/CHUNKS.md`.
+Chunks 01–50 are in. The sound chunks are done. The picture chunks 32–47 are in. The Chunk 33 style board in `assets/art/style/` is accepted. The next work is Chunk 51 (armed skidoos). After that, the backlog in `docs/CHUNKS.md`.
 
 ---
 
@@ -1196,7 +1196,7 @@ Grok must not skip tests to “save time”; they are how the next session knows
 - **Right-click** may be eaten by the window manager. If so, add a fallback (`Ctrl` = fire) in Chunk 04 without removing right-click.
 - **Both-buttons grenade** is fiddly on some mice; keep it and also accept `Space` as “special at pointer” from Chunk 14.
 - **Soft-locks** (exploding all crates) are authentic; still make Mission 2 phase 2 have a crate you do not have to shoot-walk through.
-- **Scope creep** (A*, chase AI, a second art style mid-stream) will blow the budget. Posted grunts are Chunks 21–22. Hearing is Chunk 23 only: turn toward a nearby shot, still no shot through a tree, still no chase. The picture is Chunks 32–47. Parked squads are Chunk 48. Door posts are Chunk 49. The remaining AI after that is Chunks 50–51: specialist facing, armed skidoos. Architecture.md is the brake.
+- **Scope creep** (A*, chase AI, a second art style mid-stream) will blow the budget. Posted grunts are Chunks 21–22. Hearing is Chunk 23 only: turn toward a nearby shot, still no shot through a tree, still no chase. The picture is Chunks 32–47. Parked squads are Chunk 48. Door posts are Chunk 49. Specialist facing is Chunk 50. The remaining AI after that is Chunk 51: armed skidoos. Architecture.md is the brake.
 - **Do not rebalance Mission 1 by deleting grunts or shortening the gun.** The south man walks in because approach is 140 px and he spawns at 80. Chunk 21 stops the walk; Chunk 22 stops the laser.
 
 ## First message to Grok after you accept this plan

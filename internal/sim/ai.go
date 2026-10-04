@@ -44,6 +44,7 @@ func (w *World) stepAI(dt float64) {
 			u.VY = 0
 			u.GrenadeWind = 0
 			u.RocketWind = 0
+			u.WindHeld = false
 			resetGruntContact(u)
 			continue
 		}
@@ -240,19 +241,30 @@ func wrapAngle(d float64) float64 {
 
 // stepGrenadier spends the frame on a telegraphed throw.
 // Between bombs the grenadier fights as a grunt.
+// The windup turns at EnemyTurnRate. If the clock finishes first, he
+// holds and releases on the first frame he faces the target.
 func (w *World) stepGrenadier(u *Unit, px, py, dist, dt float64) bool {
 	if u.Kind != KindGrenadier {
 		return false
 	}
-	if u.GrenadeWind > 0 {
+	if u.GrenadeWind > 0 || u.WindHeld {
 		u.VX = 0
 		u.VY = 0
-		u.Facing = math.Atan2(py-u.Y, px-u.X)
-		u.GrenadeWind -= dt
+		w.turnToward(u, px, py, dt)
+		if u.GrenadeWind > 0 {
+			u.GrenadeWind -= dt
+			if u.GrenadeWind < 0 {
+				u.GrenadeWind = 0
+			}
+		}
 		if u.GrenadeWind > 0 {
 			return true
 		}
-		u.GrenadeWind = 0
+		if facingError(u, px, py) > EnemyFaceTol {
+			u.WindHeld = true
+			return true
+		}
+		u.WindHeld = false
 		if u.Bombs > 0 && w.CanShoot(u) {
 			w.launchGrenade(u, px, py)
 			u.Bombs--
@@ -275,7 +287,6 @@ func (w *World) stepGrenadier(u *Unit, px, py, dist, dt float64) bool {
 	u.GrenadeWind = GrenadierWindup
 	u.VX = 0
 	u.VY = 0
-	u.Facing = math.Atan2(py-u.Y, px-u.X)
 	return true
 }
 
@@ -292,15 +303,24 @@ const (
 // stepRocketeer fires a slow rocket. Beside a tree they hold still instead of chasing.
 func (w *World) stepRocketeer(u *Unit, px, py, dist, dt float64) {
 	hiding := w.treeAdjacent(u)
-	if u.RocketWind > 0 {
+	if u.RocketWind > 0 || u.WindHeld {
 		u.VX = 0
 		u.VY = 0
-		u.Facing = math.Atan2(py-u.Y, px-u.X)
-		u.RocketWind -= dt
+		w.turnToward(u, px, py, dt)
+		if u.RocketWind > 0 {
+			u.RocketWind -= dt
+			if u.RocketWind < 0 {
+				u.RocketWind = 0
+			}
+		}
 		if u.RocketWind > 0 {
 			return
 		}
-		u.RocketWind = 0
+		if facingError(u, px, py) > EnemyFaceTol {
+			u.WindHeld = true
+			return
+		}
+		u.WindHeld = false
 		if w.CanShoot(u) {
 			w.launchRocket(u.ID, u.Side, u.X, u.Y, px, py)
 			u.RocketCD = RocketeerCooldown
@@ -334,7 +354,6 @@ func (w *World) stepRocketeer(u *Unit, px, py, dist, dt float64) {
 	u.RocketWind = RocketeerWindup
 	u.VX = 0
 	u.VY = 0
-	u.Facing = math.Atan2(py-u.Y, px-u.X)
 }
 
 // treeAdjacent reports a tree in the eight neighbouring cells.

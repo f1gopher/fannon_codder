@@ -1,6 +1,9 @@
 package sim
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestSkidooBoardAndExit(t *testing.T) {
 	w := NewEmpty()
@@ -237,6 +240,7 @@ func TestRocketeerFiresSlowly(t *testing.T) {
 	e := w.SpawnUnit(SideEnemy, Vec2{X: 180, Y: 0})
 	e.Kind = KindRocketeer
 	e.RocketCD = 0
+	e.Facing = math.Pi // already on the squad, so this test is the cooldown
 	w.Step(1.0 / 60)
 	if e.RocketWind <= 0 {
 		t.Fatal("rocket should be telegraphed")

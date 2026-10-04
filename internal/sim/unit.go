@@ -53,6 +53,7 @@ type Unit struct {
 	GrenadeCD   float64 // seconds until the next windup may start
 	RocketWind  float64 // rocketeer aim telegraph
 	RocketCD    float64 // seconds until the next rocket windup
+	WindHeld    bool    // telegraph finished; release on the first frame he faces the target
 	SpotT       float64 // seconds of unbroken contact (LOS or a heard shot). Zeroed when both end.
 	ReactAt     float64 // SpotT must reach this before the first MG round. 0 means no live contact.
 	HearID      int     // infantry shooter whose MG round woke an idle grunt. 0 means none.

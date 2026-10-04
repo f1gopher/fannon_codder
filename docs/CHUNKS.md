@@ -50,8 +50,10 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 46 Pointer and the status strip
 - [x] 47 Title, briefing, Boot Hill
 - [x] 48 Parked squads turn and burst
+- [x] 49 Door grunts walk out and post
+- [x] 50 Grenadier and rocketeer turn through the windup
 
-Chunks 01–49 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. AI still to do is Chunks 50–51 in `PLAN.md`. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left after 51.
+Chunks 01–50 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. AI still to do is Chunk 51 in `PLAN.md`. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left after 51.
 
 ## Log
 
@@ -267,15 +269,18 @@ Verify: `go test ./...`. A squad you are not controlling turns at the grunt rate
 Files: `internal/sim/building.go`, `internal/sim/ai.go`, `internal/sim/unit.go`, `internal/sim/building_test.go`, `internal/data/mission_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
 Verify: `go test ./...`. A door grunt walks a few tiles straight out and does not fire on the way. A tree slides him, and he posts when he arrives or when the walk cannot advance. A grunt loaded from mission JSON stays on his tile. The living-enemy cap stays six.
 
-## Next — Chunks 50–51
+### Chunk 50 done
+Files: `internal/sim/ai.go`, `internal/sim/unit.go`, `internal/sim/ai_test.go`, `internal/sim/vehicle_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
+Verify: `go test ./...`. A grenadier and a rocketeer turn at the grunt rate through the windup and release on the first frame they face the target. The windup lengths stay. A grenadier already facing still throws at the windup. A rocketeer beside a tree still holds. A point-blank grenadier still uses the grunt gun.
+
+## Next — Chunk 51
 
 Specs are in `PLAN.md`. Do one chunk per session. Grunts stay posted. No chase and no pathfinding.
 
-- [x] 49 Door grunts walk out and post
-- [ ] 50 Grenadier and rocketeer turn through the windup
+- [x] 50 Grenadier and rocketeer turn through the windup
 - [ ] 51 Armed enemy skidoo holds a gun line and bursts
 
-Start at 50. A grenadier and a rocketeer still snap their facing on the windup frame.
+Start at 51. An armed enemy skidoo still drives into the squad and fires without a burst.
 
 ## Backlog
 

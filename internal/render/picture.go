@@ -64,6 +64,29 @@ func Text(dst *ebiten.Image, str string, x, y float64) {
 	text.Draw(dst, str, face, op)
 }
 
+// TextCenter draws str so its middle sits on x,y in world-frame pixels.
+// scale multiplies the HUD face size.
+func TextCenter(dst *ebiten.Image, str string, x, y float64, c color.Color, scale float64) {
+	if dst == nil || str == "" {
+		return
+	}
+	s := pictureScale
+	if s <= 0 {
+		s = 1
+	}
+	if scale <= 0 {
+		scale = 1
+	}
+	size := TextPixels(s) * scale
+	face := &text.GoTextFace{Source: uiFont, Size: size}
+	op := &text.DrawOptions{}
+	op.PrimaryAlign = text.AlignCenter
+	op.SecondaryAlign = text.AlignCenter
+	op.GeoM.Translate(x*s, y*s)
+	op.ColorScale.ScaleWithColor(c)
+	text.Draw(dst, str, face, op)
+}
+
 // TextCentered draws str in the middle of dst. Each line is centered, and
 // the block sits on the vertical middle of the frame.
 func TextCentered(dst *ebiten.Image, str string) {

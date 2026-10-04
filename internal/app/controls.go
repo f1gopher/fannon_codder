@@ -131,8 +131,8 @@ func controls() []binding {
 		},
 		{
 			section: "Battle — firing",
-			input:   "Left click the G or R icon on the status strip",
-			action:  "Selects grenades (G) or rockets (R). If any trooper is highlighted, the same click cycles how much of that ammo a split gives the new squad: none, half, then all.",
+			input:   "Left click the grenade or rocket icon on the status strip",
+			action:  "Selects grenades or rockets. If any trooper is highlighted, the same click cycles how much of that ammo a split gives the new squad: none, half, then all.",
 			tokens:  []string{"MouseButtonLeft"},
 		},
 		{

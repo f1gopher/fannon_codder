@@ -44,7 +44,7 @@ This page is generated from the control list in `internal/app/controls.go`. When
 - **Hold the right mouse button, or hold Ctrl** — The active squad fires toward the pointer. The cursor becomes a crosshair. Either Ctrl key works. This does nothing while the pointer is on the status strip or the map overlay is open.
 - **C** — Switches the special weapon between grenades and the bazooka.
 - **Space, or hold the right button and left-click** — Uses the selected special weapon at the pointer. The leader throws a grenade or fires a rocket. This is not a move order. It does nothing on the status strip or while the map overlay is open.
-- **Left click the G or R icon on the status strip** — Selects grenades (G) or rockets (R). If any trooper is highlighted, the same click cycles how much of that ammo a split gives the new squad: none, half, then all.
+- **Left click the grenade or rocket icon on the status strip** — Selects grenades or rockets. If any trooper is highlighted, the same click cycles how much of that ammo a split gives the new squad: none, half, then all.
 
 ## Battle — vehicles and map
 

@@ -238,8 +238,8 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int, paused bool) {
 	if active != nil {
 		gCount, rCount = active.Grenades, active.Rockets
 	}
-	drawAmmoIcon(dst, lay.gren, "G", gCount, "ui/grenade", grenIcon(), w.GrenadeShare, w.Special == sim.SpecialGrenade)
-	drawAmmoIcon(dst, lay.rock, "R", rCount, "ui/rocket", rocketIcon(), w.RocketShare, w.Special == sim.SpecialRocket)
+	drawAmmoIcon(dst, lay.gren, gCount, "ui/grenade", grenIcon(), w.GrenadeShare, w.Special == sim.SpecialGrenade)
+	drawAmmoIcon(dst, lay.rock, rCount, "ui/rocket", rocketIcon(), w.RocketShare, w.Special == sim.SpecialRocket)
 	drawStance(dst, lay.foot, leaderOnFoot(w, active))
 	drawMapIcon(dst, lay.mapIcon)
 	drawPauseIcon(dst, lay.pause, paused)
@@ -340,7 +340,7 @@ func squadMark(id sim.SquadID) string {
 	}
 }
 
-func drawAmmoIcon(dst *ebiten.Image, r hudRect, label string, n int, key string, img *ebiten.Image, mode sim.AmmoShare, selected bool) {
+func drawAmmoIcon(dst *ebiten.Image, r hudRect, n int, key string, img *ebiten.Image, mode sim.AmmoShare, selected bool) {
 	if !drawUIAt(dst, key, float64(r.x), float64(r.y)) {
 		blit(dst, img, float64(r.x), float64(r.y), 1, 1)
 	}
@@ -348,7 +348,7 @@ func drawAmmoIcon(dst *ebiten.Image, r hudRect, label string, n int, key string,
 	if selected {
 		strokeRect(dst, r, selectSpec)
 	}
-	Text(dst, fmt.Sprintf("%s%d", label, n), float64(r.x+2), float64(r.y+4))
+	TextCenter(dst, fmt.Sprintf("%d", n), float64(r.x)+float64(r.w)/2, float64(r.y)+float64(r.h)/2, pointerInk, 2)
 }
 
 func strokeRect(dst *ebiten.Image, r hudRect, c color.Color) {

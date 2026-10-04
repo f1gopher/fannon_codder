@@ -1,313 +1,84 @@
-# Chunk checklist
-
-One chunk per Grok session. Preamble is in `PLAN.md`.
-
-- [x] 01 Bootstrap
-- [x] 02 Scenes + pointer + camera shell
-- [x] 03 Troopers walk in file
-- [x] 04 Machine guns, death, friendly-fire rules
-- [x] 05 Enemy grunts + kill-all
-- [x] 06 Mission 1 playable (data + tiny jungle)
-- [x] 07 Names, ranks, recruit pool
-- [x] 08 Boot Hill, briefing, fail/retry
-- [x] 09 Mission complete: promotions, +15, save/load
-- [x] 10 Rank gun stats + HUD ammo icons
-- [x] 11 Tilemaps, scrolling, cover
-- [x] 12 Water, swimming, bridges
-- [x] 13 Split squads (Snake / Eagle / Panther)
-- [x] 14 Buildings, spawners, grenades, crates
-- [x] 15 Mission 2 content
-- [x] 16 HUD finish + overview map
-- [x] 17 Mission 3 (ice, cliffs, grenade economy)
-- [x] 18 Civilians, quicksand, mines
-- [x] 19 Mission 4 content + free grenades
-- [x] 20 Bazookas, rocket-grunts, Skidoo, Mission 5
-- [x] 21 Grunts spot, turn, and hold the post
-- [x] 22 Grunt bursts and a wide cone
-- [x] 23 Gunfire turns the next posted man
-- [x] 24 Sound bus and gunshot
-- [x] 25 Blasts
-- [x] 26 Death
-- [x] 27 Throw and launch
-- [x] 28 Terrain and vehicles (one-shots)
-- [x] 29 Distance
-- [x] 30 Engine loop
-- [x] 31 Scene stings
-- [x] 32 The picture
-- [x] 33 Style board
-- [x] 34 Sprite stage
-- [x] 35 Snake walks
-- [x] 36 Snake fights and falls
-- [x] 37 Snake in the water and the sand
-- [x] 38 Eagle and Panther
-- [x] 39 Enemy soldiers
-- [x] 40 Civilians
-- [x] 41 Ground
-- [x] 42 Water, quicksand, ice
-- [x] 43 Trees and the hard ground
-- [x] 44 Huts, crates, and the skidoo
-- [x] 45 Fire and blasts
-- [x] 46 Pointer and the status strip
-- [x] 47 Title, briefing, Boot Hill
-- [x] 48 Parked squads turn and burst
-- [x] 49 Door grunts walk out and post
-- [x] 50 Grenadier and rocketeer turn through the windup
-- [x] 51 Armed enemy skidoo holds a gun line and bursts
-
-Chunks 01–51 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left.
-
-## Log
-
-### Chunk 01 done
-Files: `go.mod`, `go.sum`, `.gitignore`, `cmd/fannon/main.go`, `internal/app/game.go`, `internal/app/scale_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
-Verify: `go test ./...` then `go run ./cmd/fannon`. Grey 320×256 playfield, “Fannon Codder” in the corner, window starts at 960×768. Resize should stay chunky (integer scale + letterbox). No scenes, units, or maps yet.
-
-### Chunk 02 done
-Files: `internal/app/game.go`, `internal/app/scenes.go`, `internal/input/pointer.go`, `internal/input/pointer_test.go`, `internal/sim/camera.go`, `internal/sim/camera_test.go`, `internal/render/pointer.go`.
-Verify: title screen → click or Enter → green field. OS cursor hidden. Move the white arrow; hold right mouse for a crosshair. No units or shooting.
-
-### Chunk 03 done
-Files: `internal/sim/world.go`, `internal/sim/unit.go`, `internal/sim/squad.go`, `internal/sim/move.go`, `internal/sim/move_test.go`, `internal/render/units.go`, `internal/app/scenes.go`.
-Verify: after the title, two green squares. Left-click: leader walks there, second man follows in file and they stop without stacking. `go test ./internal/sim`. No guns yet.
-
-### Chunk 04 done
-Files: `internal/sim/combat.go`, `internal/sim/projectile.go`, `internal/sim/combat_test.go`, `internal/sim/world.go`, `internal/sim/unit.go`, `internal/render/units.go`, `internal/app/scenes.go`.
-Verify: hold right (or Ctrl) to hose MG fire. The red dummy dies in one hit and stays as a dark corpse. Shooting through your own green man does not kill him. Dead troopers drop out of the file. No enemy AI yet.
-
-### Chunk 05 done
-Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/objectives.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/app/scenes.go`.
-Verify: 2 greens vs 3 reds. Reds shoot if you enter range, otherwise wander in if close. Kill all three → PHASE COMPLETE. Lose both men → PHASE FAILED. Click/Enter returns to title. No campaign or maps yet.
-
-### Chunk 06 done
-Files: `internal/sim/map.go`, `internal/sim/map_test.go`, `internal/sim/move.go`, `internal/sim/world.go`, `internal/sim/ai.go`, `internal/sim/objectives.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`, `data/missions/campaign.json`, `data/missions/m01p01.json`.
-Verify: `go run ./cmd/fannon` (or `-skip-title`). Mission 1 jungle, 2 men, 3 isolated grunts, trees block walking (slide around). Kill all → PHASE COMPLETE. Stand in the open and you can lose. No Boot Hill/names yet.
-
-### Chunk 07 done
-Files: `internal/campaign/pool.go`, `internal/campaign/ranks.go`, `internal/campaign/names.go`, `internal/campaign/pool_test.go`, `internal/render/hud.go`, `internal/app/scenes.go`, `data/names.txt`.
-Verify: left HUD shows Snake logo, Pte Jools and Pte Jops, R13 remaining. Restarting a new game deploys the same two names. `go test ./internal/campaign`. No Boot Hill, promotions, or save yet.
-
-### Chunk 08 done
-Files: `internal/app/progress.go`, `internal/app/boothill.go`, `internal/app/briefing.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/campaign/pool.go`, `internal/campaign/pool_test.go`.
-Verify: Title → Boot Hill (queue of 15, 0 graves) → briefing → battle. Wipe: graves go up, queue shrinks, next attempt is Stoo & Jon. ESC returns living men to the pool. Win → Boot Hill “MISSION COMPLETE”. No save or +15 yet.
-
-### Chunk 09 done
-Files: `internal/campaign/save.go`, `internal/campaign/save_test.go`, `internal/campaign/pool.go`, `internal/campaign/ranks.go`, `internal/app/progress.go`, `internal/app/boothill.go`, `internal/app/stub.go`, `internal/app/scenes.go`.
-Verify: finish M1 with no deaths → Boot Hill queue 30, Cpl Jools and Cpl Jops. SAVE/LOAD icons (save in `~/.config/fannon-codder/save.json`). Click continues to a Mission 2 stub, not a crash. No M2 map yet.
-
-### Chunk 10 done
-Files: `internal/sim/combat.go`, `internal/sim/combat_test.go`, `internal/sim/ai.go`, `internal/render/hud.go`.
-Verify: HUD shows G0 and R0. A Corporal’s MG range/RoF beat a Private (`go test ./internal/sim`). Enemies stay on the grunt table (70 px, 4/s). No grenades yet.
-
-### Chunk 11 done
-Files: `internal/sim/los.go`, `internal/sim/los_test.go`, `internal/sim/combat.go`, `internal/sim/combat_test.go`, `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/world.go`, `internal/sim/camera_test.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/render/tiles.go`, `cmd/fannon/main.go`.
-Verify: `go test ./internal/sim`. `go run ./cmd/fannon -cover` — 40×30 jungle, tree wall on the first screen. Pointer at the edge pans. Hose the wall: the east grunt lives until you walk south around the trees. Water still not in.
-
-### Chunk 12 done
-Files: `internal/sim/water.go`, `internal/sim/water_test.go`, `internal/sim/map.go`, `internal/sim/move.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/world.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`.
-Verify: `go test ./internal/sim`. `go run ./cmd/fannon -river` — river with a brown bridge. Swimmers in deep water cannot fire (hose them from the bank). Wading shallow is slow but you can still shoot. Crossing the bridge is full speed. No grenades.
-
-### Chunk 13 done
-Files: `internal/sim/squad.go`, `internal/sim/split.go`, `internal/sim/squad_test.go`, `internal/sim/combat.go`, `internal/sim/world.go`, `internal/sim/water_test.go`, `internal/render/hud.go`, `internal/render/hud_test.go`, `internal/render/units.go`, `internal/app/scenes.go`.
-Verify: `go test ./...`. `go run ./cmd/fannon -river` — three troopers (green Snake). Click a name (olive bar), click the logo or the `>S` row to peel him off as blue Eagle. He holds and shoots; walk the others across the bridge. Keys `1`/`2`/`3` or click a squad's block to switch. Walk onto the other squad to merge under whoever is active. G/R icons cycle the split share: no outline = none, open outline = half, full outline = all (counts stay 0). No grenades.
-
-### Chunk 14 done
-Files: `internal/sim/building.go`, `internal/sim/grenade.go`, `internal/sim/grenade_test.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/move.go`, `internal/sim/objectives.go`, `internal/sim/world.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/props.go`, `internal/app/scenes.go`, `internal/app/game.go`, `cmd/fannon/main.go`.
-Verify: `go test ./...`. `go run ./cmd/fannon -hut` — brown door hut spewing reds, grey G crate off to the west. Walk onto the crate (G4). Right-hold + left click, or Space, throws; the leader only, and it arcs over trees. One grenade on the hut destroys it (MG does not). Shoot the crate and it explodes, killing whoever is in the blast, including friendlies. Kill the remaining reds → PHASE COMPLETE. Phase stays open while the door hut stands. Doorless huts are not an objective. No bazookas.
-
-### Chunk 15 done
-Files: `data/missions/campaign.json`, `data/missions/m02p01.json`, `data/missions/m02p02.json`, `internal/data/mission_test.go`, `internal/app/progress.go`, `internal/app/progress_test.go`, `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/stub.go`, `internal/sim/camera.go`, `internal/sim/camera_test.go`.
-Verify: `go test ./...`. Fresh game: M1 (2 men) → Boot Hill queue 30, Jools and Jops corporals → M2 deploys 3, HUD remaining 27. Phase 1 “Bridge Over the River Pie”: scrolling river, one bridge, trees, a swimmer near spawn, 16 grunts, kill-all. Phase 2 “Trash Enemy HQ”: mostly water, one door hut, grenade crate on the grass beside it (outside the blast), kill-all + destroy the hut. Both phases survived → those men +2 ranks, +15 recruits, then the Mission 3 stub. An old save that was stuck on the Mission 2 stub loads phase 1 instead. Camera starts centred on the squad.
-
-### Chunk 16 done
-Files: `internal/render/hud.go`, `internal/render/hud_test.go`, `internal/render/overview.go`, `internal/sim/grenade.go`, `internal/sim/special_test.go`, `internal/sim/world.go`, `internal/app/scenes.go`.
-Verify: `go test ./...`. In battle the left strip shows the troop colour, G and R counts (white border on the selected special; grenades start selected), a foot icon, ranks and names, and a green bar on the active squad. Click G or R to select that special; with names highlighted, the same click still cycles split share. C toggles the special. Bazooka selected does not spend grenades. M at the bottom of the panel toggles a schematic of the whole map (tiles, hut, crate, unit dots, view box). Click the map to close it. Split still works.
-
-### Chunk 17 done
-Files: `internal/sim/map.go`, `internal/sim/move.go`, `internal/sim/cliff_test.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/overview.go`, `internal/app/scenes.go`, `internal/app/progress_test.go`, `data/missions/campaign.json`, `data/missions/m03p01.json`.
-Verify: `go test ./...`. After Mission 2, Boot Hill opens Mission 3 “Blast It's Cold” (deploy 4, snow field). Ice walks at grass speed. A cliff row is one-way: walk south to drop, the grey ramp on the west is the way back up. Four door huts, two crates (8 grenades). Pick the crates up before you shoot; hosing them explodes the grenades and the phase cannot be finished. One grenade per hut is enough if you do not waste the boxes. Mission 4 is still the stub.
-
-### Chunk 18 done
-Files: `internal/sim/hazard.go`, `internal/sim/hazard_test.go`, `internal/sim/unit.go`, `internal/sim/move.go`, `internal/sim/world.go`, `internal/sim/objectives.go`, `internal/sim/ai.go`, `internal/sim/water.go`, `internal/sim/map.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/overview.go`, `internal/app/game.go`, `internal/app/scenes.go`, `cmd/fannon/main.go`.
-Verify: `go test ./...`. `go run ./cmd/fannon -hazards` — grass field, brown mine with a dark pip west of the squad, tan quicksand pool further east, a yellow civilian, a doorless hut to the north. Walk onto the mine: grenade-sized blast, the tile is gone. Walk into the tan pool: the trooper stops, shrinks, and dies after about two seconds (no shooting while sinking). Hose the yellow man: he dies, and the phase stays open until the red grunt up the west road is dead. The doorless hut is not a win condition. Spears are not in. `protect_civilians` parses and does not fail the phase. Mission 4 maps are still the stub.
-
-### Chunk 19 done
-Files: `data/missions/campaign.json`, `data/missions/m04p01.json`, `data/missions/m04p02.json`, `data/missions/m04p03.json`, `data/missions/m04p04.json`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/sim/unit.go`, `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/grenade.go`, `internal/render/units.go`, `internal/render/overview.go`, `internal/app/progress_test.go`.
-Verify: `go test ./...`. New game through Mission 4. Beachy Head (4 men, 5 huts, two crates, no free grenades): blow both crates and the phase cannot be finished. Pier Pressure onward, each trooper starts with 2 grenades (G8 with 4 men, G10 with 5). Village People has yellow civilians, doorless huts, and a quicksand pool; only the two door huts count. Quicksand has pools, mines, and orange grenadiers. A grenadier stops and shows a yellow bar, then throws; each carries two bombs and will not throw again for about five seconds. Mission 5 is still the stub.
-
-### Chunk 20 done
-Files: `internal/sim/rocket.go`, `internal/sim/rocket_test.go`, `internal/sim/vehicle.go`, `internal/sim/vehicle_test.go`, `internal/sim/projectile.go`, `internal/sim/combat.go`, `internal/sim/ai.go`, `internal/sim/grenade.go`, `internal/sim/world.go`, `internal/sim/hazard.go`, `internal/sim/split.go`, `internal/sim/water.go`, `internal/data/mission.go`, `internal/data/mission_test.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/overview.go`, `internal/render/pointer.go`, `internal/app/scenes.go`, `internal/app/game.go`, `internal/app/stub.go`, `internal/app/boothill.go`, `internal/app/progress_test.go`, `cmd/fannon/main.go`, `data/missions/campaign.json`, `data/missions/m05p01.json`, `data/missions/m05p02.json`, `data/missions/m05p03.json`.
-Verify: `go test ./...`. New game through Mission 5, then save. Valley of Ice: 3 men, 6 huts, an ice river, rocketeers beside trees, a grenade crate and a rocket crate. Barmy Bazookas: 3 men, 6 huts, a bridge, many rocketeers. My Beautiful Skidoo: 4 men, 3 huts, a player skidoo, each man starts with 1 rocket (R4). Select R (or press C), then right-hold and left-click or Space to fire; a rocket destroys a hut or a skidoo, and the MG does not. Pointer over the empty skidoo is a board box; left click sends the squad in (or boards immediately if they are already on it). Hold left to drive — longer hold, higher speed. On ice the skidoo keeps sliding after you release. Right fires the mounted gun when the skidoo is armed. Grenades and rockets do not fire from inside. Running someone over kills them. The enemy skidoo has a red blinker. After Mission 5, Boot Hill says the campaign continues another day. `go run ./cmd/fannon -skidoo` is a small field with a skidoo, a rocket crate, a hut, and an enemy skidoo.
-
-### Chunk 21 done
-Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go`, `internal/sim/world.go`, `internal/sim/vehicle_test.go`, `internal/render/units.go`, `internal/data/mission_test.go`.
-Verify: `go test ./...`. Mission 1 spawn: the three grunts stay on their tiles and do not shoot (the south man is 80px away, gun range is 70). Each has a white nose showing facing; they spawn facing east and turn toward you once you are in range with a clear line. The first round waits out about half a second, longer if they have to turn around. Step out already aiming and you can kill the south grunt before he fires. Wait in the open and he turns, then shoots, and keeps shooting — bursts are Chunk 22. Grenadiers still telegraph a throw. Rocketeers are unchanged. `go run ./cmd/fannon`.
-
-### Chunk 22 done
-Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/unit.go`.
-Verify: `go test ./...`. Mission 1 again. Winning the opening aim is clean. Missing it means three rounds, a visible gap of about three quarters of a second while he keeps turning, then another burst. Shots go wide of a moving man; standing still in the open still gets him killed. Grenadiers still telegraph throws. Rocketeers are unchanged. `go run ./cmd/fannon`.
-
-### Chunk 23 done
-Files: `internal/sim/ai.go`, `internal/sim/ai_test.go`, `internal/sim/combat.go`, `internal/sim/unit.go`.
-Verify: `go test ./...`. An infantry machine-gun round within 96px starts the next posted grunt’s reaction. He turns toward the shooter and stays on his tile. A tree still blocks the shot. Opening the line does not skip the rest of the reaction or the turn. A grunt 150px away does not wake. A dead shooter with no line of sight drops the clock. Grenades, rockets, and vehicle guns do not wake anyone. Mission 1’s other two posts sit about 193px from the south fight, so that opener stays three duels. `go run ./cmd/fannon`.
-
-### Chunk 24 done
-Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/sim/vehicle.go`, `internal/audio/audio.go`, `internal/audio/gun.go`, `internal/audio/gun_test.go`, `internal/app/game.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. Hold right mouse: each trooper cracks, including the mounted skidoo gun (`go run ./cmd/fannon -skidoo`). Enemy bursts crack three times, then the gap is quiet. Grenades, rockets, and blasts are still silent.
-
-### Chunk 25 done
-Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/grenade.go`, `internal/audio/audio.go`, `internal/audio/boom.go`, `internal/audio/boom_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. A grenade, a rocket, and a mine each boom once when they go off. Hosing a crate booms, and a crate it sets off booms again. The throw and the launch are still silent; death is still silent. The gun crack is unchanged.
-
-### Chunk 26 done
-Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/combat.go`, `internal/audio/audio.go`, `internal/audio/yell.go`, `internal/audio/yell_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. Shooting a grunt yells when he drops. A grenade that kills two men booms once and yells twice, at different pitches when their ids differ. A man who sinks in quicksand yells once. Calling kill again is silent. The throw and the launch are still silent.
-
-### Chunk 27 done
-Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/grenade.go`, `internal/sim/rocket.go`, `internal/audio/audio.go`, `internal/audio/whoosh.go`, `internal/audio/whoosh_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. The yellow telegraph is silent. The whoosh is the moment the bomb leaves, then the boom is the landing. A bazooka whooshes at the tube and booms on impact. Player and enemy share each clip.
-
-### Chunk 28 done
-Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/sim/unit.go`, `internal/sim/water.go`, `internal/sim/hazard.go`, `internal/sim/grenade.go`, `internal/sim/vehicle.go`, `internal/audio/audio.go`, `internal/audio/terrain.go`, `internal/audio/terrain_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. Walking into the river splashes once; standing in it, and wading into the deep channel, stays quiet. Leaving the water is silent. The tan pool gulps once when it sticks, and the death at the end is still the yell. A grenade crate and a rocket crate each click once when picked up. Boarding the skidoo and getting off each answer once.
-
-### Chunk 29 done
-Files: `internal/audio/distance.go`, `internal/audio/distance_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `internal/app/hear_test.go`, `internal/sim/cue.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. A shot at the leader's feet is full loudness. The same crack from the far edge of a scrolling map is faint, and past 320 px it is silent. Title and briefing stings are not in yet (Chunk 31); when they arrive they stay full volume. `go run ./cmd/fannon`.
-
-### Chunk 30 done
-Files: `internal/sim/engine.go`, `internal/sim/engine_test.go`, `internal/audio/engine.go`, `internal/audio/engine_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. Board the skidoo (`go run ./cmd/fannon -skidoo`) and the hum starts at idle. Holding left builds the pitch as the skidoo speeds up. Letting go on grass drops it back to that idle hum. Letting go on ice keeps a lower hum while it slides. Getting off cuts it, unless another occupied skidoo is within 320 px. An empty or destroyed skidoo is silent.
-
-### Chunk 31 done
-Files: `internal/sim/cue.go`, `internal/sim/cue_test.go`, `internal/audio/sting.go`, `internal/audio/sting_test.go`, `internal/audio/audio.go`, `internal/app/game.go`, `internal/app/scenes.go`, `internal/app/briefing.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...`. Title → click or Enter clicks, then Boot Hill is quiet. The briefing clicks when it deploys. Clearing a phase plays a short rising sting as Boot Hill opens. Escape, or clicking through a wipe, plays a short falling sting. HUD icons do not click. `go run ./cmd/fannon`.
-
-### Chunk 32 done
-Files: `cmd/fannon/main.go`, `internal/app/game.go`, `internal/app/scale.go`, `internal/app/scale_test.go`, `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/briefing.go`, `internal/app/stub.go`, `internal/render/picture.go`, `internal/render/picture_test.go`, `internal/render/hud.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/pointer.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. The window opens at 1024×768 and will not resize outside 1024×768 … 3840×2160. Mission 1 still fills one view. Dragging the window wider adds bars and does not show more map. The cursor still selects a HUD name. Title, Boot Hill, briefing, and the battle sit in the fitted picture. Placeholders are still rectangles, drawn at the picture scale.
-
-### Chunk 33 done
-Files: `assets/art/style/` (contact sheet and the separate paintings). No game code.
-Verify: `go test ./...` and `go build ./cmd/fannon`. The board is accepted. Snake idles at 96px and the same figure is at 36px. Jungle grass is at 128 and at 48, with a 2×2 of the 48. Also on the board: a tree, a two-frame shallow-water strip, snow, a door hut, a three-quarter skidoo, the pointer, and a status-strip corner with Pte Jools in Go Regular at 14px. Nothing is loaded by the renderer. Later art follows this board.
-
-### Chunk 34 done
-Files: `assets/art/embed.go`, `internal/render/sheet.go`, `internal/render/stage.go`, `internal/render/shadow.go`, `internal/render/tiles.go`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/sheet_test.go`, `internal/render/stage_test.go`, `internal/sim/unit.go`, `internal/sim/world.go`, `internal/sim/combat.go`, `internal/sim/grenade.go`, `internal/sim/rocket.go`, `internal/sim/anim_test.go`, `internal/app/scenes.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. The battle still draws rectangles, because no production sheet is embedded. A test sheet plays its first frame, then the next, and west is the mirror of east. A missing sheet, or a facing the sheet does not carry, stays a rectangle. `addMG` zeroes `SinceShot` and one step of 1/60 increases it. `launchGrenade` and `launchRocket` zero `SinceThrow`. Tile (0,0) and tile (1,0) are on different scenery frames.
-
-The manifest and the keys are in `docs/ARCHITECTURE.md` under Sprites. The anchor sits on the sim point. Draw scale is `S/8`, filter linear. Pose is the first match in that section. Death time is per unit id in the renderer. The battle `Update` advances the clock after `Step`. A painted body gets a soft oval; a rectangle does not, so the field matches Chunk 32 until a sheet exists. Trees, huts, crates, men, and vehicles sort by foot Y, so a man south of a tree is drawn after it.
-
-### Chunk 35 done
-Files: `assets/art/snake/idle.png`, `assets/art/snake/idle.json`, `assets/art/snake/walk.png`, `assets/art/snake/walk.json`, `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s two Snake troopers idle and walk in the direction they face. West, south-west, and north-west are mirrors. Eagle, enemies, and the map are still rectangles. A shot, a throw, or a death still falls back to the rectangle until those sheets exist.
-
-### Chunk 36 done
-Files: `assets/art/snake/shoot.png`, `assets/art/snake/shoot.json`, `assets/art/snake/throw.png`, `assets/art/snake/throw.json`, `assets/art/snake/death.png`, `assets/art/snake/death.json`, `assets/art/snake/corpse.png`, `assets/art/snake/corpse.json`, `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Holding right plays the two-frame shot across 0.12s. A grenade plays the four-frame throw across the 0.25s after it leaves. A dead trooper plays the six-frame fall for 0.4s and then stays on the corpse, which is that fall’s last frame in the same cell. West, south-west, and north-west are mirrors. Swim, sink, Eagle, enemies, and the map stay rectangles. The north body stays upright when he is down. Prone frames are shorter than the standing body. Some throw frames still show a grenade in the hand.
-
-### Chunk 37 done
-Files: `assets/art/snake/swim.png`, `assets/art/snake/swim.json`, `assets/art/snake/sink.png`, `assets/art/snake/sink.json`, `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Swim is 4 frames at 8 fps, looping, cell 112×77, anchor at the body centre. Sink is 8 frames in the idle cell (85×113, feet at 45,108), scrubbed across the 2 second sink, and the last frame is the helmet at the sand. West, south-west, and north-west are mirrors. `go run ./cmd/fannon -river` swims in deep water. `go run ./cmd/fannon -hazards` plays the sink in the tan pool, then the death and the corpse. Eagle, enemies, and the map stay rectangles. The swim brush is a little smoother than the idle sheet. North and north-east swim repeat a pose with a small bob. The north sink still shows the slung rifle beside the helmet.
-
-### Chunk 38 done
-Files: `assets/art/eagle/` and `assets/art/panther/` (idle, walk, shoot, throw, death, corpse, swim, sink, each PNG plus the Snake manifest), `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Eagle is the Snake sheets in blue fatigues. Panther is the same pixels in amber. Face, rifle, boots, and the tan sink line are the Snake pixels. Cells, anchors, frame counts, and mirrors match. Split on the river sandbox shows green, blue, and amber, and merging back uses the squad colour. Enemies and the map stay rectangles. Rank is still HUD text.
-
-### Chunk 39 done
-Files: `assets/art/grunt/`, `assets/art/grenadier/`, `assets/art/rocketeer/` (idle, shoot, death, corpse, swim, sink; grenadier and rocketeer also have throw), `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1 grunts idle and the shot plays across the 0.12s window. A grenadier’s throw shows the orange satchel. A rocketeer’s launch shows the tube. Death is six frames over 0.4s, then the corpse. There is no walk sheet. West, south-west, and north-west are mirrors. Civilians and the map stay rectangles.
-
-The idle breath is a one-pixel bob. Swim is the same side-on pose on every stored row. The rocketeer’s tube is the east painting on every row. Grenadier north-east reuses the south-east view. Grenadier and rocketeer shots, falls, swims, and sinks use the grunt body. The north corpse is the back view, and the other corpses are the side view. The sink is the idle cropped down to the helmet.
-
-### Chunk 40 done
-Files: `assets/art/civilian/` (idle, walk, death, corpse, each PNG plus JSON), `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. `go run ./cmd/fannon -hazards`: the yellow wanderer is a man in a pale shirt and dark trousers. He idles and walks. Shooting him plays a six-frame fall over 0.4s, then the corpse. West, south-west, and north-west are mirrors. He has no weapon. Killing him still does not end or fail the phase. The map stays rectangles.
-
-The front and back walks are one stride alternating with the standing pose. The north-east corpse is the south-east body. The middle of the fall is the standing figure tipped, then the painted body on the ground.
-
-### Chunk 41 done
-Files: `assets/art/ground/grass.png`, `assets/art/ground/grass.json`, `assets/art/ground/snow.png`, `assets/art/ground/snow.json`, `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s grass and Mission 3’s snow are four-frame loops at 8 fps, 128×128, pinned at the cell’s top-left. A 2×2 of either tile meets at the edges. Neighbouring cells are not on the same frame. Water, quicksand, ice, trees, and the other ground squares are unchanged. The rest pose is the accepted style tile. The other three frames shift the fine strokes, so the colour field stays put.
-
-### Chunk 42 done
-Files: `assets/art/ground/water-shallow.png`, `assets/art/ground/water-shallow.json`, `assets/art/ground/water-deep.png`, `assets/art/ground/water-deep.json`, `assets/art/ground/quicksand.png`, `assets/art/ground/quicksand.json`, `assets/art/ground/ice.png`, `assets/art/ground/ice.json`, `internal/render/sheet_test.go`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Shallow and deep water are eight-frame loops at 8 fps, 128×128. Quicksand and ice are six-frame loops at 4 fps. A cell’s opposite edges meet. Neighbouring cells of the same kind are not on the same frame. `go run ./cmd/fannon -river` shows the two water loops and a still brown bridge. `go run ./cmd/fannon -hazards` boils the tan pool. Mission 3’s ice glints. Swim speed and the sink timer are unchanged. Trees, cliff, ramp, and the mine stay squares.
-
-### Chunk 43 done
-Files: `assets/art/tree/sway.png`, `assets/art/tree/sway.json`, `assets/art/ground/cliff.png`, `assets/art/ground/cliff.json`, `assets/art/ground/ramp.png`, `assets/art/ground/ramp.json`, `assets/art/ground/bridge.png`, `assets/art/ground/bridge.json`, `assets/art/ground/mine.png`, `assets/art/ground/mine.json`, `internal/render/sheet.go`, `internal/render/stage.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. Mission 1’s trees are three silhouettes, each a four-frame sway at 4 fps, and neighbours are not on the same shape or the same frame. The anchor is the trunk foot on the blocked cell, so a man south of a tree draws in front of the trunk and a man north of it draws behind the canopy. Cliff, ramp, and bridge are one frame each. The hazard-sandbox mine sits on the grass and glints on one frame of a four-frame loop. No new tile types. Huts, crates, and the skidoo stay the old shapes.
-
-Shallow water keeps the style-board ripples and scrolls the strokes. Deep water is the same strokes on a navy field, scrolling the other way. Quicksand is a tan field with a few bubbles rising. Ice is a pale field with short glints.
-
-### Chunk 44 done
-Files: `assets/art/hut/door.png`, `assets/art/hut/door.json`, `assets/art/hut/plain.png`, `assets/art/hut/plain.json`, `assets/art/crate/grenade.png`, `assets/art/crate/grenade.json`, `assets/art/crate/rocket.png`, `assets/art/crate/rocket.json`, `assets/art/skidoo/idle.png`, `assets/art/skidoo/idle.json`, `assets/art/skidoo/move.png`, `assets/art/skidoo/move.json`, `internal/render/props.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. `go run ./cmd/fannon -hut` shows the door hut with chimney smoke and the grenade crate. `go run ./cmd/fannon -skidoo`: the skidoo idles, the ski highlights step while it is driven, and it uses the facing row as it turns. The enemy lamp still blinks on that same body. Boarding still hides the troopers. No rubble and no destroyed-hut sprite.
-
-The door hut keeps the style-board doorway and side window. The doorless hut is the same building with a shuttered front and no doorway. Smoke is four soft puffs rising off the chimney, and the hut itself does not move. The grenade crate shows olive bombs and the rocket crate shows two grey tubes; neither painting has a letter. The skidoo hull is the same in every move frame; light ticks travel along the dark skis. North and south are top-down, and the ski posts on those rows are blockier than the side views. West, south-west, and north-west are mirrors.
-
-### Chunk 45 done
-Files: `assets/art/fx/flash.png`, `assets/art/fx/flash.json`, `assets/art/fx/tracer.png`, `assets/art/fx/tracer.json`, `assets/art/fx/grenade.png`, `assets/art/fx/grenade.json`, `assets/art/fx/rocket.png`, `assets/art/fx/rocket.json`, `assets/art/fx/blast.png`, `assets/art/fx/blast.json`, `internal/render/units.go`, `internal/render/props.go`, `internal/render/stage.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. A burst draws the muzzle flash for the 0.12s shot window, on foot at the rifle and on the skidoo at the mounted gun. The tracer and the rocket are painted and turned to follow their travel. A grenade tumbles on the arc. Grenades, rockets, mines, and crates share one blast of four frames over 0.2s. There is no second explosion painting.
-
-The flash is two frames. The grenade is a two-frame tumble. The tracer is one streak and the rocket is one side view; both rotate with velocity. The blast opens from a tight fireball into smoke and is not drawn after 0.2s, while the sim marker still lasts 0.35s. Backgrounds were keyed from the corner colour because the generator’s flat field was a dusty rose.
-
-### Chunk 46 done
-Files: `assets/art/ui/` (pointer, crosshair, board, grenade, rocket, foot, vehicle, map, mark-snake, mark-eagle, mark-panther, each PNG plus JSON), `internal/render/pointer.go`, `internal/render/hud.go`, `internal/render/overview.go`, `internal/app/scenes.go`, `internal/render/sheet.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. The battle arrow is the style-board pointer, the fire cursor is the cream crosshair, and hovering a skidoo you can board shows the painted skidoo. The strip keeps its place and its clicks. Grenade, rocket, boots, vehicle, map, and the three squad marks are painted. The selected special still has the white stroke. G and R counts, names, and ranks stay text. The overview uses the ground-painting colours, and an arctic phase uses snow for grass and trees. Text is the same Go Regular face, which scales with the window.
-
-The exit cursor on a skidoo you already occupy is still the small bitmap. The map button no longer draws the letter M over the painting. The grenade icon was keyed again so the magenta shadow did not stay.
-
-### Chunk 47 done
-Files: `assets/art/menu/` (title, briefing, hill, grave, save, load, each PNG plus JSON), `internal/app/scenes.go`, `internal/app/boothill.go`, `internal/app/briefing.go`, `internal/render/stage.go`, `internal/render/sheet.go`, `internal/render/sheet_test.go`, `docs/ARCHITECTURE.md`.
-Verify: `go test ./...` and `go build ./cmd/fannon`. A new game walks the painted title, then Boot Hill, then the briefing, then Mission 1. The title carries the words “Fannon Codder”. The hill queue is the Snake idle sheet. Graves are one cross per death. Save and load are the disk and the folder, on the same corners as before. The click prompt, the mission line, and the briefing copy stay text on a dark panel.
-
-The load folder still has a thin warm edge where the magenta shadow used to sit. There is no title tune.
-
-### Chunk 48 done
-Files: `internal/sim/combat.go`, `internal/sim/squad_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
-Verify: `go test ./...`. A squad you are not controlling turns at the grunt rate, waits out the reaction, then fires three rounds and pauses. Range, rate, and cone stay that man's rank. The squad you are aiming still fires on the frame you hold the button. He does not hear shots and he does not throw.
-
-### Chunk 49 done
-Files: `internal/sim/building.go`, `internal/sim/ai.go`, `internal/sim/unit.go`, `internal/sim/building_test.go`, `internal/data/mission_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
-Verify: `go test ./...`. A door grunt walks a few tiles straight out and does not fire on the way. A tree slides him, and he posts when he arrives or when the walk cannot advance. A grunt loaded from mission JSON stays on his tile. The living-enemy cap stays six.
-
-### Chunk 50 done
-Files: `internal/sim/ai.go`, `internal/sim/unit.go`, `internal/sim/ai_test.go`, `internal/sim/vehicle_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
-Verify: `go test ./...`. A grenadier and a rocketeer turn at the grunt rate through the windup and release on the first frame they face the target. The windup lengths stay. A grenadier already facing still throws at the windup. A rocketeer beside a tree still holds. A point-blank grenadier still uses the grunt gun.
-
-### Chunk 51 done
-Files: `internal/sim/vehicle.go`, `internal/sim/vehicle_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
-Verify: `go test ./...`. An armed enemy skidoo stops inside gun range, outside the ram, waits out the reaction, fires three rounds, and pauses. An unarmed one still closes and rams. A tree still only slides the hull.
-
-## Next
-
-The numbered plan is done. What remains is the backlog below.
-
-Mission 1 grunts still hold their tile. From Mission 2, and after a door man finishes his walk-out, a grunt or grenadier closes inside 160px, then stops to shoot. There is still no pathfinding. Rocketeers hold. A man with no walk sheet keeps his idle while he moves.
-
-## Landed after the numbered plan
-
-These are in `git log` after Chunk 51. Older “Chunk N done” notes stay as they were on the day that chunk landed.
-
-- Enemies close (`a37048e`). Mission 1 map grunts stay posted. `World.Mission >= 2` marks other grunts and grenadiers `Aggressive`. They walk in inside `EnemyChase` (160px) on sight or a heard shot, then use the existing burst. Door men set `Aggressive` when the walk-out ends. Rocketeers no longer shuffle in (`RocketeerApproach` is gone).
-- Door and chase men have no walk sheet (`409fabd`). A missing walk frame falls back to idle, so a hut grunt is not a rectangle while he steps out.
-- Rank flashes (`f0e5d87`). The status strip draws `ui/rank-*` above the name. Names and the G/R counts stay text.
-- High Scoring Heroes (`19a2322`). Boot Hill, H. One point per enemy the trooper kills. The table keeps the best twelve, living or fallen, and the save remembers the fallen.
-- Flavour (`bd3d66c`). Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos. None of them block movement or fire.
-- Pause (`5b97066`). P, or the status-strip button, freezes orders, the sim, and the picture. The playfield says PAUSED. A finished phase does not pause.
-
-## Backlog
-
-These are not AI chunks. Do not pull them forward to “finish the AI”.
-
-- Jeeps (skin of the skidoo), tanks, static turrets, choppers
-- Hostages, kidnap, factories, protect-civilians fail
-- Desert, moors, and underground tiles
-- Missions 6–24 as data
-- Wounded troopers and finishing them; corpse juggling — in, not committed yet. About one MG hit in three drops a standing man. He leaves the file and squirms on the corpse frame until another round, a blast, or a vehicle finishes him. Player MG still ignores a friendly on his feet and does finish one who is down. A wounded enemy blocks kill-all. Shooting a corpse kicks it along the round.
-- Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in. The picture, Chunks 32–47, is in.
-- Birds, snowmen, igloos — in (`bd3d66c`)
-- High Scoring Heroes — in (`19a2322`)
-- Rank flashes on the status strip — in (`f0e5d87`)
-- Pause — in (`5b97066`)
-- A fullscreen toggle
-- Headless sim replay for each phase
+# Done
+
+Chunks 01–51 and the later changes below are in the game. This is a record of what shipped. How it works now is `docs/ARCHITECTURE.md`. An early line is not a spec.
+
+When you finish an item from `docs/BACKLOG.md`, add one line under "After the numbered plan" and delete it there. Update `docs/ARCHITECTURE.md` if behavior changed.
+
+## 01–20 Campaign through Mission 5
+
+- 01 Bootstrap. Module, window, game loop.
+- 02 Title and battle scenes, custom pointer, camera type.
+- 03 Player squad walks in file.
+- 04 Squad machine gun, corpses, player MG ignores a standing friendly.
+- 05 Grunts, kill-all win, wipe loses the phase.
+- 06 Mission 1 JSON. Trees block walking.
+- 07 Names, sixteen ranks, recruit pool, left status strip.
+- 08 Boot Hill, briefing, fail and retry.
+- 09 Promotions, +15 recruits, save and load.
+- 10 Rank changes MG range, spread, and rate. Grenade and rocket icons.
+- 11 Maps larger than the view. Trees block shots. Pointer edge scroll.
+- 12 Shallow water, deep water, bridges.
+- 13 Split and merge Snake, Eagle, and Panther.
+- 14 Door huts, grenades, exploding crates, destroy-buildings objective.
+- 15 Mission 2, two phases.
+- 16 Status strip finished. Overview map.
+- 17 Mission 3. Ice, cliffs, scarce grenade crates.
+- 18 Civilians, quicksand, mines.
+- 19 Mission 4, four phases. Starting grenades. Grenadiers.
+- 20 Bazookas, rocketeers, skidoo, Mission 5.
+
+## 21–23 Posted grunts
+
+- 21 Hold the spawn tile. Limited turn. Reaction before the first shot.
+- 22 Burst of three, then a pause. Wide cone.
+- 23 A nearby infantry MG round starts that reaction. He still needs a clear shot to fire.
+
+## 24–31 Sound
+
+- 24 Cue bus and gunshot. The sim records cues. Audio plays them.
+- 25 One boom for grenades, rockets, mines, and crates.
+- 26 Death yell, three pitches. A second kill is silent.
+- 27 Grenade whoosh and rocket whoosh.
+- 28 Splash, quicksand gulp, crate pickup, board, dismount.
+- 29 World cues get quieter with distance.
+- 30 Skidoo hum. A loop, not a cue.
+- 31 Menu click, win sting, fail sting.
+
+## 32–47 Picture
+
+- 32 Window opens at 1024×768, caps at 4K. Same 320×256 frame.
+- 33 Style board accepted. `assets/art/style/` is not drawn. Later art follows it.
+- 34 Sprite stage. PNG plus JSON. Missing sheet stays a rectangle.
+- 35 Snake idle and walk.
+- 36 Snake shoot, throw, death, corpse.
+- 37 Snake swim and sink.
+- 38 Eagle and Panther are Snake recolors.
+- 39 Grunt, grenadier, and rocketeer sheets. No walk cycle.
+- 40 Civilian sheets.
+- 41 Grass and snow paintings. The battle draws frame 0 only.
+- 42 Shallow water, deep water, quicksand, and ice loops.
+- 43 Trees, cliff, ramp, bridge, mine.
+- 44 Huts, crates, skidoo.
+- 45 Muzzle flash, tracer, grenade, rocket, one shared blast.
+- 46 Pointer, crosshair, board cursor, status-strip icons.
+- 47 Painted title, briefing, and Boot Hill.
+
+## 48–51 The rest of the numbered plan
+
+- 48 A squad you are not controlling turns, waits, then bursts. Range and rate stay that man's rank.
+- 49 A grunt from a door walks straight out, then posts. Map-placed men do not.
+- 50 Grenadiers and rocketeers turn through the windup, then release.
+- 51 An armed enemy skidoo holds gun range and bursts. An unarmed one still rams.
+
+## After the numbered plan
+
+- Mission 2 and later grunts and grenadiers close in. Mission 1 and sandboxes stay posted. Rocketeers stay put. No pathfinding. `a37048e`
+- A missing walk sheet draws idle, so a walking enemy is not a rectangle. `409fabd`
+- Grass and snow stay on frame 0. `a8ff4fa`
+- Ground tiles hide the seam from atlas padding. `ebab65c`
+- Rank insignia on the status strip. `f0e5d87`
+- High Scoring Heroes on Boot Hill. `19a2322`
+- Birds, scrub, snowmen, igloos. They do not block movement or fire. `bd3d66c`
+- Pause. `5b97066`
+- An MG hit can wound. Another round, a blast, or a ram finishes him. `edeaab7`
+- Shooting a corpse shoves it about one tile. Kick is capped. The hop refreshes.

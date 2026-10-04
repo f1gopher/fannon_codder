@@ -14,12 +14,12 @@ const (
 	// A burst still finishes him. Tests leave WoundChance at 0.
 	WoundOdds = 0.34
 
-	juggleKick    = 70.0  // px/s along the shot
-	juggleHop     = 120.0 // px/s upward
-	juggleGravity = 340.0
-	juggleBounce  = 0.4
-	juggleDrag    = 80.0 // px/s^2 once the body is on the ground
-	juggleRest    = 8.0  // px/s; slower than this, the hop ends
+	juggleKick    = 36.0 // px/s along the shot; extra rounds do not stack past this
+	juggleHop     = 64.0 // px/s upward
+	juggleGravity = 420.0
+	juggleBounce  = 0.28
+	juggleDrag    = 200.0 // px/s^2 once the body is on the ground
+	juggleRest    = 12.0  // px/s; slower than this, the hop ends
 
 	privateRange  = 80.0
 	generalRange  = 150.0
@@ -349,7 +349,14 @@ func (w *World) juggle(u *Unit, p *Projectile) {
 	}
 	u.VX += p.VX / sp * juggleKick
 	u.VY += p.VY / sp * juggleKick
-	u.VZ += juggleHop
+	along := hypot(u.VX, u.VY)
+	if along > juggleKick {
+		u.VX = u.VX / along * juggleKick
+		u.VY = u.VY / along * juggleKick
+	}
+	if u.VZ < juggleHop {
+		u.VZ = juggleHop
+	}
 }
 
 func (w *World) stepBodies(dt float64) {

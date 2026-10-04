@@ -1,164 +1,211 @@
-# Fannon Codder — Architecture
+# Architecture
 
-Gameplay clone of Cannon Fodder (Amiga, 1993). Product name: **Fannon Codder**.
+Current behavior. Read this before changing code. If you change behavior, update this file.
 
-Read this file at the start of every implementation chunk. Do not invent a new architecture.
+Already done: `docs/CHUNKS.md`. Not done: `docs/BACKLOG.md`. Bindings: `controls.md`, generated from `internal/app/controls.go` by `go test ./internal/app -run TestControlsDoc`.
 
-## Display
+## Session rules
 
-The world pixel space did not change. The frame is still **320×256**. A tile is 16 world pixels, a trooper is an 8-pixel body, and the playfield is the 268×256 view beside the 52-pixel status strip. The camera does not zoom. Audio distances stay in world pixels. A larger window is a sharper picture of that same frame, not a wider view of the map.
-
-The window opens at **1024×768** device-independent pixels. `SetWindowSizeLimits` keeps it inside **1024×768 … 3840×2160**. The 320×256 frame is fitted uniformly (it is not stretched to the window). On the windows this range produces, height is the fit: 1024×768 shows a 960×768 picture with 32 pixels of bar on each side (scale 3), and 3840×2160 shows a 2700×2160 picture (scale 8.4375) with bars on the sides.
-
-`Layout` / `LayoutF` receive the window in device-independent pixels and return the offscreen, `320×S` by `256×S`. `S` is that fit times `Monitor().DeviceScaleFactor()`, clamped so the offscreen never exceeds 3840×2160. `DrawFinalScreen` clears the bars and blits the offscreen at 1:1 in the centre. The filter on that blit is nearest, because the scale is 1. Placeholders are drawn into this offscreen — logical coordinate times `S` — and not painted into a 320×256 buffer and scaled up.
-
-HUD text is `ebiten/v2/text/v2` with the Go regular face. The size is 14 pixels when `S` is 3, and it scales with `S`. The OS cursor stays hidden. The pointer, the sim, the HUD hit tests, and edge scroll see the cursor divided by `S` and clamped to the frame. A click in the bar does not reach the game.
-
-A painted sheet is drawn at `S/8` with a linear filter. The blit of the offscreen stays nearest. `8` is source pixels per world pixel. A body with no sheet draws its coloured rectangle.
-
-## Loop
-
-- `ebiten.TPS = 60`.
-- `Update` samples input, steps `sim.World` once, then advances the picture clock.
-- `Draw` paints the picture from sim state. **No gameplay in Draw.**
-
-## Packages
-
-```
-cmd/fannon/          # main, window, RunGame
-internal/app/        # ebiten.Game, scene stack, scaling
-internal/input/      # pointer, buttons, both-buttons chord
-internal/sim/        # world, units, combat, AI, objectives — NO ebiten import
-internal/campaign/   # recruits, names, ranks, save JSON — NO ebiten import
-internal/render/     # picture: sheets, or the coloured rectangle when a sheet is missing
-internal/audio/      # cue playback — the only package that opens the audio device
-internal/data/       # load mission JSON
-assets/placeholder/  # later: real PNGs with the same filenames
-data/missions/       # mission JSON
-data/names.txt
-docs/ARCHITECTURE.md
-docs/CHUNKS.md
-```
-
-`internal/sim` must not import Ebitengine or `internal/audio`. Simulation is unit-tested with `go test`.
-
-## Audio
-
-The sim records `Cue` values (`Kind`, world `X`, `Y`, and `ID` when a sound depends on who made it) and does not play them. The battle scene takes the queue after `Step` and passes it to `internal/audio`. One mixer owns the process-wide Ebitengine context (44100 Hz, 16-bit stereo). A kind with no clip loaded is silent.
-
-The mixer loads the gunshot (8 voices), the blast (4 voices), the death yell (4 voices at each of three pitches, chosen from the unit id), the grenade whoosh (4 voices), the rocket whoosh (3 voices), one voice each for the splash, the quicksand gulp, the crate pickup, boarding, and dismount, and one voice each for the menu click, the win sting, and the fail sting. Another effect is a `CueKind`, an emit at the cause, and `Mixer.Load(kind, pcm, voices, volume)`. Each clip keeps its own full-loudness level. The battle calls `SetListener` at the active leader (the driven vehicle counts), or at the camera centre when that squad has no leader. A world cue is full inside 48 px and falls linearly to silence at 320 px; a cue beyond that does not take a voice. There is no pan. Stings that have no world cause use `PlayKind` and stay at the clip's full volume. The title plays a click when it advances, and the briefing plays one when it starts the phase. Leaving a cleared phase plays the win sting. Leaving after a wipe plays the fail sting. Escape opens a quit prompt on every screen; Y or Enter ends the process, and N or Escape closes the prompt. The world stays frozen while the prompt is up. Boot Hill plays nothing. The world never emits those three kinds. The skidoo hum is not a cue. One looping voice on the mixer starts, stops, and changes pitch. It runs while the listener is aboard a living skidoo, or while the nearest other occupied skidoo is inside 320 px, and it is silent when that vehicle is empty or destroyed. Pitch is idle at a standstill and top at `VehicleMaxSpeed`; the listener's own vehicle wins. Ebitengine players have no playback-rate control, so the loop reader resamples a synthesised cycle. Samples are original synthesis or original recordings, never Amiga rips. There is one mixer per process.
-
-## Core types (sim)
-
-- `World`: map, units, projectiles, buildings, pickups, vehicles, camera, objectives, rng.
-- `Unit`: id, name, rank, side (player/enemy/civilian), hp (alive / wounded / dead), pos, vel, facing, inWater, squadID, vehicleID, kills.
-- `Squad`: id (Snake / Eagle / Panther), leader, member IDs in rank order, grenades, rockets, active.
-- `Map`: tile grid, tile size 16×16 world pixels. Tiles: grass, tree, waterShallow, waterDeep, ice, quicksand, cliff, bridge, mine.
-- `Building`: pos, hasDoor (spawner vs flavour hut), hp, spawnInterval.
-- `Pickup`: grenadeCrate(4) | rocketCrate(4). Destroying it explodes.
-- `Vehicle`: skidoo (later jeep as the same type with a skin).
-- `Objective`: KillAllEnemy, DestroyEnemyBuildings (both can be required). ProtectCivilians parses and is ignored until a later chunk.
-
-World space is float64 pixels. Units are ~8×8. An MG round kills a standing man, or (about one time in three) drops him wounded. He leaves the file and squirms until another round, a blast, or a vehicle finishes him. A wounded enemy still blocks kill-all. Shooting a corpse kicks it along the round and pops it up.
-
-## Controls (Amiga mouse)
-
-| Input | Effect |
-|---|---|
-| Move mouse | Move pointer. Near playfield edge, scroll camera. |
-| Left click | Active squad leader walks toward pointer tip. Others follow in file. |
-| Right held | Crosshair. Whole active squad fires MG at the crosshair. Move and fire are independent. |
-| Right held + left click | Leader throws grenade or fires bazooka at the crosshair. |
-| Click grenade/bazooka icon | Toggle special weapon. |
-| Click names in HUD | Highlight members. Click troop logo → split into Eagle/Panther. |
-| Walk two player squads together | Merge. |
-| ESC | Surrender phase. Survivors return to the pool. |
-| P | Pause. |
-
-Player MG does **not** harm living friendlies. It does finish a wounded friendly. Explosives and vehicles kill everyone, standing or wounded.
-
-## Enemy infantry
-
-Map-placed grunts hold the tile they spawned on (facing east). A grunt born from a door walks a few tiles straight out, sliding on blocked axes, and does not shoot until he posts. If that walk cannot advance he posts where he is. They notice a player only inside gun range with clear LOS. They turn at a limited rate and wait out a short reaction before the first round, then fire a short burst, pause, and repeat. The enemy cone is wider than a Private’s and is not the player’s `World.Spread`. Grenadiers and rocketeers keep their own windups; those windups are not stacked on the grunt reaction. During the windup they turn at the grunt rate and release on the first frame they face the target, even if the clock already finished. A grenadier’s point-blank MG uses the grunt rules. No pathfinding and no chase. Numbers and the hearing follow-up are Chunks 21–23 in `PLAN.md`.
-
-A squad you are not controlling uses that same turn, reaction, and burst. Range, rate, and cone stay the man's rank gun. He does not hear shots and he does not throw. The squad you are aiming still fires on the frame you hold the button.
-
-An armed enemy skidoo drives toward the nearest living player and drops the throttle once it is inside `VehicleMGRange`, still outside the ram. The hull then turns at the grunt rate. The mounted gun waits out the same reaction and facing tolerance, fires `EnemyBurst` rounds at `VehicleMGRoF`, and pauses. Range stays `VehicleMGRange`. There is no grunt cone. An unarmed enemy skidoo still drives into the squad and rams. A blocked hull still slides on one axis. The player’s own driving is unchanged.
-
-## Camera
-
-Pointer-driven edge scroll, clamped to the map. The view is the playfield beside the status strip, so a map the width of the full screen still scrolls by the strip's width. The active leader stays inside a soft inner margin.
-
-## Campaign
-
-- Start: 15 conscripts. Mission 1 deploys 2 → 13 remaining.
-- After each **mission**: +15 recruits; survivors promoted **one rank per phase survived**.
-- After every three missions, new recruits arrive already trained.
-- Max on-field squad: briefing number, never more than six.
-- Save only on Boot Hill after a full mission (`userConfig/fannon-codder/save.json`). The save also keeps the fallen scores for the High Scoring Heroes table.
-- One enemy kill is one point for the trooper who fired. Grenades, rockets, the skidoo gun, and a ram score for that trooper (the driver, for the skidoo). Civilians do not score. Boot Hill opens the table with H: the best twelve living or fallen men. The bureau remembers more fallen than it draws.
-- Run out of recruits → game over.
-
-Ranks (low → high): Private, Corporal, Sergeant, Staff Sergeant, Sergeant First Class, Master Sergeant, Sergeant Major, Specialist 4, Specialist 6, Warrant Officer, Chief Warrant Officer, Captain, Major, Colonel, Brigadier General, General.
-
-Rank affects MG range, accuracy (spread), and rate of fire (Chunk 10). Until then all ranks shoot the same.
-
-## Sprites
-
-Sheets live in `assets/art` as one PNG and one JSON per animation. `internal/render` embeds that tree. The style board has no JSON, so it is not drawn. The key is the path without the extension.
-
-JSON fields are `frameW`, `frameH`, `anchorX`, `anchorY`, `fps`, `loop`, `rows`, and `mirrors`. `rows` is the order of rows in the PNG. A mirror names a stored row and is not stored itself. Directions are `E, SE, S, SW, W, NW, N, NE`. Facing `0` is east, `π/2` is south, `π` is west, and `−π/2` is north. Paint E, SE, S, N, and NE. Mirror E→W, SE→SW, and NE→NW.
-
-The anchor sits on the sim point the rectangle uses: a trooper, crate, or skidoo position; the bottom centre of a hut; the bottom centre of a tree's cell. A ground frame pins its top-left to the cell. Draw order is ground, a soft oval under each painted body, then trees, huts, crates, men, and vehicles by foot Y, then grenades, tracers, and blasts, then the HUD and the pointer. Scenery frames are offset by `tx*3+ty*5`.
-
-Pose, first match: wounded (the corpse frame, rocked in place), death (once, then the corpse frame), sink (scrubbed by `Sink/SinkTime`), swim, throw (scrubbed across the windup or the 0.25s after launch), shoot (while `SinceShot < 0.12`), walk (speed above 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up each step and do not change combat. Death time is kept in the renderer by unit id. The battle `Update` advances the clock.
-
-Keys: `snake|eagle|panther|grunt|grenadier|rocketeer|civilian` with `idle|walk|shoot|throw|death|corpse|swim|sink`. Ground: `ground/grass`, `ground/snow`, `ground/water-shallow`, `ground/water-deep`, `ground/quicksand`, `ground/ice`, `ground/bridge`, `ground/cliff`, `ground/ramp`, `ground/mine`. Props: `tree/sway`, `hut/door`, `hut/plain`, `crate/grenade`, `crate/rocket`, `skidoo/idle`, `skidoo/move`, `prop/scrub`, `prop/snowman`, `prop/igloo`. Birds: `bird/flap`.
-
-`ground/grass` and `ground/snow` are in: four frames, 128×128. The battle uses snow when the phase terrain is `arctic`, and grass otherwise. Grass and tree cells take frame 0 only; the stroke loop stays on the sheet and is not played. `ground/water-shallow` and `ground/water-deep` are eight-frame loops at 8 fps. `ground/quicksand` and `ground/ice` are six-frame loops at 4 fps. All four are 128×128 and pinned at the cell’s top-left. Neighbouring cells of the same kind are not on the same frame.
-
-`ground/cliff`, `ground/ramp`, and `ground/bridge` are one frame each, 128×128, pinned at the cell’s top-left. `ground/mine` is four frames at 2 fps: three still frames and one glint, on the grass field. `tree/sway` is three silhouettes (rows E, SE, S — labels only, the tree has no facing), each a four-frame loop at 4 fps. The cell is 256×288. The anchor is the trunk foot, at (128, 282), on the bottom centre of the blocked cell. The battle picks the row with `(tx+ty*2) mod 3` and the column with the usual scenery phase, so a forest does not share one shape or one sway.
-
-Flavour does not block movement or fire. `bird/flap` is four frames at 8 fps, cell 128×96, anchor at the centre. East is stored and west is a mirror. Two to four birds cross the map above the other sprites. `prop/scrub` (grass), `prop/snowman`, and `prop/igloo` (arctic) sit on open grass cells, clear of trees and huts, and sort by foot Y. The igloo is 256×176 and covers two cells. The snowman is 128×192. Scrub is 128×112.
-
-`hut/door` and `hut/plain` are four-frame chimney-smoke loops at 5 fps. The cell is 256×320, and the anchor (128, 312) is the bottom centre of a 2×2 hut. `crate/grenade` and `crate/rocket` are one frame each, 128×128, anchor at the centre (64, 64), and neither painting carries a letter. `skidoo/idle` and `skidoo/move` are four frames, cell 240×176, anchor (120, 88) on the vehicle point. Stored rows are E, SE, S, N, NE; W, SW, and NW are mirrors. Move runs at 8 fps and idle at 4. The enemy lamp is still drawn on top of that body.
-
-`fx/flash` is two frames over the 0.12s shot window, drawn at a man’s muzzle and at a skidoo’s gun while `SinceShot` is inside that window. `fx/tracer` and `fx/rocket` are one frame each and rotate with velocity. `fx/grenade` is a two-frame tumble at 8 fps, drawn on the arc. `fx/blast` is four frames at 20 fps (0.2s) and is the only explosion. Grenades, rockets, mines, and crates all use it. The marker in the sim still lasts 0.35s; the painting stops at the end of the sheet.
-
-The title, the briefing, and Boot Hill are `menu/title`, `menu/briefing`, and `menu/hill`: one frame each, 2560×2048, pinned at the top-left so they fill the 320×256 frame at `S/8`. The words “Fannon Codder” are painted into the title. Boot Hill draws one `menu/grave` per death, with the foot of the cross on the old grave slot, and the queue is `snake/idle` facing south-east. `menu/load` and `menu/save` sit on the same click rectangles as the old word buttons. Names, the mission line, and the briefing copy stay text.
-
-The battle cursor is `ui/pointer` (the style-board arrow, hotspot on the tip), `ui/crosshair`, and `ui/board` (the skidoo, hotspot in the middle). They are drawn at `S/8`. The exit mark on a skidoo you already occupy stays the small bitmap. The status strip stays the flat dark panel. Its icons are `ui/grenade`, `ui/rocket`, `ui/foot`, `ui/vehicle`, `ui/map`, and `ui/mark-snake`, `ui/mark-eagle`, `ui/mark-panther`, also at `S/8`. Names and the G and R counts stay text. Each man's rank is a ui/rank-* flash above his name. The selected special is still the white stroke. The overview keeps its diagram and colours each tile from the accepted ground painting. Arctic grass and tree cells use the snow colour.
-
-## Placeholders
-
-| Thing | Draw |
-|---|---|
-| Player trooper | Small green rectangle + rank flash + name on HUD |
-| Enemy grunt | Red rectangle |
-| Civilian | Yellow rectangle |
-| Corpse | Darker rectangle |
-| Tree | Dark green square (blocks bullets/LOS) |
-| Deep water | Dark blue |
-| Shallow water | Light blue |
-| Building | Brown rect; black square = door |
-| Grenade crate | Grey box labelled G |
-| Rocket crate | Grey box labelled R |
-| Skidoo | White/grey rounded rect |
-| Pointer | White arrow; crosshair when firing |
-| HUD | Black panel, debug text |
-
-Same filenames under `assets/placeholder/` so art is a later drop-in.
-
-## Mission data
-
-JSON, one file per phase, listed by `data/missions/campaign.json`. Maps are original layouts inspired by original mission beats, not ripped Amiga data.
+- Do the change you were asked for. Leave the next backlog item alone.
+- `internal/sim` must not import Ebitengine or `internal/audio`. The sim appends `Cue` values. The battle plays them after `Step`.
+- `Update` samples input, steps the world once, then advances the picture clock. No gameplay in `Draw`. `ebiten.TPS` is 60.
+- A new rule gets a named test in `internal/sim` or `internal/campaign`.
+- `go test ./...` and `go build ./cmd/fannon` pass.
+- Launch from the repo root. Mission JSON loads relative to the working directory. Main package is `cmd/fannon`.
 
 ## Legal
 
-Do not extract or embed original Amiga graphics, samples, or map binaries. Do not ship the original theme tune.
+Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, map data, sprite sheets, or the theme. Mission titles may homage the original.
 
-## Rules for implementers
+## Packages
 
-- One chunk only. No extra systems.
-- `go test ./...` and `go build ./cmd/fannon` must pass.
-- Update `docs/CHUNKS.md` when a chunk is done.
+- `cmd/fannon` — window, `RunGame`
+- `internal/app` — `ebiten.Game`, scenes, scale, pause, quit
+- `internal/input` — pointer
+- `internal/sim` — world, combat, AI, objectives
+- `internal/campaign` — recruits, names, ranks, heroes, save
+- `internal/render` — sheets, or a coloured rectangle when a sheet is missing
+- `internal/audio` — the only package that opens the audio device
+- `internal/data` — mission JSON
+- `data/missions` — one JSON per phase, listed by `campaign.json`
+- `assets/art` — one PNG and one JSON per animation
+
+`SpawnUnit` appends to `World.Units` and can move earlier pointers. Re-fetch with `World.Unit(id)` across `Step`. `AddSkidoo` does the same to vehicles. Re-fetch with `vehicleByID`.
+
+## Display
+
+The world frame is 320×256. A tile is 16 px. A trooper body is about 8 px. The status strip is 52×256 (`HUDWidth`). The playfield is 268×256. The camera does not zoom. Audio distances are world pixels. A larger window is a sharper picture of that same frame.
+
+The window opens at 1024×768 device pixels. Limits are 1024×768 through 3840×2160. The frame fits uniformly, by height. 1024×768 is scale 3 (picture 960×768, 32 px of bar each side). 3840×2160 is scale 8.4375 (picture 2700×2160).
+
+`Layout` returns an offscreen of 320×S by 256×S. `S` is that fit times `Monitor().DeviceScaleFactor()`, clamped so the offscreen never exceeds 3840×2160. `DrawFinalScreen` clears the bars and blits the offscreen 1:1, nearest, centered. Draws use logical coordinates times `S`. The cursor is divided by `S` and clamped to the frame. A click in the bar does not reach the game.
+
+A painted sheet draws at `S/8` with a linear filter. 8 is source pixels per world pixel. HUD text is `ebiten/v2/text/v2` with Go Regular. The size is 14 px when `S` is 3, otherwise `14×S/3`.
+
+## World
+
+`World` holds the map, units, projectiles, buildings, pickups, vehicles, camera, objectives, and rng.
+
+`Unit` has id, name, rank, side (player, enemy, civilian), hp (alive, wounded, dead), position, velocity, facing, water flag, squad, vehicle, and kills.
+
+Squads are Snake, Eagle, and Panther. Members are in rank order. A squad holds grenades, rockets, and an active flag.
+
+Tiles: grass, tree, waterShallow, waterDeep, ice, quicksand, cliff, bridge, mine.
+
+A building with a door spawns grunts until destroyed. Cap is `maxDoorSpawns` (6). Doors do not spawn grenadiers or rocketeers. A doorless hut is scenery and is not a `destroy_enemy_buildings` target. MG fire does not damage a hut.
+
+A crate holds 4 grenades or 4 rockets (`CrateAmount`). Shooting a crate explodes it.
+
+The only vehicle is the skidoo. A jeep would be the same struct with another skin.
+
+Objectives in use are `kill_all_enemy` and `destroy_enemy_buildings`. `protect_civilians` parses and does not change the phase.
+
+## Combat
+
+Player MG range, rate, and spread come from `GunStatsFor`. Private is 80 px, 8/s, 0.12 rad. General is 150 px, 14/s, 0.02 rad. The steps between are linear. Enemies use the grunt table in `internal/sim/ai.go`, not this curve. Movement, grenades, rockets, and specials do not scale with rank.
+
+`NewEmpty` sets `WoundChance` to `WoundOdds` (0.34). A `World` literal in a test leaves it at 0, so those shots still kill. `rollWound` treats 0 as always kill and 1 as always wound.
+
+An MG hit on a standing man kills him, or wounds him. A wounded man leaves the file, cannot shoot, and squirms on the corpse frame until another MG round, a blast, or a ram finishes him. The yell and the kill point happen on the finish.
+
+Player MG passes through a standing friendly and finishes a wounded friendly. Explosives and rams kill anyone who is not already dead, including the owner.
+
+`Living()` means alive. A wounded enemy still blocks kill-all. The phase is lost when no player is `Living()`.
+
+Shooting a corpse shoves it about one tile. Keep it that short. In `combat.go`, `juggleKick` is 36 px/s along the shot and does not stack past that, `juggleHop` is 64 px/s upward and refreshes, gravity is 420, bounce is 0.28, ground drag is 200, and rest is 12. Corpses do not sink or walk off cliffs. The shadow stays on the ground while the sprite lifts.
+
+Rounds are fast (`MGSpeed` 500). The cone is the miss chance.
+
+## Enemy infantry
+
+There is no pathfinding and no patrol. `steerToward` slides on a blocked axis. Feel constants live in `internal/sim/ai.go`.
+
+Mission 1, and any sandbox (`World.Mission` 0), leaves map grunts posted. They spawn facing east and stay on that tile. `Phase.World` sets `World.Mission` from the phase and marks non-rocketeer enemies `Aggressive` when the mission is 2 or higher.
+
+An aggressive grunt or grenadier closes inside `EnemyChase` (160 px) on line of sight or a heard infantry shot, then stops inside gun range. Rocketeers never close.
+
+Fire contact is `EnemyMGRange` (70) and clear LOS. He turns at `EnemyTurnRate` (4 rad/s). The first round waits until `SpotT` passes `EnemyReact` (0.55 s) plus one jitter of `EnemyReactJitter` (0.15 s), and facing error is inside `EnemyFaceTol` (0.35 rad). Then he fires `EnemyBurst` (3) rounds at `EnemyMGRoF` (4/s), stays silent for `EnemyBurstPause` (0.75 s) while still turning, and repeats. The cone is `EnemyMGSpread` (0.20 rad), not `World.Spread`. Losing range or LOS calls `resetGruntContact`. The next sighting owes a full reaction.
+
+`EnemyHear` is 96 px. An infantry MG round calls `wakeFromMG` and sets `HearID` on an idle posted grunt. An existing `ReactAt` or `HearID` is left alone. `Step` runs AI before fire, so the id latches when the round spawns and `SpotT` advances on the next tick. Hearing alone never fires. Grenades, rockets, and vehicle guns do not wake anyone. A dead shooter with no LOS clears the clock.
+
+Only `spawnDoorGrunt` sets `HasPost`. He walks about `DoorPostTiles` (3) south onto a walkable cell, slides on blocked axes, and does not shoot until he arrives or a step cannot move. The post then clears and `Aggressive` is set, on every mission. Sinking clears the post and does not set `Aggressive`. Enemies loaded from JSON, and a plain `SpawnUnit`, do not take that walk. The pre-placed grunt in `NewHutWorld` is a plain spawn.
+
+A grenadier carries `GrenadierBombs` (2), winds up for `GrenadierWindup` (0.8 s), and waits `GrenadierCooldown` (5 s). Inside `GrenadierMinRange` he uses the grunt gun. Grenades arc over trees. A rocketeer holds still. `RocketeerWindup` is 0.55 s. `RocketRange` is 200. A rocket needs LOS to start the windup.
+
+During a windup he turns at the grunt rate and releases on the first frame inside `EnemyFaceTol`. The opening frame sets the clock and does not snap `Facing`. If the clock ends while he is still turning, `WindHeld` finishes the turn and releases. The windup does not restart.
+
+A player squad you are not controlling uses that same turn, reaction, burst, and pause. Range, rate, and spread stay `GunStatsFor`. He does not hear and does not throw. The active squad fires on the first frame fire is held. `World.Spread == 0` still zeros the parked cone.
+
+Mission 1 grunts are at tiles (17, 3), (1, 5), and (14, 10). The south man starts about 80 px from the squad. The other two are about 193 px out, outside `EnemyHear`, so the opener is three duels.
+
+## Vehicles
+
+`VehicleCapacity` is 8. Hold left to drive. A longer hold is faster, up to `VehicleMaxSpeed` (88) after `VehicleHoldFull` (1.4 s). Grass zeroes velocity on release. Ice keeps a skid (`iceSkidRate`). Right fires the mounted gun when `Armed` is set. Grenades and rockets do not fire from inside. Overlap within `VehicleRamR` (12) kills. Rockets and blasts destroy a skidoo. MG fire does not. Boarding hides the troopers. The enemy lamp is drawn on the same body.
+
+An armed enemy skidoo drops the throttle inside `VehicleMGRange` (110) and outside the ram, turns the hull at `EnemyTurnRate`, then uses the grunt reaction, facing tolerance, burst, and pause at `VehicleMGRoF`. The burst clock is on the driver. An unarmed enemy skidoo still closes and rams. A blocked hull slides on one axis. The player's mounted gun still aims with `vehicleShoot`.
+
+`destroyVehicle` clears `Alive`, kills the crew, and empties `Occupants`.
+
+## Camera and HUD
+
+The view is the playfield. Origin is (`HUDWidth`, 0), so a map as wide as the frame still pans by the strip. `LeaderMargin` is 32. `Camera.Contain` keeps the active leader, or the driven vehicle via `CameraFocus`, inside that margin. Edge scroll uses playfield coordinates.
+
+The strip is opaque. Rank is a `ui/rank-*` flash above the name. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. Arctic grass and tree cells use the snow colour.
+
+## Campaign
+
+Start with 15. Mission 1 deploys 2. After each mission, survivors gain one rank per phase they lived through, capped at General, then 15 recruits join. Every three completed missions, new recruits start one rank higher. Deploy takes the highest rank first. The field never holds more than six. No recruits left is game over.
+
+Save only on Boot Hill after a finished mission, one slot at `userConfig/fannon-codder/save.json`. `Soldier.Kills` is `omitempty`, so an old save still loads.
+
+`campaign.json` plays missions 1–5 (11 phases). After Mission 5, Boot Hill says the campaign continues.
+
+- m01p01 deploy 2, kill-all.
+- m02p01 Bridge Over the River Pie, deploy 3, kill-all. m02p02 Trash Enemy HQ, deploy 3, kill-all and one door hut.
+- m03p01 Blast It's Cold, deploy 4, arctic, ice, cliff, four door huts, scarce crates.
+- m04p01 Beachy Head, deploy 4, five huts, two crates, start grenades 0. m04p02 Pier Pressure, deploy 4, kill-all and four huts, start grenades 2 from here on. m04p03 Village People, deploy 5, civilians, doorless huts, one quicksand. m04p04 Quicksand, deploy 5, pools, mines, grenadiers.
+- m05p01 Valley of Ice, deploy 3, rocketeers, both crate types, start rockets 0. m05p02 Barmy Bazookas, deploy 3. Rocket crate at tile (14, 7). m05p03 My Beautiful Skidoo, deploy 4, player and enemy skidoos, start rockets 1, destroy buildings only.
+
+Sandboxes from `cmd/fannon`: `-cover`, `-river`, `-hut`, `-hazards`, `-skidoo`. `-skip-title` opens Mission 1. The river sandbox shows all three squad colours.
+
+## Ranks and score
+
+Sixteen ranks, Private (0) through General (15), in `internal/campaign/ranks.go`.
+
+One enemy kill is one point for the player trooper who caused it. Grenades, rockets, the skidoo gun, and a ram score. The ram and the mounted gun credit the first living occupant (`vehicleDriver`). Civilians, friendlies, and a non-player owner do not score. `creditKill` is in `combat.go`. Phase kills fold into `Soldier.Kills` when the phase is tallied.
+
+Boot Hill opens the table with H (`drawHeroes`). While it is open, click or Enter closes it. The table shows the best `HeroShow` (12), living or fallen, by kills, then rank, then name. A tie prefers the living man. The fallen list keeps `HeroKeep` (64). The same name keeps the higher score. Logic is `internal/campaign/heroes.go`.
+
+## Hazards and water
+
+Civilians wander and do not shoot. Killing one does not fail the phase. Quicksand traps on entry and kills after `SinkTime` (2 s). A mine explodes like a grenade when a living unit's centre steps on it, then the tile is grass.
+
+Shallow water is `ShallowSpeedMul` (0.5) and can still fire. Deep water is `DeepSpeedMul` (1/3). Swimmers cannot fire or throw. A bridge is land. Ice is grass speed on foot. The skidoo skids.
+
+## Pause and quit
+
+P, or the 16 px strip button at (20, 238), toggles `Battle.paused`. Pause stops orders, `World.Step`, `render.Advance`, and the skidoo hum. The playfield says PAUSED. The button gets a white stroke. Entering pause clears fire and drive. A finished phase does not pause. There is no pause sheet. The icon is two cream bars.
+
+Escape opens a quit prompt on every screen and freezes it. Y or Enter ends the process. N or a second Escape cancels. Escape does not leave the phase. A cleared phase and a wipe leave on click or Enter.
+
+## Audio
+
+PCM is 16-bit stereo at 44100 Hz. One mixer per process. A second `NewMixer` panics. A kind with no clip is silent. Ebitengine players have no playback-rate API.
+
+`Cue` is kind, world position, and id. The battle calls `SetListener` at `CameraFocus`, or the playfield centre when there is no living leader, then `PlayCues(TakeCues())`. A world cue is full inside `HearNear` (48 px) and silent at `HearFar` (320 px). Past that it takes no voice. There is no pan. `PlayKind` ignores position.
+
+| Kind | Emit |
+| --- | --- |
+| `CueGun` | `addMG`, on foot and mounted |
+| `CueBoom` | once at the top of `explode` |
+| `CueDeath` | `kill`, and only on the living-to-dead step. Pitch is `id % 3` |
+| `CueThrow` | `launchGrenade` |
+| `CueRocket` | `launchRocket`, at the tube |
+| `CueSplash` | on-foot `InWater` goes false to true, and the unit was already sampled. Standing in water, shallow to deep, and leaving are silent |
+| `CueSink` | quicksand first sticks. The death is still `CueDeath` |
+| `CuePickup` | a player takes a crate |
+| `CueBoard`, `CueExit` | `enterVehicle`, `dismount`, once for the squad |
+
+`CueClick`, `CueWin`, and `CueFail` are `PlayKind` only. The title and the briefing click. A clear plays the win sting. A wipe plays the fail sting. Boot Hill and the strip icons are silent. The world never emits those three.
+
+The skidoo hum is one looping voice on the mixer. It plays while the listener is in a living occupied skidoo, or the nearest other occupied skidoo is inside `HearFar`. His own vehicle wins. Empty, destroyed, or out of range is silent. Pause stops it. Pitch runs from `EngineIdlePitch` (0.75) to `EngineTopPitch` (1.45) at `VehicleMaxSpeed`. A `loopReader` resamples a synthesised cycle. Scene changes call `SetEngine(false, 0)` before `Leave`.
+
+Clips are original synthesis. There is no title tune.
+
+## Sprites
+
+`internal/render` embeds `assets/art`. The key is the path without the extension. The style board has no JSON, so it is not drawn. Cell size, anchor, fps, loop, rows, and mirrors are in the JSON beside each PNG. A mirror names a stored row and is not stored.
+
+Directions are E, SE, S, SW, W, NW, N, NE. Facing 0 is east, π/2 is south, π is west, and −π/2 is north. Stored rows are E, SE, S, N, NE. The runtime mirrors E to W, SE to SW, and NE to NW.
+
+The anchor sits on the sim point. Ground frames pin their top-left to the cell. `drawTopLeft` bleeds a 1 px edge, disables mipmaps, and overlaps one device pixel. Ebitengine v2.10.2 `DrawImageOptions` has no wrap address, and linear filtering otherwise samples the atlas padding.
+
+Draw order: ground, a soft oval under each painted body, then trees, huts, crates, men, and vehicles by foot Y, then grenades, tracers, and blasts, then birds, then the HUD and the pointer. Rectangles cast no oval.
+
+Pose, first match: wounded (corpse frame, rocked), death (once, then the corpse), sink (scrubbed by `Sink/SinkTime`), swim, throw (the windup, or 0.25 s after launch), shoot (`SinceShot < 0.12`), walk (faster than 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up in `Step` and do not change combat. Death time is per unit id in the renderer. The battle `Update` calls `render.Advance` after `Step`.
+
+A missing walk sheet uses that actor's idle. Any other missing sheet, or a facing the sheet does not store, draws the coloured rectangle.
+
+Actor keys: `snake`, `eagle`, `panther`, `grunt`, `grenadier`, `rocketeer`, `civilian`. Eagle and Panther are Snake recolors. Enemies have no walk sheet.
+
+Ground sheets are 128×128. Grass and snow keep extra frames on disk. The battle draws frame 0 only. Arctic terrain uses snow for grass and tree cells. Shallow and deep water, quicksand, and ice do loop. Neighbours of those use `SceneryFrame` (`tx*3+ty*5`). Cliff, ramp, and bridge are one frame. The mine is a short glint on grass.
+
+`tree/sway` stores three silhouettes on rows E, SE, and S. The row is `(tx+ty*2) mod 3`. The anchor is the trunk foot.
+
+Flavour in `internal/render/flavour.go` does not block movement or fire. Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos.
+
+`fx/blast` is the only explosion, about 0.2 s. The sim marker still lasts `blastTime` (0.35 s). Grenades, rockets, mines, and crates share it.
+
+Menus `menu/title`, `menu/briefing`, and `menu/hill` are one frame pinned to the top-left of the 320×256 frame. The title painting includes the words Fannon Codder. Boot Hill draws `snake/idle` facing south-east for the queue and one `menu/grave` per death. Save and load use the old click rectangles. Names, the mission line, and the briefing copy stay text.
+
+The exit mark on a skidoo you already occupy stays the small bitmap.
+
+## Accepted picture limits
+
+Leave these unless asked. They are not open bugs.
+
+- Snake swim is a smoother brush than idle. North and north-east swim repeat a pose. The north sink still shows the slung rifle.
+- Enemy idle is a one-pixel bob. Swim is one side pose on every row. The rocketeer tube is the east painting on every row. Grenadier north-east reuses south-east. Grenadier and rocketeer shoot, death, swim, and sink reuse the grunt body.
+- Civilian front and back walks alternate one stride with the standing pose. The north-east corpse reuses the south-east body.
+- Skidoo north and south are top-down, and those ski posts are blockier than the side views.
+- `menu/load` still has a thin warm edge from keying.

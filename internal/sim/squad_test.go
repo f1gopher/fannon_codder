@@ -44,6 +44,67 @@ func TestSplitThreeIntoTwoPlusOne(t *testing.T) {
 	}
 }
 
+func TestSplitDoesNotRejoinUntilOrderedClose(t *testing.T) {
+	w := threeMan()
+	middle := w.ActiveSquad().MemberIDs[1]
+	w.ToggleSelect(middle)
+	if !w.Split() {
+		t.Fatal("split failed")
+	}
+	// The man behind the split closes the file and walks onto him.
+	for i := 0; i < 90; i++ {
+		w.Step(1.0 / 60)
+	}
+	if len(w.Squads) != 2 {
+		t.Fatal("closing the file must not merge the squads")
+	}
+	eagle := w.Unit(w.SquadByID(SquadEagle).LeaderID)
+	snake := w.ActiveSquad()
+	w.CommandMove(eagle.X, eagle.Y, true)
+	leader := w.Unit(snake.LeaderID)
+	leader.X, leader.Y = eagle.X, eagle.Y
+	w.Step(1.0 / 60)
+	if len(w.Squads) != 1 {
+		t.Fatal("a click-move onto the other squad should merge")
+	}
+}
+
+func TestMovingOneSquadStaysSplit(t *testing.T) {
+	w := threeMan()
+	middle := w.ActiveSquad().MemberIDs[1]
+	w.ToggleSelect(middle)
+	if !w.Split() {
+		t.Fatal("split failed")
+	}
+	for i := 0; i < 90; i++ {
+		w.Step(1.0 / 60)
+	}
+	eagle := w.SquadByID(SquadEagle)
+	leader := w.Unit(w.ActiveSquad().LeaderID)
+	w.CommandMove(leader.X+80, leader.Y, true)
+	if w.ActiveSquad().JoinSeek {
+		t.Fatal("a move away from the other squad must not arm a join")
+	}
+	for i := 0; i < 180; i++ {
+		w.Step(1.0 / 60)
+	}
+	if len(w.Squads) != 2 || w.SquadByID(SquadEagle) == nil {
+		t.Fatal("moving one squad must leave the other squad in place")
+	}
+	if eagle.HasDest {
+		t.Fatal("the squad left behind should hold")
+	}
+	moved := false
+	for _, id := range w.ActiveSquad().MemberIDs {
+		if w.Unit(id).X > 40 {
+			moved = true
+		}
+	}
+	if !moved {
+		t.Fatal("the ordered squad should have moved")
+	}
+}
+
 func TestSplitRefusesEmptyOrWholeSquad(t *testing.T) {
 	w := threeMan()
 	if w.Split() {
@@ -102,9 +163,10 @@ func TestMergeUnderActiveSquad(t *testing.T) {
 	snake := w.SquadByID(SquadSnake)
 	eagle.Grenades = 2
 	snake.Grenades = 3
-	// Walk the active squad onto the guard: he joins Snake, Snake stays in charge.
+	// A click-move onto the guard: he joins Snake, Snake stays in charge.
 	g := w.Unit(guard)
 	leader := w.Unit(snake.LeaderID)
+	w.CommandMove(g.X, g.Y, true)
 	g.X, g.Y = leader.X, leader.Y
 	w.Step(1.0 / 60)
 	if len(w.Squads) != 1 {
@@ -135,6 +197,7 @@ func TestMergeFollowsActiveSquad(t *testing.T) {
 	}
 	g := w.Unit(guard)
 	other := w.Unit(w.SquadByID(SquadSnake).LeaderID)
+	w.CommandMove(other.X, other.Y, true)
 	other.X, other.Y = g.X, g.Y
 	w.Step(1.0 / 60)
 	s := w.ActiveSquad()

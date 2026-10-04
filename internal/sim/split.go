@@ -40,6 +40,7 @@ func (w *World) SetActiveSquad(id SquadID) bool {
 	for i := range w.Squads {
 		if w.Squads[i].Active && i != idx {
 			w.Squads[i].HasDest = false
+			w.Squads[i].JoinSeek = false
 		}
 		w.Squads[i].Active = i == idx
 	}
@@ -79,6 +80,9 @@ func (w *World) Split() bool {
 	}
 	if len(moving) == 0 || len(stay) == 0 {
 		return false
+	}
+	for i := range w.Squads {
+		w.Squads[i].JoinSeek = false
 	}
 	gStay, gGo := shareAmmo(active.Grenades, w.GrenadeShare)
 	rStay, rGo := shareAmmo(active.Rockets, w.RocketShare)
@@ -164,7 +168,7 @@ func (w *World) stepMerge() {
 			if s.ID == dstID {
 				continue
 			}
-			if w.squadsTouch(active, s) {
+			if active.JoinSeek && w.squadsTouch(active, s) {
 				srcID = s.ID
 				found = true
 				break
@@ -175,6 +179,27 @@ func (w *World) stepMerge() {
 		}
 		w.absorbInto(dstID, srcID)
 	}
+}
+
+// orderJoins reports whether (x,y) is aimed at a living member of some
+// squad other than s. Only that kind of order may combine squads.
+func (w *World) orderJoins(s *Squad, x, y float64) bool {
+	for i := range w.Squads {
+		other := &w.Squads[i]
+		if other.ID == s.ID {
+			continue
+		}
+		for _, id := range other.MemberIDs {
+			u := w.Unit(id)
+			if u == nil || !u.Living() {
+				continue
+			}
+			if hypot(u.X-x, u.Y-y) <= JoinDestRadius {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (w *World) squadsTouch(a, b *Squad) bool {

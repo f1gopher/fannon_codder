@@ -312,6 +312,7 @@ func (w *World) CommandMove(x, y float64, newOrder bool) {
 	s.HasDest = true
 	s.DestX = x
 	s.DestY = y
+	s.JoinSeek = w.orderJoins(s, x, y)
 	if newOrder {
 		w.BoardID = 0
 		if l := w.Unit(s.LeaderID); l != nil {
@@ -332,6 +333,9 @@ func (w *World) Step(dt float64) {
 	}
 	w.tryCompleteBoard()
 	w.stepMerge()
+	if s := w.ActiveSquad(); s != nil && !s.HasDest {
+		s.JoinSeek = false
+	}
 	w.stepPickups()
 	w.refreshTerrain()
 	w.stepCivilians(dt)

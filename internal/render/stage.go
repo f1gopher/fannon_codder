@@ -1,8 +1,10 @@
 package render
 
 import (
+	"image"
 	"math"
 	"sort"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -266,19 +268,70 @@ func DrawSpriteAngle(dst, img *ebiten.Image, anchorX, anchorY int, x, y, angle f
 
 // drawTopLeft pins a ground frame to the cell. Seamless tiles keep anchor
 // out of it; a wrong anchor would open a seam.
+//
+// Shrinking with mipmaps averages the atlas's transparent padding into the
+// edge texels. The battlefield fill is a brighter green than the grass, so
+// that fringe reads as a grid. The bled cel keeps a copy of the edge just
+// outside the frame, mipmaps stay off, and the tile overlaps by one device
+// pixel so a crack cannot open.
 func drawTopLeft(dst, img *ebiten.Image, x, y float64) {
 	if dst == nil || img == nil {
 		return
 	}
+	img = bled(img)
 	ps := pictureScale
 	if ps <= 0 {
 		ps = 1
 	}
+	sc := SpriteScale()
+	fw := float64(img.Bounds().Dx())
+	fh := float64(img.Bounds().Dy())
+	sx, sy := sc, sc
+	if fw > 0 {
+		sx = (fw*sc + 1) / fw
+	}
+	if fh > 0 {
+		sy = (fh*sc + 1) / fh
+	}
 	op := &ebiten.DrawImageOptions{}
 	op.Filter = ebiten.FilterLinear
-	op.GeoM.Scale(SpriteScale(), SpriteScale())
-	op.GeoM.Translate(x*ps, y*ps)
+	op.DisableMipmaps = true
+	op.GeoM.Scale(sx, sy)
+	op.GeoM.Translate(x*ps-0.5, y*ps-0.5)
 	dst.DrawImage(img, op)
+}
+
+// bled is the same frame with a one-pixel copy of each edge outside it.
+// Draw the returned subimage; a linear sample then stays on grass.
+var bledCache sync.Map
+
+func bled(img *ebiten.Image) *ebiten.Image {
+	if v, ok := bledCache.Load(img); ok {
+		return v.(*ebiten.Image)
+	}
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return img
+	}
+	pad := ebiten.NewImage(w+2, h+2)
+	put := func(src *ebiten.Image, x, y float64) {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(x, y)
+		pad.DrawImage(src, op)
+	}
+	put(img, 1, 1)
+	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Min.X+1, b.Max.Y)).(*ebiten.Image), 0, 1)
+	put(img.SubImage(image.Rect(b.Max.X-1, b.Min.Y, b.Max.X, b.Max.Y)).(*ebiten.Image), float64(w+1), 1)
+	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Max.X, b.Min.Y+1)).(*ebiten.Image), 1, 0)
+	put(img.SubImage(image.Rect(b.Min.X, b.Max.Y-1, b.Max.X, b.Max.Y)).(*ebiten.Image), 1, float64(h+1))
+	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Min.X+1, b.Min.Y+1)).(*ebiten.Image), 0, 0)
+	put(img.SubImage(image.Rect(b.Max.X-1, b.Min.Y, b.Max.X, b.Min.Y+1)).(*ebiten.Image), float64(w+1), 0)
+	put(img.SubImage(image.Rect(b.Min.X, b.Max.Y-1, b.Min.X+1, b.Max.Y)).(*ebiten.Image), 0, float64(h+1))
+	put(img.SubImage(image.Rect(b.Max.X-1, b.Max.Y-1, b.Max.X, b.Max.Y)).(*ebiten.Image), float64(w+1), float64(h+1))
+	inner := pad.SubImage(image.Rect(1, 1, w+1, h+1)).(*ebiten.Image)
+	bledCache.Store(img, inner)
+	return inner
 }
 
 func drawLoopSheet(dst *ebiten.Image, sh *Sheet, tx, ty int, x, y float64) bool {

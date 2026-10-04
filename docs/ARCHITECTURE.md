@@ -198,7 +198,7 @@ Flavour in `internal/render/flavour.go` does not block movement or fire. Birds c
 
 Menus `menu/title`, `menu/briefing`, and `menu/hill` are one frame pinned to the top-left of the 320×256 frame. The title painting includes the words Fannon Codder. Boot Hill draws `snake/idle` facing south-east for the queue and one `menu/grave` per death. Save and load use the old click rectangles. Names, the mission line, and the briefing copy stay text.
 
-The exit mark on a skidoo you already occupy stays the small bitmap.
+The pointer and the board cursor are tinted gold so they stay readable on snow. The crosshair, shown while firing, is red. The black outline is left alone. The exit mark on a skidoo you already occupy stays the small bitmap, in the same gold.
 
 ## Accepted picture limits
 

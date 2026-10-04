@@ -14,7 +14,9 @@ const (
 )
 
 var (
-	pointerWhite = color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+	// Gold reads on snow. Pure yellow is almost as bright as the ground.
+	pointerInk   = color.RGBA{R: 0xff, G: 0xc4, B: 0x00, A: 0xff}
+	pointerAim   = color.RGBA{R: 0xff, G: 0x20, B: 0x20, A: 0xff}
 	pointerBlack = color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff}
 )
 
@@ -46,8 +48,23 @@ func drawUIAt(dst *ebiten.Image, key string, x, y float64) bool {
 	if !ok {
 		return false
 	}
-	DrawSprite(dst, img, ax, ay, false, x, y)
+	if c, ok := cursorTint(key); ok {
+		DrawSpriteTint(dst, img, ax, ay, x, y, c)
+	} else {
+		DrawSprite(dst, img, ax, ay, false, x, y)
+	}
 	return true
+}
+
+func cursorTint(key string) (color.Color, bool) {
+	switch key {
+	case "ui/crosshair":
+		return pointerAim, true
+	case "ui/pointer", "ui/board":
+		return pointerInk, true
+	default:
+		return nil, false
+	}
 }
 
 func uiCel(key string) (img *ebiten.Image, ax, ay int, ok bool) {
@@ -76,7 +93,7 @@ func drawBoard(dst *ebiten.Image, x, y int) {
 		{1, 0, 0, 0, 0, 0, 1},
 		{1, 1, 1, 1, 1, 1, 1},
 	}
-	drawBitmap(dst, x-3, y-3, rows)
+	drawBitmap(dst, x-3, y-3, rows, pointerInk)
 }
 
 func drawExit(dst *ebiten.Image, x, y int) {
@@ -89,11 +106,11 @@ func drawExit(dst *ebiten.Image, x, y int) {
 		{1, 0, 0, 0, 0, 0, 1},
 		{1, 1, 1, 1, 1, 1, 1},
 	}
-	drawBitmap(dst, x-3, y-5, rows)
+	drawBitmap(dst, x-3, y-5, rows, pointerInk)
 }
 
 func drawArrow(dst *ebiten.Image, x, y int) {
-	// 7×10 tip at (x,y), white with a 1px black outline.
+	// 7×10 tip at (x,y), gold with a 1px black outline.
 	rows := [][]int{
 		{1, 0, 0, 0, 0, 0, 0},
 		{1, 1, 0, 0, 0, 0, 0},
@@ -106,7 +123,7 @@ func drawArrow(dst *ebiten.Image, x, y int) {
 		{1, 0, 1, 1, 0, 0, 0},
 		{0, 0, 0, 1, 1, 0, 0},
 	}
-	drawBitmap(dst, x, y, rows)
+	drawBitmap(dst, x, y, rows, pointerInk)
 }
 
 func drawCrosshair(dst *ebiten.Image, x, y int) {
@@ -122,10 +139,10 @@ func drawCrosshair(dst *ebiten.Image, x, y int) {
 		{0, 0, 0, 0, 1, 0, 0, 0, 0},
 		{0, 0, 0, 0, 1, 0, 0, 0, 0},
 	}
-	drawBitmap(dst, x-4, y-4, rows)
+	drawBitmap(dst, x-4, y-4, rows, pointerAim)
 }
 
-func drawBitmap(dst *ebiten.Image, ox, oy int, rows [][]int) {
+func drawBitmap(dst *ebiten.Image, ox, oy int, rows [][]int, ink color.Color) {
 	h := len(rows)
 	for j, row := range rows {
 		for i, v := range row {
@@ -140,7 +157,7 @@ func drawBitmap(dst *ebiten.Image, ox, oy int, rows [][]int) {
 					fillRect(dst, nx, ny, 1, 1, pointerBlack)
 				}
 			}
-			fillRect(dst, px, py, 1, 1, pointerWhite)
+			fillRect(dst, px, py, 1, 1, ink)
 		}
 	}
 }

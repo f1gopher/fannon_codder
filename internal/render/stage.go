@@ -2,6 +2,7 @@ package render
 
 import (
 	"image"
+	"image/color"
 	"math"
 	"sort"
 	"sync"
@@ -234,6 +235,16 @@ func DrawSheet(dst *ebiten.Image, key, dir string, frame int, x, y float64) bool
 // DrawSprite puts the cel's anchor on a logical screen point. mirror flips
 // the cel around that anchor. The filter is linear.
 func DrawSprite(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y float64) {
+	drawSprite(dst, img, anchorX, anchorY, mirror, x, y, color.White)
+}
+
+// DrawSpriteTint is DrawSprite with a multiply tint. White paint takes the
+// colour. A black outline stays black.
+func DrawSpriteTint(dst, img *ebiten.Image, anchorX, anchorY int, x, y float64, c color.Color) {
+	drawSprite(dst, img, anchorX, anchorY, false, x, y, c)
+}
+
+func drawSprite(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y float64, c color.Color) {
 	if dst == nil || img == nil {
 		return
 	}
@@ -254,6 +265,7 @@ func DrawSprite(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y 
 	op.GeoM.Translate(-float64(anchorX), -float64(anchorY))
 	op.GeoM.Scale(sx, sc)
 	op.GeoM.Translate(x*ps, y*ps)
+	op.ColorScale.ScaleWithColor(c)
 	dst.DrawImage(img, op)
 }
 

@@ -48,7 +48,7 @@ A painted sheet draws at `S/8` with a linear filter. 8 is source pixels per worl
 
 `Unit` has id, name, rank, side (player, enemy, civilian), hp (alive, wounded, dead), position, velocity, facing, water flag, squad, vehicle, and kills.
 
-Squads are Snake, Eagle, and Panther. Members are in rank order. A squad holds grenades, rockets, and an active flag.
+Squads are Snake, Eagle, and Panther. Members are in rank order. A squad holds grenades, rockets, and an active flag. `SpawnPlayerSquad` stores the given positions as the file trail, so the men stay in that line until a new move order. Followers stand `FileSpacing` (10) apart along it.
 
 Tiles: grass, tree, waterShallow, waterDeep, ice, quicksand, cliff, bridge, mine.
 

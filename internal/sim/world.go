@@ -237,6 +237,13 @@ func (w *World) SpawnPlayerSquad(id SquadID, positions []Vec2) *Squad {
 	if len(s.MemberIDs) > 0 {
 		s.LeaderID = s.MemberIDs[0]
 	}
+	// Oldest crumb first, leader last, so an idle file stays on these spots.
+	if len(positions) > 1 {
+		s.Trail = make([]Vec2, len(positions))
+		for i, p := range positions {
+			s.Trail[len(positions)-1-i] = p
+		}
+	}
 	w.Squads = append(w.Squads, s)
 	return &w.Squads[len(w.Squads)-1]
 }

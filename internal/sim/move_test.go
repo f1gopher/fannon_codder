@@ -38,6 +38,23 @@ func TestFollowerStaysBehindNotStacked(t *testing.T) {
 	}
 }
 
+func TestSpawnFileHoldsWithoutAMove(t *testing.T) {
+	w := twoManWorld(Vec2{X: 40, Y: 40}, Vec2{X: 40 - FileSpacing, Y: 40})
+	for i := 0; i < 120; i++ {
+		w.Step(1.0 / 60)
+	}
+	s := w.ActiveSquad()
+	leader := w.Unit(s.LeaderID)
+	follower := w.Unit(s.MemberIDs[1])
+	if hypot(leader.X-40, leader.Y-40) > 0.1 {
+		t.Fatalf("leader drifted to (%v,%v)", leader.X, leader.Y)
+	}
+	d := hypot(follower.X-leader.X, follower.Y-leader.Y)
+	if d < FileSpacing*0.8 {
+		t.Fatalf("spawn stacked the file, distance=%v", d)
+	}
+}
+
 func TestFileAlongPathNotJustOffset(t *testing.T) {
 	// Walk south, then the follower should also be on that north-south line.
 	w := twoManWorld(Vec2{X: 40, Y: 40}, Vec2{X: 40, Y: 40 - FileSpacing})

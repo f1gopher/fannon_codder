@@ -16,6 +16,7 @@ type World struct {
 	Pickups     []Pickup
 	Grenades    []Grenade
 	Explosions  []Explosion
+	Roofs       []Roof
 	Vehicles    []Vehicle
 	Cues        []Cue
 	AimX, AimY  float64
@@ -356,6 +357,7 @@ func (w *World) Step(dt float64) {
 	w.stepBodies(dt)
 	w.stepGrenades(dt)
 	w.stepSpawners(dt)
+	w.stepRoofs(dt)
 	w.stepBlasts(dt)
 	w.evaluateObjectives()
 	w.stepAnimClocks(dt)

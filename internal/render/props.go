@@ -98,14 +98,35 @@ func Blasts(dst *ebiten.Image, w *sim.World) {
 	for i := range w.Explosions {
 		e := &w.Explosions[i]
 		if sh != nil && sheetDur > 0 {
-			// The sim marker outlives the painting. After the last frame, draw nothing.
-			if e.Age >= sheetDur {
+			life := e.Life
+			if life <= 0 {
+				life = sheetDur
+			}
+			// A plain marker outlives the painting. A shed blast keeps the
+			// sheet going for Life, looping when asked.
+			if e.Life <= 0 && e.Age >= sheetDur {
 				continue
 			}
+			if e.Age >= life {
+				continue
+			}
+			rate := e.Rate
+			if rate <= 0 {
+				rate = 1
+			}
 			sx := cam.ScreenX(e.X)
-			sy := cam.ScreenY(e.Y)
-			frame := FrameAt(e.Age, sh.FPS, sh.Frames, false)
-			if drawStill(dst, sh, frame, sx, sy, 0, false) {
+			sy := cam.ScreenY(e.Y - e.Age*e.Lift)
+			frame := FrameAt(e.Age*rate, sh.FPS, sh.Frames, e.Loop)
+			scale := e.Scale
+			if scale <= 0 {
+				scale = 1
+			}
+			if drawBlast(dst, sh, frame, sx, sy, scale) {
+				if scale > 1 {
+					// A second, smaller boil so the shed fireball reads thicker.
+					inner := FrameAt(e.Age*rate+0.08, sh.FPS, sh.Frames, true)
+					drawBlast(dst, sh, inner, sx, sy-6, scale*0.62)
+				}
 				continue
 			}
 		}
@@ -121,6 +142,32 @@ func Blasts(dst *ebiten.Image, w *sim.World) {
 		fillRectF(dst, x, y, 1, s, blastFill)
 		fillRectF(dst, x+s, y, 1, s, blastFill)
 	}
+}
+
+// drawBlast paints one explosion frame. scale is 1 for a grenade.
+func drawBlast(dst *ebiten.Image, sh *Sheet, frame int, x, y, scale float64) bool {
+	if sh == nil || scale <= 0 {
+		return false
+	}
+	img, ok := sh.still(frame)
+	if !ok || img == nil {
+		return false
+	}
+	if spriteHook != nil {
+		spriteHook(img, false)
+	}
+	sc := SpriteScale() * scale
+	ps := pictureScale
+	if ps <= 0 {
+		ps = 1
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterLinear
+	op.GeoM.Translate(-float64(sh.AnchorX), -float64(sh.AnchorY))
+	op.GeoM.Scale(sc, sc)
+	op.GeoM.Translate(x*ps, y*ps)
+	dst.DrawImage(img, op)
+	return true
 }
 
 // drawStill paints one stored frame. spin rotates the cel clockwise so a

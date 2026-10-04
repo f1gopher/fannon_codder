@@ -1,7 +1,7 @@
 package sim
 
 // Settle keeps pictures that were already moving after the phase ends:
-// shots and rockets in the air, grenades, blasts, a throw that had started,
+// shots and rockets in the air, grenades, shed roofs, blasts, a throw that had started,
 // a skidding vehicle, hopping bodies, and the shoot and throw clocks.
 // It does not take orders, and it does not start new fire or a new windup.
 func (w *World) Settle(dt float64) {
@@ -11,6 +11,7 @@ func (w *World) Settle(dt float64) {
 	w.finishWindups(dt)
 	w.stepProjectiles(dt)
 	w.stepGrenades(dt)
+	w.stepRoofs(dt)
 	w.stepBlasts(dt)
 	w.stepBodies(dt)
 	w.coastVehicles(dt)
@@ -26,6 +27,11 @@ func (w *World) Pending() bool {
 	}
 	if len(w.Grenades) > 0 || len(w.Projectiles) > 0 {
 		return true
+	}
+	for i := range w.Roofs {
+		if w.Roofs[i].Flying {
+			return true
+		}
 	}
 	for i := range w.Units {
 		u := &w.Units[i]

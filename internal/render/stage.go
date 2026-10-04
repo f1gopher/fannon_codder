@@ -453,6 +453,9 @@ func collectBodies(w *sim.World, arctic bool) []body {
 		}
 		bodies = append(bodies, buildingBody(cam, b))
 	}
+	for i := range w.Roofs {
+		bodies = append(bodies, roofBody(cam, w.Roofs[i]))
+	}
 	for i := range w.Pickups {
 		p := w.Pickups[i]
 		if !p.Alive {
@@ -576,6 +579,81 @@ func buildingBody(cam sim.Camera, b sim.Building) body {
 		return body{y: y, draw: fallback}
 	}
 	return spriteBody(y, sx, sy, img, sh.AnchorX, sh.AnchorY, false, fallback)
+}
+
+// roofRest is how far the painted eaves sit above the hut foot, in world pixels.
+const roofRest = 16
+
+func roofBody(cam sim.Camera, r sim.Roof) body {
+	u := 1.0
+	if r.Flying {
+		u = r.T / sim.RoofFlight
+		if u > 1 {
+			u = 1
+		}
+	}
+	// Lift off the eaves, then settle onto the ground where it lands.
+	groundY := r.Y - r.Height - roofRest*(1-u)
+	sx := cam.ScreenX(r.X)
+	sy := cam.ScreenY(groundY)
+	key := "hut/plain"
+	if r.Door {
+		key = "hut/door"
+	}
+	sh := activeSheets().Get(key)
+	img, ax, ay := roofImage(sh)
+	if img == nil {
+		return body{y: r.Y, draw: func(dst *ebiten.Image) {
+			fillRectF(dst, sx-10, sy-4, 20, 6, hutFill)
+		}}
+	}
+	angle := r.Angle
+	return body{
+		y: r.Y,
+		shadow: func(dst *ebiten.Image) {
+			castShadow(dst, cam.ScreenX(r.X), cam.ScreenY(r.Y), img)
+		},
+		draw: func(dst *ebiten.Image) {
+			DrawSpriteAngle(dst, img, ax, ay, sx, sy, angle)
+		},
+	}
+}
+
+// roofImage is the eaves and chimney cut from a hut frame. The anchor is the
+// bottom centre of that crop, which is where the roof sat on the walls.
+func roofImage(sh *Sheet) (*ebiten.Image, int, int) {
+	if sh == nil {
+		return nil, 0, 0
+	}
+	full, ok := sh.still(0)
+	if !ok || full == nil {
+		return nil, 0, 0
+	}
+	roofCels.mu.Lock()
+	defer roofCels.mu.Unlock()
+	if roofCels.m == nil {
+		roofCels.m = map[*ebiten.Image]*ebiten.Image{}
+	}
+	if img := roofCels.m[full]; img != nil {
+		return img, roofAnchorX, roofAnchorY
+	}
+	b := full.Bounds()
+	cropped := ebiten.NewImage(224, 176)
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(-float64(b.Min.X+16), -float64(b.Min.Y+8))
+	cropped.DrawImage(full, op)
+	roofCels.m[full] = cropped
+	return cropped, roofAnchorX, roofAnchorY
+}
+
+const (
+	roofAnchorX = 112 // 128 - 16
+	roofAnchorY = 176 // 184 - 8
+)
+
+var roofCels struct {
+	mu sync.Mutex
+	m  map[*ebiten.Image]*ebiten.Image
 }
 
 func crateBody(cam sim.Camera, p sim.Pickup) body {

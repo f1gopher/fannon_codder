@@ -49,11 +49,18 @@ type Grenade struct {
 	Alive   bool
 }
 
-// Explosion is a short blast marker for drawing. Damage is applied immediately.
+// Explosion is a blast marker for drawing. Damage is applied immediately.
+// Scale, Life, Rate, Lift, and Loop are zero on a grenade, rocket, mine, or
+// crate blast. A shed uses them so its fireball lasts longer than the sheet.
 type Explosion struct {
-	X, Y float64
-	R    float64
-	Age  float64
+	X, Y  float64
+	R     float64
+	Age   float64
+	Scale float64
+	Life  float64
+	Rate  float64
+	Lift  float64
+	Loop  bool
 }
 
 // AddGrenadeCrate drops a crate of CrateAmount grenades at a world point.
@@ -213,7 +220,11 @@ func (w *World) stepBlasts(dt float64) {
 	for i := range w.Explosions {
 		e := w.Explosions[i]
 		e.Age += dt
-		if e.Age < blastTime {
+		life := e.Life
+		if life <= 0 {
+			life = blastTime
+		}
+		if e.Age < life {
 			out = append(out, e)
 		}
 	}
@@ -254,6 +265,7 @@ func (w *World) explode(x, y float64, ownerID int) {
 		if circleHitsRect(x, y, GrenadeRadius, b.X, b.Y, b.W, b.H) {
 			b.Alive = false
 			b.HP = 0
+			w.launchRoof(b, x, y, ownerID)
 		}
 	}
 	// Enemy fire, bombs, and rockets leave crates for the player.

@@ -81,7 +81,7 @@ Player MG does **not** harm living friendlies. Explosives and vehicles kill ever
 
 Grunts hold the tile they spawned on (facing east). They notice a player only inside gun range with clear LOS. They turn at a limited rate and wait out a short reaction before the first round, then fire a short burst, pause, and repeat. The enemy cone is wider than a Private’s and is not the player’s `World.Spread`. Grenadiers and rocketeers keep their own windups; those windups are not stacked on the grunt reaction. A grenadier’s point-blank MG uses the grunt rules. No pathfinding and no chase. Numbers and the hearing follow-up are Chunks 21–23 in `PLAN.md`.
 
-Inactive player squads still fire as soon as they have a target. Enemy vehicles are a separate rule.
+A squad you are not controlling uses that same turn, reaction, and burst. Range, rate, and cone stay the man's rank gun. He does not hear shots and he does not throw. The squad you are aiming still fires on the frame you hold the button. Enemy vehicles are a separate rule.
 
 ## Camera
 

@@ -49,8 +49,9 @@ One chunk per Grok session. Preamble is in `PLAN.md`.
 - [x] 45 Fire and blasts
 - [x] 46 Pointer and the status strip
 - [x] 47 Title, briefing, Boot Hill
+- [x] 48 Parked squads turn and burst
 
-Chunks 01–47 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. AI still to do is Chunks 48–51 in `PLAN.md`. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left after 51.
+Chunks 01–48 are in. Sound specs are in `PLAN.md` under “Chunks 24–31”. Graphics specs are in `PLAN.md` under “Chunks 32–47”. AI still to do is Chunks 49–51 in `PLAN.md`. The Chunk 33 style board in `assets/art/style/` is accepted. The picture plan is done. The backlog under this file is what is left after 51.
 
 ## Log
 
@@ -258,16 +259,19 @@ Verify: `go test ./...` and `go build ./cmd/fannon`. A new game walks the painte
 
 The load folder still has a thin warm edge where the magenta shadow used to sit. There is no title tune.
 
-## Next — Chunks 48–51
+### Chunk 48 done
+Files: `internal/sim/combat.go`, `internal/sim/squad_test.go`, `docs/ARCHITECTURE.md`, `docs/CHUNKS.md`.
+Verify: `go test ./...`. A squad you are not controlling turns at the grunt rate, waits out the reaction, then fires three rounds and pauses. Range, rate, and cone stay that man's rank. The squad you are aiming still fires on the frame you hold the button. He does not hear shots and he does not throw.
 
-Chunk 23 is in. Specs for the rest are in `PLAN.md`. Do one chunk per session. Grunts stay posted. No chase and no pathfinding.
+## Next — Chunks 49–51
 
-- [ ] 48 Parked squads turn and burst (rank gun, grunt timing)
+Specs are in `PLAN.md`. Do one chunk per session. Grunts stay posted. No chase and no pathfinding.
+
 - [ ] 49 Door grunts walk out and post
 - [ ] 50 Grenadier and rocketeer turn through the windup
 - [ ] 51 Armed enemy skidoo holds a gun line and bursts
 
-Start at 48. A man left on a bridge is the laser you meet on every split.
+Start at 49. A grunt born in a doorway still stands on the step.
 
 ## Backlog
 

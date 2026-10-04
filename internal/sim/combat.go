@@ -69,7 +69,9 @@ func (w *World) stepFire(dt float64) {
 	}
 }
 
-// stepInactiveFire: squads you are not controlling hold and shoot enemies in range.
+// stepInactiveFire: a squad you are not controlling holds, turns, and bursts.
+// Range, rate, and cone stay that man's rank gun. He does not hear shots,
+// and he does not throw. The active squad is stepFire.
 func (w *World) stepInactiveFire(dt float64) {
 	active := w.ActiveSquad()
 	for i := range w.Squads {
@@ -82,14 +84,68 @@ func (w *World) stepInactiveFire(dt float64) {
 			if !w.CanShoot(u) {
 				continue
 			}
-			st := GunStatsFor(u.Rank)
-			tx, ty, ok := w.nearestEnemy(u, st.Range)
-			if !ok {
-				continue
-			}
-			w.shootAt(u, tx-u.X, ty-u.Y, st, dt)
+			w.stepParkedGun(u, dt)
 		}
 	}
+}
+
+// stepParkedGun is the grunt contact clock with GunStatsFor. Losing the
+// enemy, the range, or the line resets the clock. He stays on his tile.
+func (w *World) stepParkedGun(u *Unit, dt float64) {
+	st := GunStatsFor(u.Rank)
+	tx, ty, see := w.nearestEnemy(u, st.Range)
+	if !see {
+		resetGruntContact(u)
+		return
+	}
+	if u.ReactAt == 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		u.ReactAt = EnemyReact + (w.rng.Float64()*2-1)*EnemyReactJitter
+	}
+	u.SpotT += dt
+	w.turnToward(u, tx, ty, dt)
+	if u.SpotT+1e-9 < u.ReactAt {
+		return
+	}
+	// The pause is real time under contact. Facing and the trigger come after,
+	// so a man still turning does not freeze the gap or fire through it.
+	if u.BurstGap > 0 {
+		u.BurstGap -= dt
+		if u.BurstGap > 0 {
+			return
+		}
+		u.BurstGap = 0
+		u.BurstN = 0
+		u.FireCD = 0
+	}
+	if facingError(u, tx, ty) > EnemyFaceTol {
+		return
+	}
+	u.FireCD -= dt
+	if u.FireCD > 0 {
+		return
+	}
+	u.BurstN++
+	if u.BurstN >= EnemyBurst {
+		u.BurstGap = EnemyBurstPause
+		u.FireCD = 0
+	} else {
+		u.FireCD = 1.0 / st.RoF
+	}
+	ang := u.Facing
+	spread := st.Spread
+	if w.Spread == 0 {
+		spread = 0
+	}
+	if spread > 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		ang += (w.rng.Float64()*2 - 1) * spread
+	}
+	w.spawnMG(u, ang, st.Range)
 }
 
 func (w *World) nearestEnemy(u *Unit, maxRange float64) (tx, ty float64, ok bool) {

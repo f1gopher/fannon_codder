@@ -444,12 +444,12 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	}
 	render.HUD(screen, b.world, b.remaining, b.paused)
 	if b.paused && b.world.Status == sim.Playing {
-		render.Text(screen, "PAUSED", 120, 120)
+		render.Notice(screen, "PAUSED")
 	}
 	switch b.world.Status {
 	case sim.Won:
-		render.Text(screen, "PHASE COMPLETE\nClick or Enter", 70, 96)
+		render.Notice(screen, "PHASE COMPLETE", "Click or Enter")
 	case sim.Lost:
-		render.TextCentered(screen, "PHASE FAILED\nClick or Enter")
+		render.Notice(screen, "PHASE FAILED", "Click or Enter")
 	}
 }

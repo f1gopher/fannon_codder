@@ -39,8 +39,6 @@ type Game struct {
 	fbW, fbH   int
 }
 
-var quitPanel = color.RGBA{R: 0x10, G: 0x10, B: 0x10, A: 0xff}
-
 // newShell is the window shell shared by every entry point, including the sandboxes.
 func newShell() *Game {
 	ebiten.SetCursorMode(ebiten.CursorModeHidden)
@@ -208,9 +206,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		kind = render.PointerCrosshair
 	}
 	if g.quit.open {
-		const x, y, w, h = 70, 96, 180, 64
-		render.Rect(screen, x, y, w, h, quitPanel)
-		render.Text(screen, "Quit the game?\n\nY or Enter  quit\nN or Escape  stay", x+8, y+6)
+		render.Notice(screen, "QUIT THE GAME?", "Y or Enter    quit", "N or Escape    stay")
 	}
 	render.Pointer(screen, g.pointer.X, g.pointer.Y, kind)
 }

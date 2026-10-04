@@ -146,7 +146,9 @@ Shallow water is `ShallowSpeedMul` (0.5) and can still fire. Deep water is `Deep
 
 P, or the 16 px strip button at (20, 238), toggles `Battle.paused`. Pause stops orders, `World.Step`, `render.Advance`, and the skidoo hum. The playfield says PAUSED. The button gets a white stroke. Entering pause clears fire and drive. A finished phase does not pause. There is no pause sheet. The icon is two cream bars.
 
-Escape opens a quit prompt on every screen and freezes it. Y or Enter ends the process. N or a second Escape cancels. Escape does not leave the phase. A cleared phase and a wipe leave on click or Enter. A wipe draws PHASE FAILED in the middle of the frame.
+Escape opens a quit prompt on every screen and freezes it. Y or Enter ends the process. N or a second Escape cancels. Escape does not leave the phase. A cleared phase and a wipe leave on click or Enter.
+
+Pause, the quit prompt, PHASE COMPLETE, and PHASE FAILED share `render.Notice`. It draws `ui/notice`, a painted olive plaque with a cream rim, and cream letters with an olive edge, in the middle of the frame. The first line is the headline. A missing plaque is a flat olive fill. The quit lines are QUIT THE GAME?, Y or Enter quit, and N or Escape stay. A clear says PHASE COMPLETE. A wipe says PHASE FAILED. Both add Click or Enter.
 
 ## Audio
 

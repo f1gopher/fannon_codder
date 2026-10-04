@@ -72,6 +72,8 @@ Player MG passes through a standing friendly and finishes a wounded friendly. Ex
 
 `Living()` means alive. A wounded enemy still blocks kill-all. The phase is lost when no player is `Living()`.
 
+When the phase is won or lost, `World.Settle` keeps going what had already started: rounds and rockets in the air, grenades, blasts, a grenade or rocket telegraph, an ice skid, hopping bodies, and the shoot and throw clocks. Men stop walking and nobody starts a new burst. The squad is tallied once those effects can no longer change who lived. Click or Enter finishes anything still in the air, then leaves. The result plaque is up while this plays. The quit prompt still freezes the screen.
+
 Shooting an enemy or civilian corpse shoves it about one tile. A dead player stays put. Keep the shove that short. In `combat.go`, `juggleKick` is 36 px/s along the shot and does not stack past that, `juggleHop` is 64 px/s upward and refreshes, gravity is 420, bounce is 0.28, ground drag is 200, and rest is 12. Three seconds after death (`juggleLife`), further MG hits leave the body still. A hop already in the air finishes. Corpses do not sink or walk off cliffs. The shadow stays on the ground while the sprite lifts.
 
 Rounds are fast (`MGSpeed` 500). The cone is the miss chance.

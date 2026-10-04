@@ -272,7 +272,17 @@ func (b *Battle) Update(h Host) error {
 	}
 	if b.world.Status != sim.Playing {
 		b.paused = false
-		b.settleOnce(b.world.Status == sim.Won)
+		// Shots, blasts, and throws that had already started keep playing.
+		// The squad is tallied once those can no longer change who lived.
+		b.world.Settle(1.0 / TPS)
+		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+			for b.world.Pending() {
+				b.world.Settle(1.0 / TPS)
+			}
+		}
+		if !b.world.Pending() {
+			b.settleOnce(b.world.Status == sim.Won)
+		}
 		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			b.leaveBattle(h, b.world.Status == sim.Won)
 		}

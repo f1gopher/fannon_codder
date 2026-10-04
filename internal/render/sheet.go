@@ -68,7 +68,7 @@ type Library struct {
 // Props use tree/sway, hut/door, hut/plain, crate/grenade, crate/rocket,
 // skidoo/idle, skidoo/move, prop/scrub, prop/snowman, prop/igloo.
 // Birds use bird/flap (east stored, west mirrored) and cross above the field.
-// Fire uses fx/flash, fx/tracer, fx/grenade, fx/rocket, and fx/blast.
+// Fire uses fx/tracer, fx/grenade, fx/rocket, and fx/blast. fx/flash is unused.
 // The cursor and the status strip use ui/pointer, ui/crosshair, ui/board,
 // ui/grenade, ui/rocket, ui/foot, ui/vehicle, ui/map, ui/mark-snake,
 // ui/mark-eagle, ui/mark-panther, and ui/rank-* (one flash per player rank).

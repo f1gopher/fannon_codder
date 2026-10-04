@@ -182,7 +182,7 @@ The anchor sits on the sim point. Ground frames pin their top-left to the cell. 
 
 Draw order: ground, a soft oval under each painted body, then trees, huts, crates, men, and vehicles by foot Y, then grenades, tracers, and blasts, then birds, then the HUD and the pointer. Rectangles cast no oval.
 
-Pose, first match: wounded (corpse frame, rocked), death (once, then the corpse), sink (scrubbed by `Sink/SinkTime`), swim, throw (the windup, or 0.25 s after launch), shoot (`SinceShot < 0.12`), walk (faster than 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up in `Step` and do not change combat. Death time is per unit id in the renderer. The battle `Update` calls `render.Advance` after `Step`.
+Pose, first match: wounded (corpse frame, rocked), death (once, then the corpse), sink (scrubbed by `Sink/SinkTime`), swim, throw (the windup, or 0.25 s after launch), shoot (`SinceShot < 0.12`), walk (faster than 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up in `Step` and do not change combat. Gunfire draws no muzzle flash, on foot or mounted. Death time is per unit id in the renderer. The battle `Update` calls `render.Advance` after `Step`.
 
 A missing walk sheet uses that actor's idle. Any other missing sheet, or a facing the sheet does not store, draws the coloured rectangle.
 

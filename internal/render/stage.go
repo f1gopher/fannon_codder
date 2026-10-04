@@ -429,7 +429,6 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 		bodies[i].draw(dst)
 	}
 	drawBirds(dst, w)
-	Muzzles(dst, w)
 	Bombs(dst, w)
 	Projectiles(dst, w)
 	Blasts(dst, w)

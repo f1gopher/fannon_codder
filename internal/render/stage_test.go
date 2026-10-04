@@ -100,6 +100,34 @@ func TestThrowScrub(t *testing.T) {
 	}
 }
 
+func TestBlastOutlineOnlyWhenSheetMissing(t *testing.T) {
+	restoreRender(t)
+	var rects int
+	blastRectHook = func() { rects++ }
+	t.Cleanup(func() { blastRectHook = nil })
+
+	w := sim.NewEmpty()
+	w.Explosions = []sim.Explosion{{X: 40, Y: 40, R: sim.GrenadeRadius, Age: 0.25}}
+	dst := ebiten.NewImage(80, 80)
+	Blasts(dst, w)
+	if rects != 0 {
+		t.Fatal("a finished blast sheet still drew the orange outline")
+	}
+
+	rects = 0
+	w.Explosions[0].Age = 0
+	Blasts(dst, w)
+	if rects != 0 {
+		t.Fatal("the blast sheet drew the orange outline over the first frame")
+	}
+
+	SetSheets(&Library{})
+	Blasts(dst, w)
+	if rects != 1 {
+		t.Fatalf("missing blast sheet outlines = %d, want 1", rects)
+	}
+}
+
 func TestWalkingEnemyUsesIdle(t *testing.T) {
 	restoreRender(t)
 	SetPictureScale(1)

@@ -22,6 +22,9 @@ var (
 	enemyLamp   = color.RGBA{R: 0xe0, G: 0x28, B: 0x28, A: 0xff}
 )
 
+// blastRectHook counts the missing-sheet blast outline. Tests use it.
+var blastRectHook func()
+
 func drawBuildingRect(dst *ebiten.Image, cam sim.Camera, b sim.Building) {
 	x := cam.ScreenX(b.X)
 	y := cam.ScreenY(b.Y)
@@ -87,13 +90,18 @@ func Blasts(dst *ebiten.Image, w *sim.World) {
 		return
 	}
 	cam := w.Camera
+	sh := activeSheets().Get("fx/blast")
+	sheetDur := 0.0
+	if sh != nil && sh.FPS > 0 {
+		sheetDur = float64(sh.Frames) / sh.FPS
+	}
 	for i := range w.Explosions {
 		e := &w.Explosions[i]
-		r := e.R
-		x := cam.ScreenX(e.X) - r
-		y := cam.ScreenY(e.Y) - r
-		sh := activeSheets().Get("fx/blast")
-		if sh != nil && sh.FPS > 0 && e.Age < float64(sh.Frames)/sh.FPS {
+		if sh != nil && sheetDur > 0 {
+			// The sim marker outlives the painting. After the last frame, draw nothing.
+			if e.Age >= sheetDur {
+				continue
+			}
 			sx := cam.ScreenX(e.X)
 			sy := cam.ScreenY(e.Y)
 			frame := FrameAt(e.Age, sh.FPS, sh.Frames, false)
@@ -101,7 +109,13 @@ func Blasts(dst *ebiten.Image, w *sim.World) {
 				continue
 			}
 		}
+		r := e.R
+		x := cam.ScreenX(e.X) - r
+		y := cam.ScreenY(e.Y) - r
 		s := r * 2
+		if blastRectHook != nil {
+			blastRectHook()
+		}
 		fillRectF(dst, x, y, s, 1, blastFill)
 		fillRectF(dst, x, y+s, s, 1, blastFill)
 		fillRectF(dst, x, y, 1, s, blastFill)

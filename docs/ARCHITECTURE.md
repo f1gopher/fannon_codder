@@ -194,7 +194,7 @@ Ground sheets are 128×128. Grass and snow keep extra frames on disk. The battle
 
 Flavour in `internal/render/flavour.go` does not block movement or fire. Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos.
 
-`fx/blast` is the only explosion, about 0.2 s. The sim marker still lasts `blastTime` (0.35 s). Grenades, rockets, mines, and crates share it.
+`fx/blast` is the only explosion, about 0.2 s. The sim marker still lasts `blastTime` (0.35 s) and draws nothing after the last frame. The orange outline is only the missing-sheet fallback. Grenades, rockets, mines, and crates share it.
 
 Menus `menu/title`, `menu/briefing`, and `menu/hill` are one frame pinned to the top-left of the 320×256 frame. The title painting includes the words Fannon Codder. Boot Hill draws `snake/idle` facing south-east for the queue and one `menu/grave` per death. Save and load use the old click rectangles. Names, the mission line, and the briefing copy stay text.
 

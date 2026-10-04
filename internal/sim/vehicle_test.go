@@ -170,6 +170,145 @@ func TestSkidooMountedMG(t *testing.T) {
 	}
 }
 
+func TestArmedEnemySkidooHoldsAGunLine(t *testing.T) {
+	w := NewEmpty()
+	w.Spread = 0
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 260, Y: 0}})
+	v := w.AddSkidoo(Vec2{X: 0, Y: 0}, SideEnemy, true)
+	id := v.ID
+	var entered bool
+	for i := 0; i < 360; i++ {
+		w.Step(1.0 / 60)
+		v = w.vehicleByID(id)
+		d := hypot(v.X-260, v.Y)
+		if d <= VehicleMGRange {
+			entered = true
+			break
+		}
+		if len(w.Projectiles) != 0 {
+			t.Fatal("an armed skidoo should not fire while it is still closing")
+		}
+	}
+	if !entered {
+		t.Fatal("the skidoo should reach gun range")
+	}
+	if d := hypot(v.X-260, v.Y); d <= VehicleRamR {
+		t.Fatalf("gun line overlaps the squad, dist=%v", d)
+	}
+	wait := EnemyReact - EnemyReactJitter - 1.0/60
+	for s := 0.0; s < wait; s += 1.0 / 60 {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		if len(freshVehicleMG(w)) != 0 {
+			t.Fatalf("fired %v into the reaction", s)
+		}
+	}
+	v = w.vehicleByID(id)
+	if d := hypot(v.X-260, v.Y); d > VehicleMGRange || d <= VehicleRamR {
+		t.Fatalf("should hold inside gun range and outside the ram, dist=%v", d)
+	}
+	if !w.Unit(w.ActiveSquad().LeaderID).Living() {
+		t.Fatal("holding the gun line should not ram the squad")
+	}
+
+	var n int
+	for i := 0; i < 180 && n < EnemyBurst; i++ {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		n += len(freshVehicleMG(w))
+	}
+	v = w.vehicleByID(id)
+	g := w.vehicleGunner(v)
+	if n != EnemyBurst {
+		t.Fatalf("got %d rounds in the first chatter, want %d", n, EnemyBurst)
+	}
+	if g.BurstGap != EnemyBurstPause {
+		t.Fatalf("pause %v, want %v", g.BurstGap, EnemyBurstPause)
+	}
+	quiet := 0.0
+	fourth := 0
+	for quiet < EnemyBurstPause+0.5 {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		quiet += 1.0 / 60
+		fourth = len(freshVehicleMG(w))
+		if fourth > 0 {
+			break
+		}
+	}
+	if fourth != 1 {
+		t.Fatalf("expected one round when the pause ended, got %d", fourth)
+	}
+	if math.Abs(quiet-EnemyBurstPause) > 1.0/60 {
+		t.Fatalf("silence lasted %v, want %v", quiet, EnemyBurstPause)
+	}
+	v = w.vehicleByID(id)
+	if hypot(v.VX, v.VY) > 1 {
+		t.Fatalf("the gun line should be stopped, speed=%v", hypot(v.VX, v.VY))
+	}
+}
+
+func TestUnarmedEnemySkidooRams(t *testing.T) {
+	w := NewEmpty()
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 36, Y: 0}})
+	leader := w.ActiveSquad().LeaderID
+	v := w.AddSkidoo(Vec2{X: 0, Y: 0}, SideEnemy, false)
+	id := v.ID
+	dead := false
+	for i := 0; i < 180; i++ {
+		w.Step(1.0 / 60)
+		if !w.Unit(leader).Living() {
+			dead = true
+			break
+		}
+	}
+	if !dead {
+		t.Fatal("an unarmed enemy skidoo should ram the squad")
+	}
+	v = w.vehicleByID(id)
+	if v.X <= 8 {
+		t.Fatalf("unarmed skidoo should close, x=%v", v.X)
+	}
+}
+
+func TestEnemySkidooSlidesOnATree(t *testing.T) {
+	w := NewEmpty()
+	w.Objectives = nil
+	const W, H = 16, 6
+	tiles := make([]Tile, W*H)
+	tiles[2*W+6] = TileTree
+	w.Map = Map{W: W, H: H, Tiles: tiles}
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 220, Y: 40}})
+	v := w.AddSkidoo(Vec2{X: 40, Y: 40}, SideEnemy, true)
+	id := v.ID
+	for i := 0; i < 180; i++ {
+		w.Step(1.0 / 60)
+	}
+	v = w.vehicleByID(id)
+	if v.X >= float64(6*TileSize) {
+		t.Fatalf("hull should not pass through the tree, x=%v", v.X)
+	}
+	if math.Abs(v.Y-40) > TileSize {
+		t.Fatalf("a blocked hull slides on an axis, it does not route around, y=%v", v.Y)
+	}
+}
+
+func freshVehicleMG(w *World) []Projectile {
+	const dt = 1.0 / 60
+	floor := VehicleMGRange - MGSpeed*dt - 1
+	var out []Projectile
+	for i := range w.Projectiles {
+		p := &w.Projectiles[i]
+		if p.OwnerSide != SideEnemy || p.Kind != ProjMG || !p.Alive || p.Left < floor {
+			continue
+		}
+		out = append(out, *p)
+	}
+	return out
+}
+
 func TestEnemySkidooChases(t *testing.T) {
 	w := NewEmpty()
 	w.Spread = 0

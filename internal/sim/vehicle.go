@@ -311,20 +311,118 @@ func (w *World) leaderVehicle() *Vehicle {
 	return w.vehicleByID(u.VehicleID)
 }
 
+// stepEnemyVehicle drives at the nearest living player. An unarmed hull
+// keeps going and can ram. An armed hull drops the throttle once it is
+// inside VehicleMGRange, which is still outside the ram, and turns the
+// hull toward that player. The mounted gun then uses the grunt reaction,
+// facing tolerance, burst, and pause. Range and rate stay the vehicle's.
 func (w *World) stepEnemyVehicle(v *Vehicle, dt float64) {
 	px, py, ok := w.nearestLiving(SidePlayer, v.X, v.Y)
 	if !ok {
 		w.applyDrive(v, v.X, v.Y, false, dt)
+		w.idleVehicleGun(v)
 		return
 	}
-	w.applyDrive(v, px, py, true, dt)
 	if !v.Armed {
+		w.applyDrive(v, px, py, true, dt)
 		return
 	}
 	dist := hypot(px-v.X, py-v.Y)
-	if dist <= VehicleMGRange && w.lineClear(v.X, v.Y, px, py) {
-		w.vehicleShoot(v, px, py, dt)
+	inRange := dist <= VehicleMGRange
+	w.applyDrive(v, px, py, !inRange, dt)
+	if inRange {
+		turnVehicle(v, px, py, dt)
 	}
+	w.stepVehicleGun(v, px, py, inRange && w.lineClear(v.X, v.Y, px, py), dt)
+}
+
+// turnVehicle swings the hull at the grunt turn rate. Drive code owns
+// facing while the throttle is held; this runs on the gun line.
+func turnVehicle(v *Vehicle, px, py, dt float64) {
+	dx, dy := px-v.X, py-v.Y
+	if dx == 0 && dy == 0 {
+		return
+	}
+	d := wrapAngle(math.Atan2(dy, dx) - v.Facing)
+	step := EnemyTurnRate * dt
+	if d > step {
+		d = step
+	} else if d < -step {
+		d = -step
+	}
+	v.Facing = wrapAngle(v.Facing + d)
+}
+
+func vehicleFacingError(v *Vehicle, px, py float64) float64 {
+	dx, dy := px-v.X, py-v.Y
+	if dx == 0 && dy == 0 {
+		return 0
+	}
+	return math.Abs(wrapAngle(math.Atan2(dy, dx) - v.Facing))
+}
+
+func (w *World) vehicleGunner(v *Vehicle) *Unit {
+	if v == nil {
+		return nil
+	}
+	for _, id := range v.Occupants {
+		if u := w.Unit(id); u != nil && u.Living() {
+			return u
+		}
+	}
+	return nil
+}
+
+func (w *World) idleVehicleGun(v *Vehicle) {
+	if u := w.vehicleGunner(v); u != nil {
+		resetGruntContact(u)
+	}
+	v.FireCD = 0
+}
+
+// stepVehicleGun is the mounted burst. The clock lives on the driver.
+// Losing range or LOS clears it. The round itself is still vehicleShoot's
+// gun: VehicleMGRange, VehicleMGRoF, no grunt cone.
+func (w *World) stepVehicleGun(v *Vehicle, px, py float64, see bool, dt float64) {
+	u := w.vehicleGunner(v)
+	if u == nil || !see {
+		w.idleVehicleGun(v)
+		return
+	}
+	if u.ReactAt == 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		u.ReactAt = EnemyReact + (w.rng.Float64()*2-1)*EnemyReactJitter
+	}
+	u.SpotT += dt
+	if u.SpotT+1e-9 < u.ReactAt {
+		return
+	}
+	if u.BurstGap > 0 {
+		u.BurstGap -= dt
+		if u.BurstGap > 0 {
+			return
+		}
+		u.BurstGap = 0
+		u.BurstN = 0
+		v.FireCD = 0
+	}
+	if vehicleFacingError(v, px, py) > EnemyFaceTol {
+		return
+	}
+	v.FireCD -= dt
+	if v.FireCD > 0 {
+		return
+	}
+	u.BurstN++
+	if u.BurstN >= EnemyBurst {
+		u.BurstGap = EnemyBurstPause
+		v.FireCD = 0
+	} else {
+		v.FireCD = 1.0 / VehicleMGRoF
+	}
+	w.fireVehicleMG(v, v.Facing)
 }
 
 func (w *World) applyDrive(v *Vehicle, tx, ty float64, holding bool, dt float64) {
@@ -443,6 +541,10 @@ func (w *World) vehicleShoot(v *Vehicle, tx, ty, dt float64) {
 	}
 	ang := math.Atan2(dy, dx)
 	v.Facing = ang
+	w.fireVehicleMG(v, ang)
+}
+
+func (w *World) fireVehicleMG(v *Vehicle, ang float64) {
 	owner := 0
 	side := v.Side
 	for _, id := range v.Occupants {

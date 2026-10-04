@@ -81,7 +81,9 @@ Player MG does **not** harm living friendlies. Explosives and vehicles kill ever
 
 Map-placed grunts hold the tile they spawned on (facing east). A grunt born from a door walks a few tiles straight out, sliding on blocked axes, and does not shoot until he posts. If that walk cannot advance he posts where he is. They notice a player only inside gun range with clear LOS. They turn at a limited rate and wait out a short reaction before the first round, then fire a short burst, pause, and repeat. The enemy cone is wider than a Private’s and is not the player’s `World.Spread`. Grenadiers and rocketeers keep their own windups; those windups are not stacked on the grunt reaction. During the windup they turn at the grunt rate and release on the first frame they face the target, even if the clock already finished. A grenadier’s point-blank MG uses the grunt rules. No pathfinding and no chase. Numbers and the hearing follow-up are Chunks 21–23 in `PLAN.md`.
 
-A squad you are not controlling uses that same turn, reaction, and burst. Range, rate, and cone stay the man's rank gun. He does not hear shots and he does not throw. The squad you are aiming still fires on the frame you hold the button. Enemy vehicles are a separate rule.
+A squad you are not controlling uses that same turn, reaction, and burst. Range, rate, and cone stay the man's rank gun. He does not hear shots and he does not throw. The squad you are aiming still fires on the frame you hold the button.
+
+An armed enemy skidoo drives toward the nearest living player and drops the throttle once it is inside `VehicleMGRange`, still outside the ram. The hull then turns at the grunt rate. The mounted gun waits out the same reaction and facing tolerance, fires `EnemyBurst` rounds at `VehicleMGRoF`, and pauses. Range stays `VehicleMGRange`. There is no grunt cone. An unarmed enemy skidoo still drives into the squad and rams. A blocked hull still slides on one axis. The player’s own driving is unchanged.
 
 ## Camera
 

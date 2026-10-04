@@ -72,6 +72,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 
 ## After the numbered plan
 
+- Enemy acquire matches the original troop check: 200 px on a clear walk, 40 px if it is blocked. A heard shot does not pull him in.
 - Mission 2 and later grunts and grenadiers close in. Mission 1 and sandboxes stay posted. Rocketeers stay put. No pathfinding. `a37048e`
 - A missing walk sheet draws idle, so a walking enemy is not a rectangle. `409fabd`
 - Grass and snow stay on frame 0. `a8ff4fa`

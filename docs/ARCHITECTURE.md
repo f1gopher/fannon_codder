@@ -82,11 +82,11 @@ There is no pathfinding and no patrol. `steerToward` slides on a blocked axis. F
 
 Mission 1, and any sandbox (`World.Mission` 0), leaves map grunts posted. They spawn facing east and stay on that tile. `Phase.World` sets `World.Mission` from the phase and marks non-rocketeer enemies `Aggressive` when the mission is 2 or higher.
 
-An aggressive grunt or grenadier closes inside `EnemyChase` (160 px) on line of sight or a heard infantry shot, then stops inside gun range. Rocketeers never close.
+An aggressive grunt or grenadier acquires like the original troop check. Past `EnemySight` (200 px, `0xC8`) he stays put. Inside `EnemySightBlind` (40 px, `0x28`) he closes even when the straight walk is blocked. Between those he closes only when `pathClear` (trees, cliffs, standing huts). He then stops inside gun range. A heard shot does not pull him. Rocketeers never close. Grenade and rocket windups use that same acquire.
 
 Fire contact is `EnemyMGRange` (70) and clear LOS. He turns at `EnemyTurnRate` (4 rad/s). The first round waits until `SpotT` passes `EnemyReact` (0.55 s) plus one jitter of `EnemyReactJitter` (0.15 s), and facing error is inside `EnemyFaceTol` (0.35 rad). Then he fires `EnemyBurst` (3) rounds at `EnemyMGRoF` (4/s), stays silent for `EnemyBurstPause` (0.75 s) while still turning, and repeats. The cone is `EnemyMGSpread` (0.20 rad), not `World.Spread`. Losing range or LOS calls `resetGruntContact`. The next sighting owes a full reaction.
 
-`EnemyHear` is 96 px. An infantry MG round calls `wakeFromMG` and sets `HearID` on an idle posted grunt. An existing `ReactAt` or `HearID` is left alone. `Step` runs AI before fire, so the id latches when the round spawns and `SpotT` advances on the next tick. Hearing alone never fires. Grenades, rockets, and vehicle guns do not wake anyone. A dead shooter with no LOS clears the clock.
+`EnemyHear` is 40 px, the same blind contact. An infantry MG round calls `wakeFromMG` and sets `HearID` on an idle posted grunt. An existing `ReactAt` or `HearID` is left alone. `Step` runs AI before fire, so the id latches when the round spawns and `SpotT` advances on the next tick. Hearing alone never fires and never starts a walk. Grenades, rockets, and vehicle guns do not wake anyone. A dead shooter with no LOS clears the clock.
 
 Only `spawnDoorGrunt` sets `HasPost`. He walks about `DoorPostTiles` (3) south onto a walkable cell, slides on blocked axes, and does not shoot until he arrives or a step cannot move. The post then clears and `Aggressive` is set, on every mission. Sinking clears the post and does not set `Aggressive`. Enemies loaded from JSON, and a plain `SpawnUnit`, do not take that walk. The pre-placed grunt in `NewHutWorld` is a plain spawn.
 
@@ -96,7 +96,7 @@ During a windup he turns at the grunt rate and releases on the first frame insid
 
 A player squad you are not controlling uses that same turn, reaction, burst, and pause. Range, rate, and spread stay `GunStatsFor`. He does not hear and does not throw. The active squad fires on the first frame fire is held. `World.Spread == 0` still zeros the parked cone.
 
-Mission 1 grunts are at tiles (17, 3), (1, 5), and (14, 10). The south man starts about 80 px from the squad. The other two are about 193 px out, outside `EnemyHear`, so the opener is three duels.
+Mission 1 grunts are at tiles (17, 3), (1, 5), and (14, 10). The south man starts about 80 px from the squad. The other two are about 193 px out. None of that is inside `EnemyHear`, and mission 1 does not close, so the opener is three duels.
 
 ## Vehicles
 

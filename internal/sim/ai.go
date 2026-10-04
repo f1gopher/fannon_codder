@@ -12,13 +12,14 @@ const (
 	EnemyBurst       = 3     // MG rounds, then silence
 	EnemyBurstPause  = 0.75  // seconds with no MG round; he keeps turning
 	EnemyMGSpread    = 0.20  // rad. Wider than a Private's 0.12
-	EnemyHear        = 96.0  // px. An infantry MG round starts a reaction with no LOS
-	EnemyChase       = 160.0 // px. An aggressive grunt walks in while he can see you, then stops to shoot
+	EnemyHear        = 40.0  // px. 0x28. A blocked path still notices a shot this close
+	EnemySight       = 200.0 // px. 0xC8. Clear walk path: he closes, then stops to shoot
+	EnemySightBlind  = 40.0  // px. 0x28. He closes even when the straight path is blocked
 )
 
 // stepAI runs enemy infantry. Mission 1 grunts hold their tile. From Mission 2,
 // and for any man who has finished walking out of a door, a grunt closes
-// while he can see or hear a player, then holds and fires. Rocketeers stay
+// once he has acquired a player, then holds and fires. Rocketeers stay
 // put. Grenade and rocket windups keep their own clocks.
 func (w *World) stepAI(dt float64) {
 	if !w.AI {
@@ -169,23 +170,53 @@ func (w *World) gruntNoise(u *Unit) (x, y float64, ok bool) {
 	return s.X, s.Y, true
 }
 
-// gruntChase walks an aggressive grunt toward the nearest player he can see
-// inside EnemyChase, or toward a heard shooter. In gun range he stops and
-// stepGruntGun fires. A blocked line with no shot to follow leaves him put.
+// gruntChase walks an aggressive grunt toward the nearest player he has
+// acquired. In gun range he stops and stepGruntGun fires.
 func (w *World) gruntChase(u *Unit, dt float64) bool {
 	tx, ty, ok := w.nearestLiving(SidePlayer, u.X, u.Y)
-	if !ok {
+	if !ok || !w.acquired(u.X, u.Y, tx, ty) {
 		return false
-	}
-	if hypot(tx-u.X, ty-u.Y) > EnemyChase || !w.lineClear(u.X, u.Y, tx, ty) {
-		sx, sy, hear := w.gruntNoise(u)
-		if !hear || hypot(sx-u.X, sy-u.Y) > EnemyChase {
-			return false
-		}
-		tx, ty = sx, sy
 	}
 	w.steerToward(u, tx, ty, WalkSpeed, dt, ArrivalRadius)
 	return true
+}
+
+// acquired is the OpenFodder troop check. Past EnemySight he ignores you.
+// Inside EnemySightBlind he closes even when the straight walk is blocked.
+// Between those, he closes only when every tile on the line is walkable.
+func (w *World) acquired(x0, y0, x1, y1 float64) bool {
+	d := hypot(x1-x0, y1-y0)
+	if d > EnemySight {
+		return false
+	}
+	if d <= EnemySightBlind {
+		return true
+	}
+	return w.pathClear(x0, y0, x1, y1)
+}
+
+// pathClear is the straight tile walk, the check Map_PathCheck_CalculateTo
+// uses before an enemy leaves his tile. Trees, cliffs, and standing huts block.
+func (w *World) pathClear(x0, y0, x1, y1 float64) bool {
+	dx, dy := x1-x0, y1-y0
+	dist := hypot(dx, dy)
+	if dist < 1e-6 {
+		return w.tileWalkable(x1, y1)
+	}
+	nx, ny := dx/dist, dy/dist
+	for d := 8.0; d < dist; d += 8 {
+		if !w.tileWalkable(x0+nx*d, y0+ny*d) {
+			return false
+		}
+	}
+	return w.tileWalkable(x1, y1)
+}
+
+func (w *World) tileWalkable(x, y float64) bool {
+	if !w.Map.WalkableTile(w.Map.TileAtPixel(x, y)) {
+		return false
+	}
+	return !w.pointInBuilding(x, y)
 }
 
 // wakeFromMG starts a grunt's reaction when an infantry machine-gun
@@ -308,7 +339,7 @@ func (w *World) stepGrenadier(u *Unit, px, py, dist, dt float64) bool {
 	if u.Bombs <= 0 || u.GrenadeCD > 0 || !w.CanShoot(u) {
 		return false
 	}
-	if dist < GrenadierMinRange || dist > GrenadeRange {
+	if dist < GrenadierMinRange || dist > GrenadeRange || !w.acquired(u.X, u.Y, px, py) {
 		return false
 	}
 	u.GrenadeWind = GrenadierWindup
@@ -362,7 +393,7 @@ func (w *World) stepRocketeer(u *Unit, px, py, dist, dt float64) {
 	if u.RocketCD > 0 || !w.CanShoot(u) {
 		return
 	}
-	if dist < RocketeerMinRange || dist > RocketeerRange {
+	if dist < RocketeerMinRange || dist > RocketeerRange || !w.acquired(u.X, u.Y, px, py) {
 		return
 	}
 	if !w.lineClear(u.X, u.Y, px, py) {

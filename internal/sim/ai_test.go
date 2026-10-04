@@ -112,15 +112,15 @@ func TestBrokenLOSResetsReaction(t *testing.T) {
 func TestHeardShotTurnsAGruntBehindTrees(t *testing.T) {
 	const row = 0
 	player := Vec2{X: 8, Y: 8}
-	near := Vec2{X: 8 + 60, Y: 8}
-	far := Vec2{X: 8 + 150, Y: 8}
+	near := Vec2{X: 8 + 32, Y: 8}
+	far := Vec2{X: 8 + 80, Y: 8}
 	w := aiWorld(player, near)
 	w.SpawnUnit(SideEnemy, far)
 	tiles := make([]Tile, 12)
 	for i := range tiles {
 		tiles[i] = TileGrass
 	}
-	tiles[2] = TileTree
+	tiles[1] = TileTree
 	w.Map = Map{W: 12, H: 1, Tiles: tiles}
 
 	p := playerOf(w)
@@ -131,7 +131,7 @@ func TestHeardShotTurnsAGruntBehindTrees(t *testing.T) {
 	n := enemyAt(w, near.X)
 	f := enemyAt(w, far.X)
 	if n.SpotT <= 0 || n.ReactAt == 0 {
-		t.Fatalf("a shot 60px away starts the clock, SpotT=%v ReactAt=%v", n.SpotT, n.ReactAt)
+		t.Fatalf("a shot inside the blind contact starts the clock, SpotT=%v ReactAt=%v", n.SpotT, n.ReactAt)
 	}
 	if n.Facing == 0 {
 		t.Fatal("he should be turning toward the shooter")
@@ -143,7 +143,7 @@ func TestHeardShotTurnsAGruntBehindTrees(t *testing.T) {
 		t.Fatal("trees hold, so the heard shot does not let him fire")
 	}
 	if f.SpotT != 0 || f.ReactAt != 0 || f.HearID != 0 {
-		t.Fatalf("150px is outside hearing, SpotT=%v HearID=%v", f.SpotT, f.HearID)
+		t.Fatalf("80px is outside hearing, SpotT=%v HearID=%v", f.SpotT, f.HearID)
 	}
 
 	w.Step(1)
@@ -157,13 +157,13 @@ func TestHeardShotTurnsAGruntBehindTrees(t *testing.T) {
 
 func TestHeardShotStillOwesTheReaction(t *testing.T) {
 	player := Vec2{X: 8, Y: 8}
-	near := Vec2{X: 8 + 60, Y: 8}
+	near := Vec2{X: 8 + 32, Y: 8}
 	w := aiWorld(player, near)
 	tiles := make([]Tile, 8)
 	for i := range tiles {
 		tiles[i] = TileGrass
 	}
-	tiles[2] = TileTree
+	tiles[1] = TileTree
 	w.Map = Map{W: 8, H: 1, Tiles: tiles}
 
 	p := playerOf(w)
@@ -175,7 +175,7 @@ func TestHeardShotStillOwesTheReaction(t *testing.T) {
 	}
 	heard := e.SpotT
 
-	w.Map.Set(2, 0, TileGrass)
+	w.Map.Set(1, 0, TileGrass)
 	w.Step(1.0 / 60)
 	if enemyRounds(w, e.ID) != 0 {
 		t.Fatal("opening the line does not skip the rest of the reaction")
@@ -200,13 +200,13 @@ func TestHeardShotStillOwesTheReaction(t *testing.T) {
 
 func TestHeardShotEndsWhenTheShooterDies(t *testing.T) {
 	player := Vec2{X: 8, Y: 8}
-	near := Vec2{X: 8 + 60, Y: 8}
+	near := Vec2{X: 8 + 32, Y: 8}
 	w := aiWorld(player, near)
 	tiles := make([]Tile, 8)
 	for i := range tiles {
 		tiles[i] = TileGrass
 	}
-	tiles[2] = TileTree
+	tiles[1] = TileTree
 	w.Map = Map{W: 8, H: 1, Tiles: tiles}
 	p := playerOf(w)
 	w.addMG(p.X, p.Y, -math.Pi/2, 80, p.ID, SidePlayer)
@@ -699,6 +699,62 @@ func TestAggressiveGruntClosesThenHoldsToShoot(t *testing.T) {
 	}
 	if len(w.Projectiles) == 0 && e.BurstN == 0 {
 		t.Fatal("expected him to fire once he was in range")
+	}
+}
+
+func TestAggressiveGruntDoesNotCrossABlockedPath(t *testing.T) {
+	w := NewEmpty()
+	w.AI = true
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 8, Y: 8}})
+	e := w.SpawnUnit(SideEnemy, Vec2{X: 8 + 96, Y: 8})
+	e.Aggressive = true
+	tiles := make([]Tile, 10)
+	for i := range tiles {
+		tiles[i] = TileGrass
+	}
+	tiles[3] = TileTree
+	w.Map = Map{W: 10, H: 1, Tiles: tiles}
+	start := e.X
+	for i := 0; i < 60; i++ {
+		w.Step(1.0 / 60)
+	}
+	if e.X != start || e.VX != 0 {
+		t.Fatalf("a tree on the walk leaves him put, x %v -> %v vx %v", start, e.X, e.VX)
+	}
+}
+
+func TestAggressiveGruntClosesInsideBlindContact(t *testing.T) {
+	w := NewEmpty()
+	w.AI = true
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 8, Y: 8}})
+	e := w.SpawnUnit(SideEnemy, Vec2{X: 8 + 32, Y: 8})
+	e.Aggressive = true
+	tiles := make([]Tile, 6)
+	for i := range tiles {
+		tiles[i] = TileGrass
+	}
+	tiles[1] = TileTree
+	w.Map = Map{W: 6, H: 1, Tiles: tiles}
+	start := e.X
+	for i := 0; i < 30; i++ {
+		w.Step(1.0 / 60)
+	}
+	if e.X >= start {
+		t.Fatalf("inside 40px he closes even through the tree, x %v -> %v", start, e.X)
+	}
+}
+
+func TestAggressiveGruntIgnoresPastSight(t *testing.T) {
+	w := NewEmpty()
+	w.AI = true
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 220, Y: 0}})
+	e := w.SpawnUnit(SideEnemy, Vec2{X: 0, Y: 0})
+	e.Aggressive = true
+	for i := 0; i < 60; i++ {
+		w.Step(1.0 / 60)
+	}
+	if e.X != 0 || e.Y != 0 {
+		t.Fatalf("past 200px he stays put, at (%v,%v)", e.X, e.Y)
 	}
 }
 

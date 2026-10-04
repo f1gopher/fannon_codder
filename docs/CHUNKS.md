@@ -84,3 +84,4 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - An MG hit can wound an enemy or a civilian. A player dies on the hit. Another round, a blast, or a ram finishes a wounded man. `edeaab7`
 - Shooting an enemy or civilian corpse shoves it about one tile. A dead player stays put. Kick is capped. The hop refreshes. Three seconds after death the body stops reacting.
 - Pause, quit, phase complete, and phase failed sit on the painted olive plaque (`ui/notice`) in cream letters with an olive edge.
+- Escape during a live phase opens a pause menu: restart, main menu, save, load, or quit. Other screens still ask before quitting.

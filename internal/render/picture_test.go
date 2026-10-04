@@ -47,6 +47,31 @@ func TestNoticePlaque(t *testing.T) {
 	}
 }
 
+func TestNoticeLineAt(t *testing.T) {
+	SetPictureScale(2)
+	lines := []string{"PAUSED", "Restart level", "Quit"}
+	top, ok := NoticeLineAt(320, 256, 160, 0)
+	if ok {
+		t.Fatalf("top of the frame hit line %d", top)
+	}
+	var headline, body bool
+	for y := 0.0; y < 256; y++ {
+		i, hit := NoticeLineAt(320, 256, 160, y, lines...)
+		if !hit {
+			continue
+		}
+		if i == 0 {
+			headline = true
+		}
+		if i == 1 {
+			body = true
+		}
+	}
+	if !headline || !body {
+		t.Fatalf("headline %v body %v", headline, body)
+	}
+}
+
 func TestNotice(t *testing.T) {
 	SetPictureScale(3)
 	dst := ebiten.NewImage(320*3, 256*3)

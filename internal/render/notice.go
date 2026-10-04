@@ -17,12 +17,22 @@ var (
 	noticeFill = color.RGBA{R: 0x3c, G: 0x40, B: 0x22, A: 0xff}
 )
 
-// Notice draws lines on a painted plaque in the middle of dst.
-// The first line is the headline. A missing plaque falls back to a flat fill.
-func Notice(dst *ebiten.Image, lines ...string) {
-	if dst == nil || len(lines) == 0 {
-		return
-	}
+// noticePad is the olive field inside the cream rim, in world pixels.
+const (
+	noticePadX = 46.0
+	noticePadY = 32.0
+)
+
+// noticeBox is one drawn line in world pixels. Index is the lines-slice index.
+// The box spans the plaque interior, including the gap under the letters.
+type noticeBox struct {
+	index      int
+	x, y, w, h float64
+}
+
+// noticeBoxes lays out the same lines Notice draws. frameW and frameH are the
+// destination in world pixels (image bounds divided by the picture scale).
+func noticeBoxes(frameW, frameH float64, lines []string) []noticeBox {
 	s := pictureScale
 	if s <= 0 {
 		s = 1
@@ -31,6 +41,12 @@ func Notice(dst *ebiten.Image, lines ...string) {
 	body := TextPixels(s)
 	gap := head * 0.35
 	var blockW, blockH float64
+	type sized struct {
+		i    int
+		h    float64
+		size float64
+	}
+	var drawn []sized
 	for i, line := range lines {
 		if line == "" {
 			continue
@@ -48,34 +64,76 @@ func Notice(dst *ebiten.Image, lines ...string) {
 			blockH += gap
 		}
 		blockH += h
+		drawn = append(drawn, sized{i: i, h: h, size: size})
 	}
-	if blockW == 0 {
+	if blockW == 0 || len(drawn) == 0 {
+		return nil
+	}
+	pw := blockW/s + noticePadX*2
+	ph := blockH/s + noticePadY*2
+	x := (frameW - pw) / 2
+	y := (frameH - ph) / 2
+	cy := y + noticePadY
+	boxes := make([]noticeBox, len(drawn))
+	for n, d := range drawn {
+		hh := d.h / s
+		bh := hh
+		if n < len(drawn)-1 {
+			bh += gap / s
+		}
+		boxes[n] = noticeBox{index: d.i, x: x, y: cy, w: pw, h: bh}
+		cy += hh + gap/s
+	}
+	return boxes
+}
+
+// NoticeLineAt reports which drawn line contains the world point x, y.
+// The index matches the lines slice. The hit box is the full width of the plaque.
+func NoticeLineAt(frameW, frameH, x, y float64, lines ...string) (int, bool) {
+	for _, b := range noticeBoxes(frameW, frameH, lines) {
+		if x >= b.x && y >= b.y && x < b.x+b.w && y < b.y+b.h {
+			return b.index, true
+		}
+	}
+	return 0, false
+}
+
+// Notice draws lines on a painted plaque in the middle of dst.
+// The first line is the headline. A missing plaque falls back to a flat fill.
+func Notice(dst *ebiten.Image, lines ...string) {
+	if dst == nil || len(lines) == 0 {
 		return
 	}
-	// Measure is in device pixels. The plaque is laid out in world pixels.
-	// The rim is about 15 world pixels, so the pad sits the letters in the field.
-	padX, padY := 46.0, 32.0
-	pw := blockW/s + padX*2
-	ph := blockH/s + padY*2
-	b := dst.Bounds()
-	x := (float64(b.Dx())/s - pw) / 2
-	y := (float64(b.Dy())/s - ph) / 2
-	if !drawNoticePlaque(dst, x, y, pw, ph) {
-		Rect(dst, int(x), int(y), int(pw), int(ph), noticeFill)
+	s := pictureScale
+	if s <= 0 {
+		s = 1
 	}
-	cy := y + padY
-	for i, line := range lines {
-		if line == "" {
-			continue
-		}
+	b := dst.Bounds()
+	boxes := noticeBoxes(float64(b.Dx())/s, float64(b.Dy())/s, lines)
+	if len(boxes) == 0 {
+		return
+	}
+	plaque := boxes[0]
+	// The first box starts at the pad, so the plaque origin is above it.
+	px := plaque.x
+	py := plaque.y - noticePadY
+	pw := plaque.w
+	last := boxes[len(boxes)-1]
+	ph := last.y + last.h + noticePadY - py
+	if !drawNoticePlaque(dst, px, py, pw, ph) {
+		Rect(dst, int(px), int(py), int(pw), int(ph), noticeFill)
+	}
+	head := TextPixels(s) * 1.6
+	body := TextPixels(s)
+	for _, box := range boxes {
+		line := lines[box.index]
 		size := body
-		if i == 0 {
+		if box.index == 0 {
 			size = head
 		}
 		face := &text.GoTextFace{Source: uiFont, Size: size}
-		_, h := text.Measure(line, face, size)
-		drawNoticeLine(dst, line, face, x+pw/2, cy+h/s/2)
-		cy += h/s + gap/s
+		_, th := text.Measure(line, face, size)
+		drawNoticeLine(dst, line, face, box.x+box.w/2, box.y+th/s/2)
 	}
 }
 

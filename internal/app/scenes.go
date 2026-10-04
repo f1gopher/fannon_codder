@@ -87,6 +87,8 @@ type Battle struct {
 	sandbox   bool
 	mapOpen   bool
 	paused    bool
+	menu      battleMenu
+	again     func(*Progress) *Battle
 }
 
 func NewBattle(prog *Progress) *Battle {
@@ -102,32 +104,44 @@ func NewBattle(prog *Progress) *Battle {
 	if err != nil || w == nil {
 		w = sim.NewDemoWorld()
 	}
-	return battleFromWorld(prog, w, false)
+	b := battleFromWorld(prog, w, false)
+	b.again = NewBattle
+	return b
 }
 
 // NewCoverBattle is the chunk 11 sandbox: oversized map, tree cover, scrolling.
 func NewCoverBattle(prog *Progress) *Battle {
-	return battleFromWorld(prog, sim.NewCoverWorld(), true)
+	b := battleFromWorld(prog, sim.NewCoverWorld(), true)
+	b.again = NewCoverBattle
+	return b
 }
 
 // NewRiverBattle is the chunk 12 sandbox: river, bridge, swimmers.
 func NewRiverBattle(prog *Progress) *Battle {
-	return battleFromWorld(prog, sim.NewRiverWorld(), true)
+	b := battleFromWorld(prog, sim.NewRiverWorld(), true)
+	b.again = NewRiverBattle
+	return b
 }
 
 // NewHutBattle is the chunk 14 sandbox: a spawner hut and a grenade crate.
 func NewHutBattle(prog *Progress) *Battle {
-	return battleFromWorld(prog, sim.NewHutWorld(), true)
+	b := battleFromWorld(prog, sim.NewHutWorld(), true)
+	b.again = NewHutBattle
+	return b
 }
 
 // NewSkidooBattle is the chunk 20 sandbox: skidoo, rocket crate, hut.
 func NewSkidooBattle(prog *Progress) *Battle {
-	return battleFromWorld(prog, sim.NewSkidooWorld(), true)
+	b := battleFromWorld(prog, sim.NewSkidooWorld(), true)
+	b.again = NewSkidooBattle
+	return b
 }
 
 // NewHazardBattle is the chunk 18 sandbox: mine, quicksand, civilian, doorless hut.
 func NewHazardBattle(prog *Progress) *Battle {
-	return battleFromWorld(prog, sim.NewHazardWorld(), true)
+	b := battleFromWorld(prog, sim.NewHazardWorld(), true)
+	b.again = NewHazardBattle
+	return b
 }
 
 // applyPlayfield sizes the camera to the area beside the status strip.
@@ -246,6 +260,16 @@ func (b *Battle) Update(h Host) error {
 		}
 	}()
 	p := h.Pointer()
+	held, err := b.stepMenu(h,
+		inpututil.IsKeyJustPressed(ebiten.KeyEscape),
+		inpututil.IsKeyJustPressed(ebiten.KeyArrowUp),
+		inpututil.IsKeyJustPressed(ebiten.KeyArrowDown),
+		inpututil.IsKeyJustPressed(ebiten.KeyEnter),
+		p,
+	)
+	if held || err != nil {
+		return err
+	}
 	if b.world.Status != sim.Playing {
 		b.paused = false
 		b.settleOnce(b.world.Status == sim.Won)
@@ -443,7 +467,9 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 		render.Overview(screen, b.world, terrain)
 	}
 	render.HUD(screen, b.world, b.remaining, b.paused)
-	if b.paused && b.world.Status == sim.Playing {
+	if b.menu.open && b.world.Status == sim.Playing {
+		render.Notice(screen, b.menu.lines()...)
+	} else if b.paused && b.world.Status == sim.Playing {
 		render.Notice(screen, "PAUSED")
 	}
 	switch b.world.Status {

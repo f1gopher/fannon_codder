@@ -24,7 +24,7 @@ func controls() []binding {
 		{
 			section: "Any screen",
 			input:   "Escape",
-			action:  "Opens “Quit the game?”. The screen underneath stays frozen until you answer, so a battle press does not also give an order.",
+			action:  "Opens “Quit the game?” on the title, Boot Hill, briefing, and a finished phase. A battle that is still being played opens the pause menu instead. The screen underneath stays frozen until you answer, so a press does not also give an order.",
 			tokens:  []string{"KeyEscape"},
 		},
 		{
@@ -158,6 +158,30 @@ func controls() []binding {
 			input:   "P, or left click the pause button",
 			action:  "Pauses the battle. Men, guns, vehicles, and the skidoo hum stop. Press P or click the button again to continue. A finished phase does not pause.",
 			tokens:  []string{"KeyP", "MouseButtonLeft"},
+		},
+		{
+			section: "Battle — pause menu",
+			input:   "Escape, while the phase is being played",
+			action:  "Opens the pause menu: restart the level, return to the main menu, save, load, or quit. Escape again continues the battle. Restart and the main menu put the squad that started this attempt back on the queue.",
+			tokens:  []string{"KeyEscape"},
+		},
+		{
+			section: "Battle — pause menu",
+			input:   "Up or Down, while the pause menu is open",
+			action:  "Moves the highlight.",
+			tokens:  []string{"KeyArrowUp", "KeyArrowDown"},
+		},
+		{
+			section: "Battle — pause menu",
+			input:   "Enter, while the pause menu is open",
+			action:  "Chooses the highlighted row. Save writes the campaign, with this attempt’s squad still on the queue, and stays on the menu. Load opens Boot Hill from the saved campaign, or the menu says “No save”. Quit leaves the game. Restart plays the phase again. Main menu returns to the title.",
+			tokens:  []string{"KeyEnter"},
+		},
+		{
+			section: "Battle — pause menu",
+			input:   "Move the pointer over a row, or left click it, while the pause menu is open",
+			action:  "Moving over a row highlights it. A left click chooses that row, the same as Enter.",
+			tokens:  []string{"MouseButtonLeft"},
 		},
 		{
 			section: "Battle — vehicles and map",

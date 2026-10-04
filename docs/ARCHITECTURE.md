@@ -116,7 +116,7 @@ The strip is opaque. Rank is a `ui/rank-*` flash above the name. Keys, low to hi
 
 Start with 15. Mission 1 deploys 2. After each mission, survivors gain one rank per phase they lived through, capped at General, then 15 recruits join. Every three completed missions, new recruits start one rank higher. Deploy takes the highest rank first. The field never holds more than six. No recruits left is game over.
 
-Save only on Boot Hill after a finished mission, one slot at `userConfig/fannon-codder/save.json`. `Soldier.Kills` is `omitempty`, so an old save still loads.
+One slot at `userConfig/fannon-codder/save.json`. Boot Hill saves only after a finished mission. The battle pause menu saves during a phase and writes the squad from that attempt back onto the queue in the file. The live queue is unchanged until you leave the phase. `Soldier.Kills` is `omitempty`, so an old save still loads.
 
 `campaign.json` plays missions 1–5 (11 phases). After Mission 5, Boot Hill says the campaign continues.
 
@@ -146,7 +146,9 @@ Shallow water is `ShallowSpeedMul` (0.5) and can still fire. Deep water is `Deep
 
 P, or the 16 px strip button at (20, 238), toggles `Battle.paused`. Pause stops orders, `World.Step`, `render.Advance`, and the skidoo hum. The playfield says PAUSED. The button gets a white stroke. Entering pause clears fire and drive. A finished phase does not pause. There is no pause sheet. The icon is two cream bars.
 
-Escape opens a quit prompt on every screen and freezes it. Y or Enter ends the process. N or a second Escape cancels. Escape does not leave the phase. A cleared phase and a wipe leave on click or Enter.
+Escape during a phase that is still playing opens the pause menu on the same plaque. Up and Down move the row. The pointer highlights the row it is over, and a left click chooses it. Enter chooses the highlighted row. Escape again continues. The rows are restart level, main menu, save game, load game, and quit. Restart and the main menu return the squad that started the attempt to the queue and drop deaths from that attempt. Save writes the campaign slot with that squad still on the queue and stays on the menu. Load reads the slot and opens Boot Hill, or the menu says “No save”. Quit ends the process. A pause that was already on stays on when the menu closes.
+
+Escape on the title, Boot Hill, briefing, and a finished phase still opens the quit prompt and freezes the screen. Y or Enter ends the process. N or a second Escape cancels. A cleared phase and a wipe leave on click or Enter.
 
 Pause, the quit prompt, PHASE COMPLETE, and PHASE FAILED share `render.Notice`. It draws `ui/notice`, a painted olive plaque with a cream rim, and cream letters with an olive edge, in the middle of the frame. The first line is the headline. A missing plaque is a flat olive fill. The quit lines are QUIT THE GAME?, Y or Enter quit, and N or Escape stay. A clear says PHASE COMPLETE. A wipe says PHASE FAILED. Both add Click or Enter.
 

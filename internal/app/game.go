@@ -173,11 +173,15 @@ func (g *Game) Update() error {
 		g.next = nil
 		g.scene.Enter()
 	}
-	// Escape asks to quit from every screen. The scene stays frozen until
-	// the player confirms or backs out, so a battle press does not also
-	// order a move.
+	// Escape asks to quit from every screen except a live battle, which
+	// opens its own pause menu. The scene stays frozen until the player
+	// answers, so a press does not also order a move.
+	escape := inpututil.IsKeyJustPressed(ebiten.KeyEscape)
+	if b, ok := g.scene.(*Battle); ok && b.ownsEscape(escape) {
+		return g.scene.Update(g)
+	}
 	switch g.quit.decide(
-		inpututil.IsKeyJustPressed(ebiten.KeyEscape),
+		escape,
 		inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeyY),
 		inpututil.IsKeyJustPressed(ebiten.KeyN),
 	) {

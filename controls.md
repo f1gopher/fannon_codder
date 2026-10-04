@@ -8,7 +8,7 @@ This page is generated from the control list in `internal/app/controls.go`. When
 
 ## Any screen
 
-- **Escape** — Opens “Quit the game?”. The screen underneath stays frozen until you answer, so a battle press does not also give an order.
+- **Escape** — Opens “Quit the game?” on the title, Boot Hill, briefing, and a finished phase. A battle that is still being played opens the pause menu instead. The screen underneath stays frozen until you answer, so a press does not also give an order.
 - **Y or Enter, while the quit prompt is open** — Quits the game.
 - **N or Escape, while the quit prompt is open** — Closes the prompt and returns to the screen you were on.
 
@@ -52,6 +52,16 @@ This page is generated from the control list in `internal/app/controls.go`. When
 - **Left click when the cursor shows exit** — The leader dismounts.
 - **Left click or hold, while the leader is in a vehicle** — Drives toward the pointer. Releasing the button stops the drive order.
 - **P, or left click the pause button** — Pauses the battle. Men, guns, vehicles, and the skidoo hum stop. Press P or click the button again to continue. A finished phase does not pause.
+
+## Battle — pause menu
+
+- **Escape, while the phase is being played** — Opens the pause menu: restart the level, return to the main menu, save, load, or quit. Escape again continues the battle. Restart and the main menu put the squad that started this attempt back on the queue.
+- **Up or Down, while the pause menu is open** — Moves the highlight.
+- **Enter, while the pause menu is open** — Chooses the highlighted row. Save writes the campaign, with this attempt’s squad still on the queue, and stays on the menu. Load opens Boot Hill from the saved campaign, or the menu says “No save”. Quit leaves the game. Restart plays the phase again. Main menu returns to the title.
+- **Move the pointer over a row, or left click it, while the pause menu is open** — Moving over a row highlights it. A left click chooses that row, the same as Enter.
+
+## Battle — vehicles and map
+
 - **M, or left click the M icon** — Opens or closes the map overlay. A left click on the open map closes it.
 
 ## Battle — end of a phase

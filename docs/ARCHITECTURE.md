@@ -124,13 +124,13 @@ Keys: `snake|eagle|panther|grunt|grenadier|rocketeer|civilian` with `idle|walk|s
 
 The title, the briefing, and Boot Hill are `menu/title`, `menu/briefing`, and `menu/hill`: one frame each, 2560×2048, pinned at the top-left so they fill the 320×256 frame at `S/8`. The words “Fannon Codder” are painted into the title. Boot Hill draws one `menu/grave` per death, with the foot of the cross on the old grave slot, and the queue is `snake/idle` facing south-east. `menu/load` and `menu/save` sit on the same click rectangles as the old word buttons. Names, the mission line, and the briefing copy stay text.
 
-The battle cursor is `ui/pointer` (the style-board arrow, hotspot on the tip), `ui/crosshair`, and `ui/board` (the skidoo, hotspot in the middle). They are drawn at `S/8`. The exit mark on a skidoo you already occupy stays the small bitmap. The status strip stays the flat dark panel. Its icons are `ui/grenade`, `ui/rocket`, `ui/foot`, `ui/vehicle`, `ui/map`, and `ui/mark-snake`, `ui/mark-eagle`, `ui/mark-panther`, also at `S/8`. Names, ranks, and the G and R counts stay text. The selected special is still the white stroke. The overview keeps its diagram and colours each tile from the accepted ground painting. Arctic grass and tree cells use the snow colour.
+The battle cursor is `ui/pointer` (the style-board arrow, hotspot on the tip), `ui/crosshair`, and `ui/board` (the skidoo, hotspot in the middle). They are drawn at `S/8`. The exit mark on a skidoo you already occupy stays the small bitmap. The status strip stays the flat dark panel. Its icons are `ui/grenade`, `ui/rocket`, `ui/foot`, `ui/vehicle`, `ui/map`, and `ui/mark-snake`, `ui/mark-eagle`, `ui/mark-panther`, also at `S/8`. Names and the G and R counts stay text. Each man's rank is a ui/rank-* flash above his name. The selected special is still the white stroke. The overview keeps its diagram and colours each tile from the accepted ground painting. Arctic grass and tree cells use the snow colour.
 
 ## Placeholders
 
 | Thing | Draw |
 |---|---|
-| Player trooper | Small green rectangle + rank letter + name on HUD |
+| Player trooper | Small green rectangle + rank flash + name on HUD |
 | Enemy grunt | Red rectangle |
 | Civilian | Yellow rectangle |
 | Corpse | Darker rectangle |

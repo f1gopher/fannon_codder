@@ -574,6 +574,22 @@ func TestPointerAndStatusIcons(t *testing.T) {
 		{"ui/mark-snake", 64, 64, 0, 0},
 		{"ui/mark-eagle", 64, 64, 0, 0},
 		{"ui/mark-panther", 64, 64, 0, 0},
+		{"ui/rank-pte", 64, 64, 0, 0},
+		{"ui/rank-cpl", 64, 64, 0, 0},
+		{"ui/rank-sgt", 64, 64, 0, 0},
+		{"ui/rank-ssgt", 64, 64, 0, 0},
+		{"ui/rank-sfc", 64, 64, 0, 0},
+		{"ui/rank-msg", 64, 64, 0, 0},
+		{"ui/rank-sgm", 64, 64, 0, 0},
+		{"ui/rank-sp4", 64, 64, 0, 0},
+		{"ui/rank-sp6", 64, 64, 0, 0},
+		{"ui/rank-wo", 64, 64, 0, 0},
+		{"ui/rank-cwo", 64, 64, 0, 0},
+		{"ui/rank-cpt", 64, 64, 0, 0},
+		{"ui/rank-maj", 64, 64, 0, 0},
+		{"ui/rank-col", 64, 64, 0, 0},
+		{"ui/rank-bg", 64, 64, 0, 0},
+		{"ui/rank-gen", 64, 64, 0, 0},
 	}
 	for _, w := range want {
 		sh := lib.Get(w.key)

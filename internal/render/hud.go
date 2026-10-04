@@ -269,8 +269,39 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 		if name == "" {
 			name = "?"
 		}
-		Text(dst, campaign.Rank(u.Rank).Abbrev(), 2, float64(m.y))
-		Text(dst, name, 2, float64(m.y+8))
+		drawRank(dst, campaign.Rank(u.Rank), 2, float64(m.y))
+		Text(dst, name, 2, float64(m.y+9))
+	}
+}
+
+// rankKeys are the status-strip flashes, low rank to high. Each cell is
+// 64×64 and draws at S/8 in the line above the man's name.
+var rankKeys = [...]string{
+	campaign.Private:             "ui/rank-pte",
+	campaign.Corporal:            "ui/rank-cpl",
+	campaign.Sergeant:            "ui/rank-sgt",
+	campaign.StaffSergeant:       "ui/rank-ssgt",
+	campaign.SergeantFirstClass:  "ui/rank-sfc",
+	campaign.MasterSergeant:      "ui/rank-msg",
+	campaign.SergeantMajor:       "ui/rank-sgm",
+	campaign.Specialist4:         "ui/rank-sp4",
+	campaign.Specialist6:         "ui/rank-sp6",
+	campaign.WarrantOfficer:      "ui/rank-wo",
+	campaign.ChiefWarrantOfficer: "ui/rank-cwo",
+	campaign.Captain:             "ui/rank-cpt",
+	campaign.Major:               "ui/rank-maj",
+	campaign.Colonel:             "ui/rank-col",
+	campaign.BrigadierGeneral:    "ui/rank-bg",
+	campaign.General:             "ui/rank-gen",
+}
+
+func drawRank(dst *ebiten.Image, rank campaign.Rank, x, y float64) {
+	key := rankKeys[campaign.Private]
+	if rank >= 0 && int(rank) < len(rankKeys) {
+		key = rankKeys[rank]
+	}
+	if !drawUIAt(dst, key, x, y) {
+		Text(dst, rank.Abbrev(), x, y)
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"fannon-codder/internal/sim"
 )
 
@@ -91,6 +93,35 @@ func TestThrowScrub(t *testing.T) {
 	u.SinceThrow = throwWindow / 2
 	if math.Abs(throwFrac(u)-0.5) > 1e-9 {
 		t.Fatalf("mid flourish = %v", throwFrac(u))
+	}
+}
+
+func TestWalkingEnemyUsesIdle(t *testing.T) {
+	restoreRender(t)
+	SetPictureScale(1)
+	ResetAnim()
+	var sprites, rects int
+	spriteHook = func(*ebiten.Image, bool) { sprites++ }
+	rectHook = func() { rects++ }
+	t.Cleanup(func() { spriteHook, rectHook = nil, nil })
+
+	w := sim.NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	u := w.SpawnUnit(sim.SideEnemy, sim.Vec2{X: 40, Y: 40})
+	u.VX = 20
+	u.Facing = 0
+	dst := ebiten.NewImage(64, 64)
+	Field(dst, w, "grass")
+	if sprites != 1 || rects != 0 {
+		t.Fatalf("walking grunt: sprites=%d rects=%d, want the idle sheet", sprites, rects)
+	}
+
+	sprites, rects = 0, 0
+	u.Kind = sim.KindRocketeer
+	Field(dst, w, "grass")
+	if sprites != 1 || rects != 0 {
+		t.Fatalf("walking rocketeer: sprites=%d rects=%d, want the idle sheet", sprites, rects)
 	}
 }
 

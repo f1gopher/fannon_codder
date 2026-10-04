@@ -106,6 +106,17 @@ func clamp01(p float64) float64 {
 	return p
 }
 
+// sheetForPose is the painted cycle for this pose. Enemy ranks have no walk
+// sheet, so a man leaving a door (or a rocketeer closing in) keeps his idle.
+func sheetForPose(u *sim.Unit, p pose) *Sheet {
+	key := actorKey(u)
+	sh := activeSheets().Get(key + "/" + p.name())
+	if sh == nil && p == poseWalk {
+		sh = activeSheets().Get(key + "/idle")
+	}
+	return sh
+}
+
 func actorKey(u *sim.Unit) string {
 	switch u.Side {
 	case sim.SideCivilian:
@@ -572,7 +583,7 @@ func unitBody(cam sim.Camera, u sim.Unit) body {
 	sy := cam.ScreenY(u.Y)
 	fallback := func(dst *ebiten.Image) { drawUnitRect(dst, cam, &u) }
 	p := unitPose(&u, deathAge[u.ID], deathDuration(&u))
-	sh := activeSheets().Get(actorKey(&u) + "/" + p.name())
+	sh := sheetForPose(&u, p)
 	if sh == nil {
 		return body{y: u.Y, draw: fallback}
 	}

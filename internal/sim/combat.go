@@ -283,9 +283,7 @@ func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 			continue
 		}
 		w.kill(u)
-		if owner := w.Unit(p.OwnerID); owner != nil {
-			owner.Kills++
-		}
+		w.creditKill(p.OwnerID, u)
 		p.Alive = false
 		return
 	}
@@ -297,6 +295,20 @@ func (w *World) mgCanHurt(p *Projectile, u *Unit) bool {
 		return false
 	}
 	return true
+}
+
+// creditKill gives the owner one point when the victim is an enemy.
+// Grenades, rockets, and the mounted gun already name the trooper who
+// used them. A dead owner still scores: the blast can take him too.
+func (w *World) creditKill(ownerID int, victim *Unit) {
+	if victim == nil || victim.Side != SideEnemy {
+		return
+	}
+	owner := w.Unit(ownerID)
+	if owner == nil || owner.ID == victim.ID || owner.Side != SidePlayer {
+		return
+	}
+	owner.Kills++
 }
 
 func (w *World) kill(u *Unit) {

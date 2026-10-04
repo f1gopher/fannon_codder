@@ -345,11 +345,20 @@ func (b *Battle) settleOnce(won bool) {
 func (b *Battle) tally() (graves int, survivors []campaign.Soldier) {
 	for i, id := range b.unitIDs {
 		u := b.world.Unit(id)
-		if i >= len(b.deployed) || u == nil || !u.Living() {
+		if i >= len(b.deployed) {
 			graves++
 			continue
 		}
-		survivors = append(survivors, b.deployed[i])
+		man := b.deployed[i]
+		if u != nil {
+			man.Kills += u.Kills
+		}
+		if u == nil || !u.Living() {
+			graves++
+			b.prog.NoteHero(man)
+			continue
+		}
+		survivors = append(survivors, man)
 	}
 	return graves, survivors
 }

@@ -8,13 +8,14 @@ import (
 
 // SaveGame is the one Boot Hill slot.
 type SaveGame struct {
-	PhaseIndex         int       `json:"phaseIndex"`
-	MissionsCompleted  int       `json:"missionsCompleted"`
-	Graves             int       `json:"graves"`
-	GameOver           bool      `json:"gameOver"`
-	AwaitingStub       bool      `json:"awaitingStub"`
-	Recruits           []Soldier `json:"recruits"`
-	NextName           int       `json:"nextName"`
+	PhaseIndex        int       `json:"phaseIndex"`
+	MissionsCompleted int       `json:"missionsCompleted"`
+	Graves            int       `json:"graves"`
+	GameOver          bool      `json:"gameOver"`
+	AwaitingStub      bool      `json:"awaitingStub"`
+	Recruits          []Soldier `json:"recruits"`
+	NextName          int       `json:"nextName"`
+	Heroes            []Hero    `json:"heroes,omitempty"`
 }
 
 func DefaultSavePath() (string, error) {

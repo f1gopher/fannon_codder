@@ -27,8 +27,9 @@ const (
 
 // BootHill is the between-mission hill: queue, graves, mission number.
 type BootHill struct {
-	prog *Progress
-	t    float64
+	prog   *Progress
+	t      float64
+	heroes bool
 }
 
 func NewBootHill(prog *Progress) *BootHill { return &BootHill{prog: prog} }
@@ -39,7 +40,17 @@ func (b *BootHill) Leave() {}
 func (b *BootHill) Update(h Host) error {
 	b.t += 1.0 / 60
 	p := h.Pointer()
+	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
+		b.heroes = !b.heroes
+		return nil
+	}
 	click := p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter)
+	if b.heroes {
+		if click {
+			b.heroes = false
+		}
+		return nil
+	}
 	if !click {
 		return nil
 	}
@@ -142,9 +153,29 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 	case b.prog.AwaitingStub:
 		render.Text(screen, "MISSION COMPLETE  Click — later missions", 8, 88)
 	default:
-		render.Text(screen, "Click or Enter to start", 8, 88)
+		render.Text(screen, "Click or Enter to start    H heroes", 8, 88)
+	}
+	if b.heroes {
+		b.drawHeroes(screen)
 	}
 	if b.prog.SaveNotice != "" {
 		render.Text(screen, b.prog.SaveNotice, 8, 108)
 	}
+}
+
+func (b *BootHill) drawHeroes(screen *ebiten.Image) {
+	render.Rect(screen, 24, 36, 272, 176, color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xee})
+	render.Text(screen, "HIGH SCORING HEROES", 36, 44)
+	var living []campaign.Soldier
+	if b.prog.Pool != nil {
+		living = b.prog.Pool.Recruits
+	}
+	rows := campaign.HighScorers(living, b.prog.Heroes)
+	if len(rows) == 0 {
+		render.Text(screen, "No scores yet", 36, 64)
+	}
+	for i, h := range rows {
+		render.Text(screen, fmt.Sprintf("%2d  %-4s %-12s %d", i+1, h.Rank.Abbrev(), h.Name, h.Kills), 36, float64(64+i*8))
+	}
+	render.Text(screen, "Click or Enter — Boot Hill", 36, 192)
 }

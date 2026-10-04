@@ -20,7 +20,8 @@ This page is generated from the control list in `internal/app/controls.go`. When
 
 - **Left click LOAD** — Loads the saved campaign. If there is no save, the hill says “No save”.
 - **Left click SAVE** — Saves the campaign after at least one mission has been finished. Earlier than that, the hill says “Save after a mission”.
-- **Left click anywhere else, or Enter** — Opens the next briefing, or the “not implemented yet” card when that mission has no map.
+- **H** — Opens or closes the High Scoring Heroes table. One point is a kill. Grenades, rockets, and the skidoo gun score for the trooper who used them.
+- **Left click anywhere else, or Enter** — Opens the next briefing, or the “not implemented yet” card when that mission has no map. While the heroes table is open, this closes the table instead.
 
 ## Briefing
 

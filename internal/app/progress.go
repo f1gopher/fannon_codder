@@ -16,6 +16,7 @@ type Progress struct {
 	GameOver          bool
 	AwaitingStub      bool // next mission has no map yet
 	SaveNotice        string
+	Heroes            []campaign.Hero
 }
 
 func NewProgress() *Progress {
@@ -106,7 +107,16 @@ func (p *Progress) ToSave() campaign.SaveGame {
 		AwaitingStub:      p.AwaitingStub,
 		Recruits:          recruits,
 		NextName:          next,
+		Heroes:            append([]campaign.Hero{}, p.Heroes...),
 	}
+}
+
+// NoteHero records a man who died with a personal score.
+func (p *Progress) NoteHero(s campaign.Soldier) {
+	if p == nil {
+		return
+	}
+	p.Heroes = campaign.Remember(p.Heroes, campaign.Hero{Name: s.Name, Rank: s.Rank, Kills: s.Kills})
 }
 
 func (p *Progress) ApplySave(s campaign.SaveGame) {
@@ -116,6 +126,7 @@ func (p *Progress) ApplySave(s campaign.SaveGame) {
 	p.GameOver = s.GameOver
 	p.AwaitingStub = s.AwaitingStub
 	p.Pool = campaign.RestorePool(s.Recruits, s.NextName)
+	p.Heroes = append([]campaign.Hero{}, s.Heroes...)
 	p.reloadPhase()
 	// A save from before Mission 2 existed flagged the stub even though
 	// phase index 1 is now a real map. Trust the loaded phase.

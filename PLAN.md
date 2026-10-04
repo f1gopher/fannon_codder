@@ -1149,7 +1149,7 @@ Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 - Wounded-squirm + “finish them” (manual); corpse-juggle (manual easter egg)
 - Original-feeling title tune (new audio, not ripped). Battle sound effects are Chunks 24–31.
 - Birds, snowmen, igloos as flavour
-- High Scoring Heroes table
+- High Scoring Heroes table — in (Boot Hill, H)
 - A fullscreen toggle
 - Headless sim replay for regression of each phase
 

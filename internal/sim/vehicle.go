@@ -511,6 +511,18 @@ func (w *World) syncCrew(v *Vehicle) {
 	}
 }
 
+func (w *World) vehicleDriver(v *Vehicle) int {
+	if v == nil {
+		return 0
+	}
+	for _, id := range v.Occupants {
+		if u := w.Unit(id); u != nil && u.Living() {
+			return u.ID
+		}
+	}
+	return 0
+}
+
 func (w *World) ram(v *Vehicle) {
 	if !v.Alive || hypot(v.VX, v.VY) < 8 {
 		return
@@ -522,6 +534,7 @@ func (w *World) ram(v *Vehicle) {
 		}
 		if hypot(u.X-v.X, u.Y-v.Y) <= VehicleRamR {
 			w.kill(u)
+			w.creditKill(w.vehicleDriver(v), u)
 		}
 	}
 }
@@ -545,14 +558,10 @@ func (w *World) vehicleShoot(v *Vehicle, tx, ty, dt float64) {
 }
 
 func (w *World) fireVehicleMG(v *Vehicle, ang float64) {
-	owner := 0
+	owner := w.vehicleDriver(v)
 	side := v.Side
-	for _, id := range v.Occupants {
-		if u := w.Unit(id); u != nil && u.Living() {
-			owner = u.ID
-			side = u.Side
-			break
-		}
+	if u := w.Unit(owner); u != nil {
+		side = u.Side
 	}
 	w.addMG(v.X+math.Cos(ang)*10, v.Y+math.Sin(ang)*10, ang, VehicleMGRange, owner, side)
 }

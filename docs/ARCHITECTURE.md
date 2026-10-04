@@ -95,7 +95,8 @@ Pointer-driven edge scroll, clamped to the map. The view is the playfield beside
 - After each **mission**: +15 recruits; survivors promoted **one rank per phase survived**.
 - After every three missions, new recruits arrive already trained.
 - Max on-field squad: briefing number, never more than six.
-- Save only on Boot Hill after a full mission (`userConfig/fannon-codder/save.json`).
+- Save only on Boot Hill after a full mission (`userConfig/fannon-codder/save.json`). The save also keeps the fallen scores for the High Scoring Heroes table.
+- One enemy kill is one point for the trooper who fired. Grenades, rockets, the skidoo gun, and a ram score for that trooper (the driver, for the skidoo). Civilians do not score. Boot Hill opens the table with H: the best twelve living or fallen men. The bureau remembers more fallen than it draws.
 - Run out of recruits → game over.
 
 Ranks (low → high): Private, Corporal, Sergeant, Staff Sergeant, Sergeant First Class, Master Sergeant, Sergeant Major, Specialist 4, Specialist 6, Warrant Officer, Chief Warrant Officer, Captain, Major, Colonel, Brigadier General, General.

@@ -11,9 +11,10 @@ const (
 
 // Soldier is one named man in the pool or on the field.
 type Soldier struct {
-	Name               string `json:"name"`
-	Rank               Rank   `json:"rank"`
-	PhasesThisMission  int    `json:"phasesThisMission,omitempty"`
+	Name              string `json:"name"`
+	Rank              Rank   `json:"rank"`
+	Kills             int    `json:"kills,omitempty"`
+	PhasesThisMission int    `json:"phasesThisMission,omitempty"`
 }
 
 // Pool is the unused recruit queue. Deployed men leave it.

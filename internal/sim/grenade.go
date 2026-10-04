@@ -234,9 +234,7 @@ func (w *World) explode(x, y float64, ownerID int) {
 			continue
 		}
 		w.kill(u)
-		if owner := w.Unit(ownerID); owner != nil && owner.Living() && owner.ID != u.ID {
-			owner.Kills++
-		}
+		w.creditKill(ownerID, u)
 	}
 	for i := range w.Vehicles {
 		v := &w.Vehicles[i]

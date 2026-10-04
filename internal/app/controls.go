@@ -59,8 +59,14 @@ func controls() []binding {
 		},
 		{
 			section: "Boot Hill",
+			input:   "H",
+			action:  "Opens or closes the High Scoring Heroes table. One point is a kill. Grenades, rockets, and the skidoo gun score for the trooper who used them.",
+			tokens:  []string{"KeyH"},
+		},
+		{
+			section: "Boot Hill",
 			input:   "Left click anywhere else, or Enter",
-			action:  "Opens the next briefing, or the “not implemented yet” card when that mission has no map.",
+			action:  "Opens the next briefing, or the “not implemented yet” card when that mission has no map. While the heroes table is open, this closes the table instead.",
 			tokens:  []string{"MouseButtonLeft", "KeyEnter"},
 		},
 		{

@@ -280,7 +280,20 @@ Verify: `go test ./...`. An armed enemy skidoo stops inside gun range, outside t
 
 ## Next
 
-The numbered plan is done. Grunts stay posted. No chase and no pathfinding. What remains is the backlog below.
+The numbered plan is done. What remains is the backlog below.
+
+Mission 1 grunts still hold their tile. From Mission 2, and after a door man finishes his walk-out, a grunt or grenadier closes inside 160px, then stops to shoot. There is still no pathfinding. Rocketeers hold. A man with no walk sheet keeps his idle while he moves.
+
+## Landed after the numbered plan
+
+These are in `git log` after Chunk 51. Older “Chunk N done” notes stay as they were on the day that chunk landed.
+
+- Enemies close (`a37048e`). Mission 1 map grunts stay posted. `World.Mission >= 2` marks other grunts and grenadiers `Aggressive`. They walk in inside `EnemyChase` (160px) on sight or a heard shot, then use the existing burst. Door men set `Aggressive` when the walk-out ends. Rocketeers no longer shuffle in (`RocketeerApproach` is gone).
+- Door and chase men have no walk sheet (`409fabd`). A missing walk frame falls back to idle, so a hut grunt is not a rectangle while he steps out.
+- Rank flashes (`f0e5d87`). The status strip draws `ui/rank-*` above the name. Names and the G/R counts stay text.
+- High Scoring Heroes (`19a2322`). Boot Hill, H. One point per enemy the trooper kills. The table keeps the best twelve, living or fallen, and the save remembers the fallen.
+- Flavour (`bd3d66c`). Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos. None of them block movement or fire.
+- Pause (`5b97066`). P, or the status-strip button, freezes orders, the sim, and the picture. The playfield says PAUSED. A finished phase does not pause.
 
 ## Backlog
 
@@ -290,9 +303,11 @@ These are not AI chunks. Do not pull them forward to “finish the AI”.
 - Hostages, kidnap, factories, protect-civilians fail
 - Desert, moors, and underground tiles
 - Missions 6–24 as data
-- Wounded troopers and finishing them; corpse juggling
+- Wounded troopers and finishing them; corpse juggling — in, not committed yet. About one MG hit in three drops a standing man. He leaves the file and squirms on the corpse frame until another round, a blast, or a vehicle finishes him. Player MG still ignores a friendly on his feet and does finish one who is down. A wounded enemy blocks kill-all. Shooting a corpse kicks it along the round.
 - Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in. The picture, Chunks 32–47, is in.
-- Birds, snowmen, igloos — in. Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos. None of them block movement or fire.
-- High Scoring Heroes — in. Boot Hill, H. One point per enemy the trooper kills. The table keeps the best twelve, living or fallen, and the save remembers the fallen.
+- Birds, snowmen, igloos — in (`bd3d66c`)
+- High Scoring Heroes — in (`19a2322`)
+- Rank flashes on the status strip — in (`f0e5d87`)
+- Pause — in (`5b97066`)
 - A fullscreen toggle
 - Headless sim replay for each phase

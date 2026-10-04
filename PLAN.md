@@ -135,7 +135,7 @@ World space is float64 pixels. Units are ~8×8. One MG bullet kills a healthy in
 | ESC | Surrender phase. Survivors return to the pool. |
 | P | Pause. |
 
-Player MG does **not** harm living friendlies. Explosives and vehicles kill everyone. Wounded friendlies on the ground **can** be finished by MG (Amiga manual).
+Player MG does **not** harm living friendlies. Explosives and vehicles kill everyone, standing or wounded. Wounded friendlies on the ground **can** be finished by MG (Amiga manual). An MG round on a standing man kills, or about one time in three drops him. Shooting a corpse juggles it.
 
 ### Camera
 
@@ -1146,12 +1146,16 @@ Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 - Hostages, kidnap, factories, protect-civilians fail
 - Desert / moors / underground tiles
 - Missions 6–24 as data
-- Wounded-squirm + “finish them” (manual); corpse-juggle (manual easter egg)
+- Wounded-squirm + “finish them” (manual); corpse-juggle (manual easter egg) — in the working tree, not committed yet. See `docs/CHUNKS.md`.
 - Original-feeling title tune (new audio, not ripped). Battle sound effects are Chunks 24–31.
-- Birds, snowmen, igloos as flavour — in. Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos. None of them block movement or fire.
-- High Scoring Heroes table — in (Boot Hill, H)
+- Birds, snowmen, igloos as flavour — in (`bd3d66c`)
+- High Scoring Heroes table — in (`19a2322`, Boot Hill, H)
+- Rank flashes on the status strip — in (`f0e5d87`)
+- Pause (P, or the status-strip button) — in (`5b97066`)
 - A fullscreen toggle
 - Headless sim replay for regression of each phase
+
+After Chunk 51 the playable AI changed (`a37048e`). Mission 1 grunts still hold their tile. From Mission 2, grunts and grenadiers close inside 160px, then stop to shoot. Door men do that once the walk-out ends. Rocketeers stay put. There is still no pathfinding. A missing walk sheet uses idle (`409fabd`).
 
 ---
 
@@ -1161,7 +1165,7 @@ If you want a **playable toy on day one**, do **01 → 06** in order (Mission 1,
 
 Do not skip 03–05; Mission 1 is the control tutor.
 
-Chunks 01–51 are in. The sound chunks are done. The picture chunks 32–47 are in. The Chunk 33 style board in `assets/art/style/` is accepted. The numbered plan is done. What remains is the backlog in `docs/CHUNKS.md`.
+Chunks 01–51 are in. The sound chunks are done. The picture chunks 32–47 are in. The Chunk 33 style board in `assets/art/style/` is accepted. The numbered plan is done. Mission 2 and later grunts close; Mission 1 still holds. What remains is the backlog in `docs/CHUNKS.md`.
 
 ---
 
@@ -1196,7 +1200,7 @@ Grok must not skip tests to “save time”; they are how the next session knows
 - **Right-click** may be eaten by the window manager. If so, add a fallback (`Ctrl` = fire) in Chunk 04 without removing right-click.
 - **Both-buttons grenade** is fiddly on some mice; keep it and also accept `Space` as “special at pointer” from Chunk 14.
 - **Soft-locks** (exploding all crates) are authentic; still make Mission 2 phase 2 have a crate you do not have to shoot-walk through.
-- **Scope creep** (A*, chase AI, a second art style mid-stream) will blow the budget. Posted grunts are Chunks 21–22. Hearing is Chunk 23 only: turn toward a nearby shot, still no shot through a tree, still no chase. The picture is Chunks 32–47. Parked squads are Chunk 48. Door posts are Chunk 49. Specialist facing is Chunk 50. Armed skidoos are Chunk 51. Architecture.md is the brake.
+- **Scope creep** (A*, a second art style mid-stream) will blow the budget. Posted grunts are Chunks 21–22. Hearing is Chunk 23: turn toward a nearby shot, still no shot through a tree. Closing inside 160px, with no pathfinding, landed after Chunk 51 for Mission 2 and later. The picture is Chunks 32–47. Parked squads are Chunk 48. Door posts are Chunk 49. Specialist facing is Chunk 50. Armed skidoos are Chunk 51. Architecture.md is the brake.
 - **Do not rebalance Mission 1 by deleting grunts or shortening the gun.** The south man walks in because approach is 140 px and he spawns at 80. Chunk 21 stops the walk; Chunk 22 stops the laser.
 
 ## First message to Grok after you accept this plan

@@ -529,7 +529,7 @@ func (w *World) ram(v *Vehicle) {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if !u.Living() || u.VehicleID != 0 {
+		if u.Dead() || u.VehicleID != 0 {
 			continue
 		}
 		if hypot(u.X-v.X, u.Y-v.Y) <= VehicleRamR {

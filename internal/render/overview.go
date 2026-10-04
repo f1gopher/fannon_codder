@@ -99,7 +99,7 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if !u.Living() || u.VehicleID != 0 {
+		if u.Dead() || u.VehicleID != 0 {
 			continue
 		}
 		fillRect(dst,

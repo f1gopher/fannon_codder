@@ -23,6 +23,7 @@ type pose int
 
 const (
 	poseDeath pose = iota
+	poseWounded
 	poseCorpse
 	poseSink
 	poseSwim
@@ -36,7 +37,7 @@ func (p pose) name() string {
 	switch p {
 	case poseDeath:
 		return "death"
-	case poseCorpse:
+	case poseWounded, poseCorpse:
 		return "corpse"
 	case poseSink:
 		return "sink"
@@ -54,6 +55,9 @@ func (p pose) name() string {
 }
 
 func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
+	if u.Wounded() {
+		return poseWounded
+	}
 	if u.Dead() {
 		if deathDur > 0 && deathAge < deathDur {
 			return poseDeath
@@ -177,7 +181,7 @@ func poseFrame(p pose, u *sim.Unit, sh *Sheet) int {
 	switch p {
 	case poseDeath:
 		return FrameAt(deathAge[u.ID], sh.FPS, sh.Frames, false)
-	case poseCorpse:
+	case poseWounded, poseCorpse:
 		return 0
 	case poseSink:
 		frac := 0.0
@@ -584,6 +588,7 @@ func crateBody(cam sim.Camera, p sim.Pickup) body {
 func unitBody(cam sim.Camera, u sim.Unit) body {
 	sx := cam.ScreenX(u.X)
 	sy := cam.ScreenY(u.Y)
+	dx, dy := bodyShift(&u)
 	fallback := func(dst *ebiten.Image) { drawUnitRect(dst, cam, &u) }
 	p := unitPose(&u, deathAge[u.ID], deathDuration(&u))
 	sh := sheetForPose(&u, p)
@@ -594,7 +599,25 @@ func unitBody(cam sim.Camera, u sim.Unit) body {
 	if !ok {
 		return body{y: u.Y, draw: fallback}
 	}
-	return spriteBody(u.Y, sx, sy, img, sh.AnchorX, sh.AnchorY, mirror, fallback)
+	if dx == 0 && dy == 0 {
+		return spriteBody(u.Y, sx, sy, img, sh.AnchorX, sh.AnchorY, mirror, fallback)
+	}
+	return body{
+		y:      u.Y,
+		shadow: func(dst *ebiten.Image) { castShadow(dst, sx, sy, img) },
+		draw:   func(dst *ebiten.Image) { DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, mirror, sx+dx, sy+dy) },
+	}
+}
+
+// bodyShift squirms a wounded man and lifts a juggled corpse. The shadow stays
+// on the ground. Offsets are world pixels, the same space ScreenX uses.
+func bodyShift(u *sim.Unit) (dx, dy float64) {
+	if u.Wounded() {
+		dx = math.Sin(animTime*9+float64(u.ID)) * 1.5
+		dy = math.Sin(animTime*14+float64(u.ID)) * 0.6
+	}
+	dy -= u.Hop
+	return dx, dy
 }
 
 func vehicleBody(cam sim.Camera, v sim.Vehicle) body {

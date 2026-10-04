@@ -10,6 +10,17 @@ const (
 	MGHitR   = 4.0
 	MGSpread = 0.05 // default world spread enable (0 in tests = none)
 
+	// WoundOdds is how often a standing man's MG hit drops him instead of killing him.
+	// A burst still finishes him. Tests leave WoundChance at 0.
+	WoundOdds = 0.34
+
+	juggleKick    = 70.0  // px/s along the shot
+	juggleHop     = 120.0 // px/s upward
+	juggleGravity = 340.0
+	juggleBounce  = 0.4
+	juggleDrag    = 80.0 // px/s^2 once the body is on the ground
+	juggleRest    = 8.0  // px/s; slower than this, the hop ends
+
 	privateRange  = 80.0
 	generalRange  = 150.0
 	privateRoF    = 8.0
@@ -273,7 +284,7 @@ func (w *World) stepProjectiles(dt float64) {
 func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.ID == p.OwnerID || u.Dead() || u.VehicleID != 0 {
+		if u.ID == p.OwnerID || u.VehicleID != 0 {
 			continue
 		}
 		if !w.mgCanHurt(p, u) {
@@ -282,11 +293,118 @@ func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 		if !segmentHitsCircle(x0, y0, x1, y1, u.X, u.Y, MGHitR) {
 			continue
 		}
-		w.kill(u)
-		w.creditKill(p.OwnerID, u)
+		w.mgStrike(p, u)
 		p.Alive = false
 		return
 	}
+}
+
+// mgStrike wounds or kills a man on his feet, finishes a wounded man, and
+// launches a corpse. Player MG still ignores a friendly who is on his feet.
+func (w *World) mgStrike(p *Projectile, u *Unit) {
+	if u.Dead() {
+		w.juggle(u, p)
+		return
+	}
+	if u.Wounded() || u.Sinking || !w.rollWound() {
+		w.kill(u)
+		w.creditKill(p.OwnerID, u)
+		return
+	}
+	w.wound(u)
+}
+
+func (w *World) rollWound() bool {
+	if w.WoundChance <= 0 {
+		return false
+	}
+	if w.WoundChance >= 1 {
+		return true
+	}
+	if w.rng == nil {
+		w.rng = newRNG()
+	}
+	return w.rng.Float64() < w.WoundChance
+}
+
+func (w *World) wound(u *Unit) {
+	if u == nil || u.HP != Alive {
+		return
+	}
+	u.HP = Wounded
+	u.VX = 0
+	u.VY = 0
+	u.GrenadeWind = 0
+	u.RocketWind = 0
+	u.WindHeld = false
+	w.dropFromFile(u.ID)
+}
+
+// juggle is the corpse easter egg: an MG round kicks the body along the shot
+// and pops it off the ground. Further rounds add to that kick.
+func (w *World) juggle(u *Unit, p *Projectile) {
+	sp := hypot(p.VX, p.VY)
+	if sp < 1 {
+		return
+	}
+	u.VX += p.VX / sp * juggleKick
+	u.VY += p.VY / sp * juggleKick
+	u.VZ += juggleHop
+}
+
+func (w *World) stepBodies(dt float64) {
+	for i := range w.Units {
+		u := &w.Units[i]
+		if !u.Dead() || u.VehicleID != 0 {
+			continue
+		}
+		if u.Hop == 0 && u.VZ == 0 && u.VX == 0 && u.VY == 0 {
+			continue
+		}
+		u.VZ -= juggleGravity * dt
+		u.Hop += u.VZ * dt
+		if u.Hop <= 0 {
+			u.Hop = 0
+			if u.VZ < 0 {
+				u.VZ = -u.VZ * juggleBounce
+				if u.VZ < juggleRest {
+					u.VZ = 0
+				}
+			}
+			sp := hypot(u.VX, u.VY)
+			if sp > 0 {
+				drop := juggleDrag * dt
+				if drop >= sp {
+					u.VX, u.VY = 0, 0
+				} else {
+					u.VX -= u.VX / sp * drop
+					u.VY -= u.VY / sp * drop
+				}
+			}
+		}
+		w.shoveCorpse(u, u.VX*dt, u.VY*dt)
+	}
+}
+
+// shoveCorpse slides a body and stops it on a solid tile. It does not sink,
+// and it does not step off a cliff.
+func (w *World) shoveCorpse(u *Unit, dx, dy float64) {
+	nx, ny := u.X+dx, u.Y+dy
+	if w.walkableUnit(nx, ny) {
+		u.X, u.Y = nx, ny
+		return
+	}
+	if w.walkableUnit(nx, u.Y) {
+		u.X = nx
+		u.VY = 0
+		return
+	}
+	if w.walkableUnit(u.X, ny) {
+		u.Y = ny
+		u.VX = 0
+		return
+	}
+	u.VX, u.VY = 0, 0
 }
 
 // Player MG does not harm living friendlies. Explosives later ignore this.

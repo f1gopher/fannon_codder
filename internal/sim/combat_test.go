@@ -29,10 +29,117 @@ func TestMGKillsEnemyInOneHit(t *testing.T) {
 	}
 }
 
+func TestMGCanWoundThenFinish(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 40, Y: 0})
+	w.WoundChance = 1
+	id := enemyOf(w).ID
+	fireAt(w, 80, 0, 8)
+	d := w.Unit(id)
+	if !d.Wounded() {
+		t.Fatalf("HP=%v, want wounded", d.HP)
+	}
+	if d.X != 40 || d.Y != 0 {
+		t.Fatalf("wounded man moved to (%v,%v)", d.X, d.Y)
+	}
+	shooter := w.Unit(w.ActiveSquad().LeaderID)
+	if shooter.Kills != 0 {
+		t.Fatalf("a wound scored %d", shooter.Kills)
+	}
+	var yelled bool
+	for _, c := range w.TakeCues() {
+		if c.Kind == CueDeath {
+			yelled = true
+		}
+	}
+	if yelled {
+		t.Fatal("a wound played the death yell")
+	}
+	fireAt(w, 80, 0, 12)
+	d = w.Unit(id)
+	if !d.Dead() {
+		t.Fatalf("finish left HP=%v", d.HP)
+	}
+	if w.Unit(w.ActiveSquad().LeaderID).Kills != 1 {
+		t.Fatalf("finish scored %d, want 1", w.Unit(w.ActiveSquad().LeaderID).Kills)
+	}
+}
+
+func TestFinishWoundedFriendly(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 0, Y: 0}, {X: 20, Y: 0}}, Vec2{X: 200, Y: 200})
+	friend := w.Unit(w.ActiveSquad().MemberIDs[1])
+	w.wound(friend)
+	if len(w.ActiveSquad().MemberIDs) != 1 {
+		t.Fatal("a wounded man should drop out of the file")
+	}
+	fireAt(w, 80, 0, 12)
+	if !w.Unit(friend.ID).Dead() {
+		t.Fatal("player MG should finish a wounded friendly")
+	}
+}
+
+func TestWoundedEnemyBlocksKillAll(t *testing.T) {
+	w := NewDemoWorld()
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side == SideEnemy {
+			w.wound(u)
+		}
+	}
+	w.evaluateObjectives()
+	if w.Status != Playing {
+		t.Fatalf("status=%v, want Playing while an enemy is down", w.Status)
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side == SideEnemy {
+			w.kill(u)
+		}
+	}
+	w.evaluateObjectives()
+	if w.Status != Won {
+		t.Fatalf("status=%v, want Won", w.Status)
+	}
+}
+
+func TestBlastFinishesWounded(t *testing.T) {
+	w := NewEmpty()
+	u := w.SpawnUnit(SideEnemy, Vec2{X: 10, Y: 10})
+	w.wound(u)
+	w.explode(10, 10, 0)
+	if !w.Unit(u.ID).Dead() {
+		t.Fatal("a blast should finish a wounded man")
+	}
+}
+
+func TestCorpseJuggle(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 40, Y: 0})
+	id := enemyOf(w).ID
+	fireAt(w, 80, 0, 8)
+	body := w.Unit(id)
+	if !body.Dead() {
+		t.Fatal("setup should leave a corpse")
+	}
+	x := body.X
+	w.SetFire(200, 0, true)
+	for i := 0; i < 40; i++ {
+		w.Step(1.0 / 60)
+		body = w.Unit(id)
+		if body.Hop > 1 || body.X > x+1 {
+			return
+		}
+	}
+	t.Fatalf("corpse stayed at x=%v hop=%v", body.X, body.Hop)
+}
+
 func TestCorpseStaysOnMap(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 40, Y: 0})
 	id := enemyOf(w).ID
-	fireAt(w, 80, 0, 20)
+	w.SetFire(80, 0, true)
+	for i := 0; i < 20 && !w.Unit(id).Dead(); i++ {
+		w.Step(1.0 / 60)
+	}
+	w.Firing = false
+	w.Step(1.0 / 60)
 	u := w.Unit(id)
 	if u == nil {
 		t.Fatal("corpse was removed from the world")

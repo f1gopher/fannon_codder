@@ -43,6 +43,18 @@ func (w *World) anyLiving(side Side) bool {
 	return false
 }
 
+// anyRemaining is a man still on the field, including one who is down and
+// squirming. A wounded enemy blocks kill-all until he is finished.
+func (w *World) anyRemaining(side Side) bool {
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side == side && !u.Dead() {
+			return true
+		}
+	}
+	return false
+}
+
 func (w *World) evaluateObjectives() {
 	if w.Status != Playing || len(w.Objectives) == 0 {
 		return
@@ -55,7 +67,7 @@ func (w *World) evaluateObjectives() {
 	for _, o := range w.Objectives {
 		switch o {
 		case KillAllEnemy:
-			if w.anyLiving(SideEnemy) {
+			if w.anyRemaining(SideEnemy) {
 				return
 			}
 		case DestroyEnemyBuildings:

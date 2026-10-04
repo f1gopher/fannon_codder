@@ -21,6 +21,7 @@ type World struct {
 	AimX, AimY  float64
 	Firing      bool
 	Spread      float64
+	WoundChance float64 // odds an MG round wounds a standing man; 0 is a one-hit kill
 	AI          bool
 	// Mission is the campaign number for this phase. 1 keeps map grunts posted.
 	// 2 and later lets them close. 0 is a sandbox.
@@ -51,13 +52,14 @@ func NewEmpty() *World {
 			MapW:  320,
 			MapH:  256,
 		},
-		Spread:     MGSpread,
-		AI:         true,
-		Status:     Playing,
-		Objectives: []Objective{KillAllEnemy},
-		nextID:     1,
-		nextVID:    1,
-		rng:        newRNG(),
+		Spread:      MGSpread,
+		WoundChance: WoundOdds,
+		AI:          true,
+		Status:      Playing,
+		Objectives:  []Objective{KillAllEnemy},
+		nextID:      1,
+		nextVID:     1,
+		rng:         newRNG(),
 	}
 }
 
@@ -340,6 +342,7 @@ func (w *World) Step(dt float64) {
 	w.stepFire(dt)
 	w.stepInactiveFire(dt)
 	w.stepProjectiles(dt)
+	w.stepBodies(dt)
 	w.stepGrenades(dt)
 	w.stepSpawners(dt)
 	w.stepBlasts(dt)

@@ -9,7 +9,8 @@ const (
 	SideCivilian
 )
 
-// HP is the coarse health state. One MG hit kills a healthy infantryman later.
+// HP is the coarse health state. An MG round kills a standing man or drops him
+// wounded. A second round, a blast, or a vehicle finishes a wounded man.
 type HP int
 
 const (
@@ -65,6 +66,8 @@ type Unit struct {
 	PostY       float64
 	SinceShot   float64 // seconds since this unit's last MG round. Render only.
 	SinceThrow  float64 // seconds since this unit's last grenade or rocket. Render only.
+	Hop         float64 // corpse height above the ground, in world pixels
+	VZ          float64 // corpse vertical speed; positive is up
 	sampled     bool    // terrain has been read once; a man placed in water does not splash
 }
 
@@ -74,6 +77,8 @@ type Unit struct {
 const animRest = 1
 
 func (u *Unit) Dead() bool { return u.HP == Dead }
+
+func (u *Unit) Wounded() bool { return u.HP == Wounded }
 
 func (u *Unit) Living() bool {
 	return u.HP == Alive

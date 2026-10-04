@@ -63,6 +63,10 @@ func TestPoseFirstMatch(t *testing.T) {
 	if got := unitPose(u, 0, 0); got != poseSink {
 		t.Fatalf("sinking = %s", got.name())
 	}
+	u.HP = sim.Wounded
+	if got := unitPose(u, 0, 0.4); got != poseWounded || got.name() != "corpse" {
+		t.Fatalf("wounded = %s", got.name())
+	}
 	u.HP = sim.Dead
 	if got := unitPose(u, 0, 0.4); got != poseDeath {
 		t.Fatalf("dying = %s", got.name())

@@ -39,7 +39,7 @@ func unitSprite(c color.RGBA) *ebiten.Image {
 }
 
 func unitColor(u *sim.Unit) color.RGBA {
-	if u.Dead() {
+	if u.Dead() || u.Wounded() {
 		switch u.Side {
 		case sim.SidePlayer:
 			return playerDead
@@ -112,9 +112,10 @@ func drawUnitRect(dst *ebiten.Image, cam sim.Camera, u *sim.Unit) {
 	}
 	half := float64(sim.UnitSize) / 2
 	pose, drop := unitPoseScale(u)
+	dx, dy := bodyShift(u)
 	blit(dst, unitSprite(unitColor(u)),
-		cam.ScreenX(u.X)-half*pose,
-		cam.ScreenY(u.Y)-half*pose+drop,
+		cam.ScreenX(u.X)+dx-half*pose,
+		cam.ScreenY(u.Y)+dy-half*pose+drop,
 		pose, pose,
 	)
 	if u.Living() {

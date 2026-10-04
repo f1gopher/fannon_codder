@@ -59,7 +59,7 @@ The mixer loads the gunshot (8 voices), the blast (4 voices), the death yell (4 
 - `Vehicle`: skidoo (later jeep as the same type with a skin).
 - `Objective`: KillAllEnemy, DestroyEnemyBuildings (both can be required). ProtectCivilians parses and is ignored until a later chunk.
 
-World space is float64 pixels. Units are ~8×8. One MG bullet kills a healthy infantry unit.
+World space is float64 pixels. Units are ~8×8. An MG round kills a standing man, or (about one time in three) drops him wounded. He leaves the file and squirms until another round, a blast, or a vehicle finishes him. A wounded enemy still blocks kill-all. Shooting a corpse kicks it along the round and pops it up.
 
 ## Controls (Amiga mouse)
 
@@ -75,7 +75,7 @@ World space is float64 pixels. Units are ~8×8. One MG bullet kills a healthy in
 | ESC | Surrender phase. Survivors return to the pool. |
 | P | Pause. |
 
-Player MG does **not** harm living friendlies. Explosives and vehicles kill everyone. Wounded friendlies on the ground can be finished by MG.
+Player MG does **not** harm living friendlies. It does finish a wounded friendly. Explosives and vehicles kill everyone, standing or wounded.
 
 ## Enemy infantry
 
@@ -111,7 +111,7 @@ JSON fields are `frameW`, `frameH`, `anchorX`, `anchorY`, `fps`, `loop`, `rows`,
 
 The anchor sits on the sim point the rectangle uses: a trooper, crate, or skidoo position; the bottom centre of a hut; the bottom centre of a tree's cell. A ground frame pins its top-left to the cell. Draw order is ground, a soft oval under each painted body, then trees, huts, crates, men, and vehicles by foot Y, then grenades, tracers, and blasts, then the HUD and the pointer. Scenery frames are offset by `tx*3+ty*5`.
 
-Pose, first match: death (once, then the corpse frame), sink (scrubbed by `Sink/SinkTime`), swim, throw (scrubbed across the windup or the 0.25s after launch), shoot (while `SinceShot < 0.12`), walk (speed above 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up each step and do not change combat. Death time is kept in the renderer by unit id. The battle `Update` advances the clock.
+Pose, first match: wounded (the corpse frame, rocked in place), death (once, then the corpse frame), sink (scrubbed by `Sink/SinkTime`), swim, throw (scrubbed across the windup or the 0.25s after launch), shoot (while `SinceShot < 0.12`), walk (speed above 2 px/s), idle. `SinceShot` resets in `addMG`. `SinceThrow` resets in `launchGrenade` and `launchRocket`. Both count up each step and do not change combat. Death time is kept in the renderer by unit id. The battle `Update` advances the clock.
 
 Keys: `snake|eagle|panther|grunt|grenadier|rocketeer|civilian` with `idle|walk|shoot|throw|death|corpse|swim|sink`. Ground: `ground/grass`, `ground/snow`, `ground/water-shallow`, `ground/water-deep`, `ground/quicksand`, `ground/ice`, `ground/bridge`, `ground/cliff`, `ground/ramp`, `ground/mine`. Props: `tree/sway`, `hut/door`, `hut/plain`, `crate/grenade`, `crate/rocket`, `skidoo/idle`, `skidoo/move`, `prop/scrub`, `prop/snowman`, `prop/igloo`. Birds: `bird/flap`.
 

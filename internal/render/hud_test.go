@@ -67,6 +67,10 @@ func TestHitHUDMapIcon(t *testing.T) {
 	if kind != HitMap {
 		t.Fatalf("map icon hit = %v", kind)
 	}
+	kind, _ = HitHUD(w, 24, 242)
+	if kind != HitPause {
+		t.Fatalf("pause button hit = %v", kind)
+	}
 	kind, _ = HitHUD(w, 4, 20)
 	if kind != HitGrenade {
 		t.Fatalf("grenade hit = %v", kind)

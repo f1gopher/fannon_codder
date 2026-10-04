@@ -86,6 +86,7 @@ type Battle struct {
 	settled   bool
 	sandbox   bool
 	mapOpen   bool
+	paused    bool
 }
 
 func NewBattle(prog *Progress) *Battle {
@@ -231,6 +232,10 @@ func (b *Battle) CursorKind(p input.Pointer) int {
 
 func (b *Battle) Update(h Host) error {
 	defer func() {
+		if b.paused {
+			h.SetEngine(false, 0)
+			return
+		}
 		render.Advance(1.0/TPS, b.world)
 		if b.world != nil {
 			x, y := hearPoint(b.world)
@@ -242,10 +247,17 @@ func (b *Battle) Update(h Host) error {
 	}()
 	p := h.Pointer()
 	if b.world.Status != sim.Playing {
+		b.paused = false
 		b.settleOnce(b.world.Status == sim.Won)
 		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			b.leaveBattle(h, b.world.Status == sim.Won)
 		}
+		return nil
+	}
+	if b.togglePause(p) {
+		return nil
+	}
+	if b.paused {
 		return nil
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
@@ -321,6 +333,28 @@ func (b *Battle) Update(h Host) error {
 		b.world.Camera.Contain(x, y)
 	}
 	return nil
+}
+
+// togglePause flips the battle on P or a click of the status-strip button.
+// A phase that is already over does not pause.
+func (b *Battle) togglePause(p input.Pointer) bool {
+	if b.world == nil || b.world.Status != sim.Playing {
+		return false
+	}
+	click := p.LeftDown && p.X < float64(render.HUDWidth)
+	if click {
+		kind, _ := render.HitHUD(b.world, p.X, p.Y)
+		click = kind == render.HitPause
+	}
+	if !click && !inpututil.IsKeyJustPressed(ebiten.KeyP) {
+		return false
+	}
+	b.paused = !b.paused
+	if b.paused {
+		b.world.SetFire(b.world.AimX, b.world.AimY, false)
+		b.world.SetDrive(0, 0, false)
+	}
+	return true
 }
 
 func (b *Battle) settleOnce(won bool) {
@@ -405,7 +439,10 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	if b.mapOpen {
 		render.Overview(screen, b.world, terrain)
 	}
-	render.HUD(screen, b.world, b.remaining)
+	render.HUD(screen, b.world, b.remaining, b.paused)
+	if b.paused && b.world.Status == sim.Playing {
+		render.Text(screen, "PAUSED", 120, 120)
+	}
 	switch b.world.Status {
 	case sim.Won:
 		render.Text(screen, "PHASE COMPLETE\nClick or Enter", 70, 96)

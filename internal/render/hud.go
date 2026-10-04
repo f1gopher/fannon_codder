@@ -23,18 +23,20 @@ const (
 	HitMember
 	HitSquad
 	HitMap
+	HitPause
 )
 
 const (
-	hudLogoX, hudLogoY, hudLogoS = 4, 4, 12
-	hudGrenX, hudGrenY           = 2, 18
-	hudRockX                     = 28
-	hudIconW, hudIconH           = 22, 16
-	hudSquadTop                  = 36
-	hudHeadH                     = 12
-	hudManH                      = 18
-	hudFootX, hudFootY, hudFootS = 40, 4, 8
-	hudMapX, hudMapY, hudMapS    = 2, 238, 16
+	hudLogoX, hudLogoY, hudLogoS    = 4, 4, 12
+	hudGrenX, hudGrenY              = 2, 18
+	hudRockX                        = 28
+	hudIconW, hudIconH              = 22, 16
+	hudSquadTop                     = 36
+	hudHeadH                        = 12
+	hudManH                         = 18
+	hudFootX, hudFootY, hudFootS    = 40, 4, 8
+	hudMapX, hudMapY, hudMapS       = 2, 238, 16
+	hudPauseX, hudPauseY, hudPauseS = 20, 238, 16
 )
 
 var (
@@ -107,11 +109,11 @@ type hudBlock struct {
 }
 
 type hudLayout struct {
-	logo, gren, rock hudRect
-	foot, mapIcon    hudRect
-	headers          []hudHeader
-	men              []hudMan
-	blocks           []hudBlock
+	logo, gren, rock     hudRect
+	foot, mapIcon, pause hudRect
+	headers              []hudHeader
+	men                  []hudMan
+	blocks               []hudBlock
 }
 
 func layoutHUD(w *sim.World) hudLayout {
@@ -121,6 +123,7 @@ func layoutHUD(w *sim.World) hudLayout {
 		rock:    hudRect{hudRockX, hudGrenY, hudIconW, hudIconH},
 		foot:    hudRect{hudFootX, hudFootY, hudFootS, hudFootS},
 		mapIcon: hudRect{hudMapX, hudMapY, hudMapS, hudMapS},
+		pause:   hudRect{hudPauseX, hudPauseY, hudPauseS, hudPauseS},
 	}
 	if w == nil {
 		return lay
@@ -188,6 +191,9 @@ func HitHUD(w *sim.World, x, y float64) (HUDHit, int) {
 	if lay.mapIcon.contains(x, y) {
 		return HitMap, 0
 	}
+	if lay.pause.contains(x, y) {
+		return HitPause, 0
+	}
 	for _, h := range lay.headers {
 		if h.contains(x, y) {
 			if s := w.ActiveSquad(); s != nil && s.ID == h.id {
@@ -209,7 +215,8 @@ func HitHUD(w *sim.World, x, y float64) (HUDHit, int) {
 }
 
 // HUD draws the left status strip: troop logo, ammo, and every squad.
-func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
+// paused strokes the pause button.
+func HUD(dst *ebiten.Image, w *sim.World, remaining int, paused bool) {
 	if w == nil {
 		return
 	}
@@ -235,6 +242,7 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int) {
 	drawAmmoIcon(dst, lay.rock, "R", rCount, "ui/rocket", rocketIcon(), w.RocketShare, w.Special == sim.SpecialRocket)
 	drawStance(dst, lay.foot, leaderOnFoot(w, active))
 	drawMapIcon(dst, lay.mapIcon)
+	drawPauseIcon(dst, lay.pause, paused)
 
 	selected := map[int]bool{}
 	for _, id := range w.Selected {
@@ -381,6 +389,18 @@ func drawMapIcon(dst *ebiten.Image, r hudRect) {
 	fillRect(dst, r.x, r.y, r.w, r.h, mapIconFill)
 	strokeRect(dst, r, overviewGrass)
 	Text(dst, "M", float64(r.x+4), float64(r.y+4))
+}
+
+func drawPauseIcon(dst *ebiten.Image, r hudRect, paused bool) {
+	if !drawUIAt(dst, "ui/pause", float64(r.x), float64(r.y)) {
+		fillRect(dst, r.x, r.y, r.w, r.h, mapIconFill)
+		strokeRect(dst, r, overviewGrass)
+		fillRect(dst, r.x+4, r.y+3, 3, r.h-6, outlineFill)
+		fillRect(dst, r.x+9, r.y+3, 3, r.h-6, outlineFill)
+	}
+	if paused {
+		strokeRect(dst, r, selectSpec)
+	}
 }
 
 func strokeShare(dst *ebiten.Image, r hudRect, mode sim.AmmoShare) {

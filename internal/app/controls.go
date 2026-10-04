@@ -155,6 +155,12 @@ func controls() []binding {
 		},
 		{
 			section: "Battle — vehicles and map",
+			input:   "P, or left click the pause button",
+			action:  "Pauses the battle. Men, guns, vehicles, and the skidoo hum stop. Press P or click the button again to continue. A finished phase does not pause.",
+			tokens:  []string{"KeyP", "MouseButtonLeft"},
+		},
+		{
+			section: "Battle — vehicles and map",
 			input:   "Left click the M icon",
 			action:  "Opens or closes the map overlay. A left click on the open map closes it.",
 			tokens:  []string{"MouseButtonLeft"},

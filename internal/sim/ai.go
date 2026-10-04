@@ -3,22 +3,23 @@ package sim
 import "math"
 
 const (
-	EnemyMGRoF       = 4.0  // slower than player 8/s
-	EnemyMGRange     = 70.0 // shorter than a Private's 80
-	EnemyReact       = 0.55 // seconds of contact before the first round
-	EnemyReactJitter = 0.15 // added once per contact, in [-j, +j]
-	EnemyTurnRate    = 4.0  // rad/s. A 180° turn takes about 0.8s
-	EnemyFaceTol     = 0.35 // rad. No round until he is looking at the player
-	EnemyBurst       = 3    // MG rounds, then silence
-	EnemyBurstPause  = 0.75 // seconds with no MG round; he keeps turning
-	EnemyMGSpread    = 0.20 // rad. Wider than a Private's 0.12
-	EnemyHear        = 96.0 // px. An infantry MG round starts a reaction with no LOS
+	EnemyMGRoF       = 4.0   // slower than player 8/s
+	EnemyMGRange     = 70.0  // shorter than a Private's 80
+	EnemyReact       = 0.55  // seconds of contact before the first round
+	EnemyReactJitter = 0.15  // added once per contact, in [-j, +j]
+	EnemyTurnRate    = 4.0   // rad/s. A 180° turn takes about 0.8s
+	EnemyFaceTol     = 0.35  // rad. No round until he is looking at the player
+	EnemyBurst       = 3     // MG rounds, then silence
+	EnemyBurstPause  = 0.75  // seconds with no MG round; he keeps turning
+	EnemyMGSpread    = 0.20  // rad. Wider than a Private's 0.12
+	EnemyHear        = 96.0  // px. An infantry MG round starts a reaction with no LOS
+	EnemyChase       = 160.0 // px. An aggressive grunt walks in while he can see you, then stops to shoot
 )
 
-// stepAI posts grunts: they hold their tile, turn toward a player in gun
-// range with clear LOS, withhold the first round until the reaction and
-// the turn are both done, then fire a short burst and pause. Rocketeers
-// and grenade throws keep their own windups.
+// stepAI runs enemy infantry. Mission 1 grunts hold their tile. From Mission 2,
+// and for any man who has finished walking out of a door, a grunt closes
+// while he can see or hear a player, then holds and fires. Rocketeers stay
+// put. Grenade and rocket windups keep their own clocks.
 func (w *World) stepAI(dt float64) {
 	if !w.AI {
 		return
@@ -67,20 +68,27 @@ func (w *World) stepDoorPost(u *Unit, dt float64) {
 	arrived := w.steerToward(u, u.PostX, u.PostY, WalkSpeed, dt, ArrivalRadius)
 	if arrived || (u.X == prevX && u.Y == prevY) {
 		u.HasPost = false
+		u.Aggressive = true
 		u.VX = 0
 		u.VY = 0
 	}
 }
 
 // stepGruntGun is the MG path for a grunt and for a grenadier who is not
-// throwing. He never leaves his tile. A round needs a living player inside
-// gun range with clear LOS. A heard infantry shot turns him toward the
-// shooter and runs the same clock, and it never fires by itself.
+// throwing. A round needs a living player inside gun range with clear LOS.
+// A heard infantry shot turns him toward the shooter and runs the same clock,
+// and it never fires by itself. An aggressive man walks in first.
 func (w *World) stepGruntGun(u *Unit, dt float64) {
 	u.VX = 0
 	u.VY = 0
 	px, py, see := w.gruntContact(u)
 	nx, ny, hear := w.gruntNoise(u)
+	if !see && u.Aggressive && w.gruntChase(u, dt) {
+		if !hear {
+			resetGruntContact(u)
+			return
+		}
+	}
 	if !see && !hear {
 		resetGruntContact(u)
 		return
@@ -161,9 +169,28 @@ func (w *World) gruntNoise(u *Unit) (x, y float64, ok bool) {
 	return s.X, s.Y, true
 }
 
-// wakeFromMG starts a posted grunt's reaction when an infantry machine-gun
+// gruntChase walks an aggressive grunt toward the nearest player he can see
+// inside EnemyChase, or toward a heard shooter. In gun range he stops and
+// stepGruntGun fires. A blocked line with no shot to follow leaves him put.
+func (w *World) gruntChase(u *Unit, dt float64) bool {
+	tx, ty, ok := w.nearestLiving(SidePlayer, u.X, u.Y)
+	if !ok {
+		return false
+	}
+	if hypot(tx-u.X, ty-u.Y) > EnemyChase || !w.lineClear(u.X, u.Y, tx, ty) {
+		sx, sy, hear := w.gruntNoise(u)
+		if !hear || hypot(sx-u.X, sy-u.Y) > EnemyChase {
+			return false
+		}
+		tx, ty = sx, sy
+	}
+	w.steerToward(u, tx, ty, WalkSpeed, dt, ArrivalRadius)
+	return true
+}
+
+// wakeFromMG starts a grunt's reaction when an infantry machine-gun
 // round lands inside EnemyHear. He must be idle. Grenades, rockets, and
-// vehicle guns never call this. The grunt does not move.
+// vehicle guns never call this.
 func (w *World) wakeFromMG(x, y float64, owner int) {
 	src := w.Unit(owner)
 	if src == nil || !src.Living() || src.VehicleID != 0 {
@@ -295,14 +322,11 @@ const (
 	RocketeerWindup     = 0.55
 	RocketeerCooldown   = 3.2
 	RocketeerFirstDelay = 2.0
-	RocketeerApproach   = 90.0 // a rocketeer shuffles in; a grunt holds his post
-	RocketeerSpeed      = 12.0
 	RocketeerMinRange   = GrenadeRadius + 8
 )
 
-// stepRocketeer fires a slow rocket. Beside a tree they hold still instead of chasing.
+// stepRocketeer fires a slow rocket from where he stands. He does not close.
 func (w *World) stepRocketeer(u *Unit, px, py, dist, dt float64) {
-	hiding := w.treeAdjacent(u)
 	if u.RocketWind > 0 || u.WindHeld {
 		u.VX = 0
 		u.VY = 0
@@ -333,15 +357,8 @@ func (w *World) stepRocketeer(u *Unit, px, py, dist, dt float64) {
 			u.RocketCD = 0
 		}
 	}
-	if hiding {
-		u.VX = 0
-		u.VY = 0
-	} else if dist <= RocketeerApproach && dist > RocketeerMinRange {
-		w.steerToward(u, px, py, RocketeerSpeed, dt, ArrivalRadius)
-	} else {
-		u.VX = 0
-		u.VY = 0
-	}
+	u.VX = 0
+	u.VY = 0
 	if u.RocketCD > 0 || !w.CanShoot(u) {
 		return
 	}

@@ -641,6 +641,99 @@ func freshEnemyMGAngles(w *World) []float64 {
 	return out
 }
 
+func TestMission1GruntHoldsInsideChaseRange(t *testing.T) {
+	w := NewEmpty()
+	w.AI = true
+	w.Mission = 1
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 120, Y: 0}})
+	e := w.SpawnUnit(SideEnemy, Vec2{X: 0, Y: 0})
+	for i := 0; i < 60; i++ {
+		w.Step(1.0 / 60)
+	}
+	if e.X != 0 || e.Y != 0 {
+		t.Fatalf("mission 1 grunt stays posted, at (%v,%v)", e.X, e.Y)
+	}
+}
+
+func TestAggressiveGruntClosesThenHoldsToShoot(t *testing.T) {
+	w := NewEmpty()
+	w.AI = true
+	w.Spread = 0
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 100, Y: 0}})
+	e := w.SpawnUnit(SideEnemy, Vec2{X: 0, Y: 0})
+	e.Aggressive = true
+	id := e.ID
+	for i := 0; i < 30; i++ { // 0.5s, still outside the 70px gun
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		e = w.Unit(id)
+		if len(w.Projectiles) != 0 {
+			t.Fatal("he shot before he was in gun range")
+		}
+	}
+	if e.X < 10 {
+		t.Fatalf("he should have closed from 100px, x=%v", e.X)
+	}
+	var held bool
+	var x float64
+	for i := 0; i < 180; i++ {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		e = w.Unit(id)
+		if hypot(100-e.X, e.Y) <= EnemyMGRange {
+			held = true
+			x = e.X
+			break
+		}
+	}
+	if !held {
+		t.Fatalf("he never reached gun range, x=%v", e.X)
+	}
+	for i := 0; i < 90; i++ {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+		e = w.Unit(id)
+	}
+	if math.Abs(e.X-x) > 2 {
+		t.Fatalf("in range he holds, x %v -> %v", x, e.X)
+	}
+	if len(w.Projectiles) == 0 && e.BurstN == 0 {
+		t.Fatal("expected him to fire once he was in range")
+	}
+}
+
+func TestDoorGruntClosesAfterThePost(t *testing.T) {
+	w := NewEmpty()
+	w.AI = true
+	w.AddDoorHut(2, 0)
+	w.Buildings[0].SpawnCD = 0
+	door := w.Buildings[0].DoorSpawn()
+	// East of the post and outside gun range, so the walk-out finishes first.
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: door.X + 140, Y: door.Y + float64(3*TileSize)}})
+	w.Step(1.0 / 60)
+	var id int
+	for i := range w.Units {
+		if w.Units[i].Side == SideEnemy {
+			id = w.Units[i].ID
+		}
+	}
+	for i := 0; i < 180 && w.Unit(id).HasPost; i++ {
+		w.Step(1.0 / 60)
+	}
+	g := w.Unit(id)
+	if g.HasPost || !g.Aggressive {
+		t.Fatalf("post should finish as an aggressive grunt, post=%v aggressive=%v", g.HasPost, g.Aggressive)
+	}
+	postX := g.X
+	for i := 0; i < 60; i++ {
+		w.Step(1.0 / 60)
+	}
+	g = w.Unit(id)
+	if g.X <= postX {
+		t.Fatalf("after the post he walks toward the squad, x %v -> %v", postX, g.X)
+	}
+}
+
 func keepPlayerAlive(w *World) {
 	for i := range w.Units {
 		if w.Units[i].Side == SidePlayer {

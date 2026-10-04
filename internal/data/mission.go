@@ -136,6 +136,7 @@ func (p *Phase) World() (*sim.World, error) {
 		return nil, err
 	}
 	w := sim.NewEmpty()
+	w.Mission = p.Mission
 	w.Map = m
 	mw, mh := m.PixelSize()
 	w.Camera.MapW = mw
@@ -192,6 +193,11 @@ func (p *Phase) World() (*sim.World, error) {
 			u.RocketCD = sim.RocketeerFirstDelay
 		default:
 			return nil, fmt.Errorf("unknown enemy %q", e.Kind)
+		}
+		// Mission 1 grunts stay on their tile. Later grunts and grenadiers close.
+		// Rocketeers stay put on every phase.
+		if p.Mission >= 2 && u.Kind != sim.KindRocketeer {
+			u.Aggressive = true
 		}
 	}
 	for _, c := range p.Civilians {

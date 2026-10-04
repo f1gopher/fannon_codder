@@ -22,9 +22,12 @@ type World struct {
 	Firing      bool
 	Spread      float64
 	AI          bool
-	Status      Status
-	Objectives  []Objective
-	Map         Map
+	// Mission is the campaign number for this phase. 1 keeps map grunts posted.
+	// 2 and later lets them close. 0 is a sandbox.
+	Mission    int
+	Status     Status
+	Objectives []Objective
+	Map        Map
 	// Selected members of the active squad will form the next split.
 	Selected     []int
 	GrenadeShare AmmoShare

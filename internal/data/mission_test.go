@@ -90,6 +90,56 @@ func TestMission1GruntsHoldAtSpawn(t *testing.T) {
 	}
 }
 
+func TestLaterMissionGruntsClose(t *testing.T) {
+	p, err := LoadPhase("m02p01.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w, err := p.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Mission != 2 {
+		t.Fatalf("mission %d", w.Mission)
+	}
+	var grunt bool
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != sim.SideEnemy {
+			continue
+		}
+		if !u.Aggressive {
+			t.Fatal("a mission 2 grunt should close")
+		}
+		grunt = true
+	}
+	if !grunt {
+		t.Fatal("mission 2 has no grunt")
+	}
+	r, err := LoadPhase("m05p01.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rw, err := r.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rocket bool
+	for i := range rw.Units {
+		u := &rw.Units[i]
+		if u.Kind != sim.KindRocketeer {
+			continue
+		}
+		rocket = true
+		if u.Aggressive {
+			t.Fatal("a rocketeer stays on his tile")
+		}
+	}
+	if !rocket {
+		t.Fatal("mission 5 phase 1 has no rocketeer")
+	}
+}
+
 func TestMissionJSONGruntStaysOnHisTile(t *testing.T) {
 	p, err := LoadPhase("m01p01.json")
 	if err != nil {

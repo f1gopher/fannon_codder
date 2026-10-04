@@ -357,17 +357,18 @@ func TestRocketeerHidesBesideATree(t *testing.T) {
 
 func TestRocketeerDoesNotChaseIntoTheOpen(t *testing.T) {
 	w := NewEmpty()
+	w.AI = true
 	w.Spread = 0
 	w.Objectives = nil
 	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 0, Y: 0}})
-	e := w.SpawnUnit(SideEnemy, Vec2{X: 110, Y: 0})
+	e := w.SpawnUnit(SideEnemy, Vec2{X: 80, Y: 0})
 	e.Kind = KindRocketeer
 	e.RocketCD = 10
 	for i := 0; i < 30; i++ {
 		w.Step(1.0 / 60)
 	}
-	if e.X != 110 {
-		t.Fatalf("a rocketeer outside his approach holds; x=%v", e.X)
+	if e.X != 80 {
+		t.Fatalf("a rocketeer holds his spot; x=%v", e.X)
 	}
 }
 

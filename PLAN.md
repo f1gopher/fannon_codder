@@ -1148,7 +1148,7 @@ Keep these in `docs/CHUNKS.md` as a backlog so a future plan is easy:
 - Missions 6–24 as data
 - Wounded-squirm + “finish them” (manual); corpse-juggle (manual easter egg)
 - Original-feeling title tune (new audio, not ripped). Battle sound effects are Chunks 24–31.
-- Birds, snowmen, igloos as flavour
+- Birds, snowmen, igloos as flavour — in. Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos. None of them block movement or fire.
 - High Scoring Heroes table — in (Boot Hill, H)
 - A fullscreen toggle
 - Headless sim replay for regression of each phase

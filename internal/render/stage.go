@@ -393,7 +393,8 @@ func Advance(dt float64, w *sim.World) {
 }
 
 // Field paints the playfield: ground, shadows, then trees, huts, crates,
-// men, and vehicles by foot Y, then grenades, tracers, and blasts.
+// flavour props, men, and vehicles by foot Y, then birds, grenades,
+// tracers, and blasts.
 // terrain is "snow" or "grass" and selects the base loop when that sheet exists.
 func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
@@ -401,7 +402,7 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	}
 	paintTerrain(dst, w.Map, w.Camera, terrain)
 	Tiles(dst, w.Map, w.Camera)
-	bodies := collectBodies(w)
+	bodies := collectBodies(w, terrain == "snow")
 	sort.SliceStable(bodies, func(i, j int) bool { return bodies[i].y < bodies[j].y })
 	for i := range bodies {
 		if bodies[i].shadow != nil {
@@ -411,6 +412,7 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	for i := range bodies {
 		bodies[i].draw(dst)
 	}
+	drawBirds(dst, w)
 	Muzzles(dst, w)
 	Bombs(dst, w)
 	Projectiles(dst, w)
@@ -423,10 +425,11 @@ type body struct {
 	draw   func(*ebiten.Image)
 }
 
-func collectBodies(w *sim.World) []body {
+func collectBodies(w *sim.World, arctic bool) []body {
 	cam := w.Camera
 	var bodies []body
 	bodies = append(bodies, treeBodies(w.Map, cam)...)
+	bodies = append(bodies, flavourBodies(w, arctic)...)
 	for i := range w.Buildings {
 		b := w.Buildings[i]
 		if !b.Alive {

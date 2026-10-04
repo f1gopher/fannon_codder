@@ -1,0 +1,10 @@
+{
+  "frameW": 128,
+  "frameH": 96,
+  "anchorX": 64,
+  "anchorY": 48,
+  "fps": 8,
+  "loop": true,
+  "rows": ["E"],
+  "mirrors": {"W": "E"}
+}

@@ -292,7 +292,7 @@ These are not AI chunks. Do not pull them forward to “finish the AI”.
 - Missions 6–24 as data
 - Wounded troopers and finishing them; corpse juggling
 - Title tune (new, not ripped). Battle sound effects, Chunks 24–31, are in. The picture, Chunks 32–47, is in.
-- Birds, snowmen, igloos
+- Birds, snowmen, igloos — in. Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos. None of them block movement or fire.
 - High Scoring Heroes — in. Boot Hill, H. One point per enemy the trooper kills. The table keeps the best twelve, living or fallen, and the save remembers the fallen.
 - A fullscreen toggle
 - Headless sim replay for each phase

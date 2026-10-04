@@ -131,6 +131,25 @@ func TestCorpseJuggle(t *testing.T) {
 	t.Fatalf("corpse stayed at x=%v hop=%v", body.X, body.Hop)
 }
 
+func TestCorpseStopsReacting(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 40, Y: 0})
+	id := enemyOf(w).ID
+	w.kill(w.Unit(id))
+	for w.Unit(id).DeadFor <= juggleLife {
+		w.Step(1.0 / 30)
+	}
+	body := w.Unit(id)
+	x, y := body.X, body.Y
+	w.SetFire(200, 0, true)
+	for i := 0; i < 40; i++ {
+		w.Step(1.0 / 60)
+	}
+	body = w.Unit(id)
+	if body.Hop != 0 || body.VX != 0 || body.VY != 0 || body.VZ != 0 || body.X != x || body.Y != y {
+		t.Fatalf("settled corpse still moved: x=%v y=%v hop=%v v=(%v,%v,%v)", body.X, body.Y, body.Hop, body.VX, body.VY, body.VZ)
+	}
+}
+
 func TestCorpseStaysOnMap(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 40, Y: 0})
 	id := enemyOf(w).ID

@@ -20,6 +20,7 @@ const (
 	juggleBounce  = 0.28
 	juggleDrag    = 200.0 // px/s^2 once the body is on the ground
 	juggleRest    = 12.0  // px/s; slower than this, the hop ends
+	juggleLife    = 3.0   // seconds after death; later MG hits leave the body still
 
 	privateRange  = 80.0
 	generalRange  = 150.0
@@ -341,8 +342,11 @@ func (w *World) wound(u *Unit) {
 }
 
 // juggle is the corpse easter egg: an MG round kicks the body along the shot
-// and pops it off the ground. Further rounds add to that kick.
+// and pops it off the ground. After juggleLife the body no longer reacts.
 func (w *World) juggle(u *Unit, p *Projectile) {
+	if u.DeadFor > juggleLife {
+		return
+	}
 	sp := hypot(p.VX, p.VY)
 	if sp < 1 {
 		return
@@ -365,6 +369,7 @@ func (w *World) stepBodies(dt float64) {
 		if !u.Dead() || u.VehicleID != 0 {
 			continue
 		}
+		u.DeadFor += dt
 		if u.Hop == 0 && u.VZ == 0 && u.VX == 0 && u.VY == 0 {
 			continue
 		}

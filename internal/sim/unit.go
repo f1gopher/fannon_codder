@@ -68,6 +68,7 @@ type Unit struct {
 	SinceThrow  float64 // seconds since this unit's last grenade or rocket. Render only.
 	Hop         float64 // corpse height above the ground, in world pixels
 	VZ          float64 // corpse vertical speed; positive is up
+	DeadFor     float64 // seconds since this unit died. MG hits stop juggling after juggleLife.
 	sampled     bool    // terrain has been read once; a man placed in water does not splash
 }
 

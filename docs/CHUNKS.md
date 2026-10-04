@@ -82,4 +82,4 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Birds, scrub, snowmen, igloos. They do not block movement or fire. `bd3d66c`
 - Pause. `5b97066`
 - An MG hit can wound. Another round, a blast, or a ram finishes him. `edeaab7`
-- Shooting a corpse shoves it about one tile. Kick is capped. The hop refreshes.
+- Shooting a corpse shoves it about one tile. Kick is capped. The hop refreshes. Three seconds after death the body stops reacting.

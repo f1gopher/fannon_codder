@@ -1,6 +1,9 @@
 package sim
 
-import "math/rand/v2"
+import (
+	"math"
+	"math/rand/v2"
+)
 
 const (
 	UnitSize = 8
@@ -410,5 +413,26 @@ func (w *World) stepSquad(s *Squad, dt float64) {
 		}
 		target, _ := trailPoint(Vec2{X: leader.X, Y: leader.Y}, s.Trail, FileSpacing*float64(i))
 		w.steerToward(u, target.X, target.Y, WalkSpeed, dt, FollowerArrive)
+	}
+	// Walking sets Facing along the path. The squad you control looks at
+	// the pointer instead, standing or on the move.
+	if s.Active {
+		w.faceSquadAtAim(s)
+	}
+}
+
+// faceSquadAtAim points every man on foot in s at AimX, AimY.
+func (w *World) faceSquadAtAim(s *Squad) {
+	for _, id := range s.MemberIDs {
+		u := w.Unit(id)
+		if u == nil || !u.Living() || u.VehicleID != 0 {
+			continue
+		}
+		dx := w.AimX - u.X
+		dy := w.AimY - u.Y
+		if dx == 0 && dy == 0 {
+			continue
+		}
+		u.Facing = math.Atan2(dy, dx)
 	}
 }

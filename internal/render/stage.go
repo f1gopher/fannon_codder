@@ -611,9 +611,9 @@ func treeBody(cam sim.Camera, tx, ty int) body {
 	sh := activeSheets().Get("tree/sway")
 	var img *ebiten.Image
 	if sh != nil {
-		// Rows are the three silhouettes. Neighbours take different shapes and different sway frames.
+		// Rows are the three silhouettes. Column 0 stays put; later columns are unused sway art.
 		row := mod(tx+ty*2, sh.RowCount())
-		img, _ = sh.Row(row, SceneryFrame(tx, ty, sh.Frames, animTime, sh.FPS))
+		img, _ = sh.Row(row, 0)
 	}
 	if img == nil {
 		return body{y: y, draw: func(dst *ebiten.Image) {

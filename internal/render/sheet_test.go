@@ -420,7 +420,7 @@ func TestGroundSheets(t *testing.T) {
 		t.Fatal("mine glint frame should differ")
 	}
 	tree := lib.Get("tree/sway")
-	if tree == nil || tree.Frames != 4 || tree.FPS != 4 || !tree.Loop || tree.RowCount() != 3 {
+	if tree == nil || tree.Frames != 4 || tree.FPS != 0 || tree.Loop || tree.RowCount() != 3 {
 		t.Fatalf("tree sway frames=%v", tree)
 	}
 	if tree.FrameW != 256 || tree.FrameH != 288 || tree.AnchorX != 128 || tree.AnchorY != 282 {
@@ -434,9 +434,6 @@ func TestGroundSheets(t *testing.T) {
 	ac := frameDeltaRow(treeImg, 256, 288, 0, 2)
 	if ab < 8 || ac < 8 {
 		t.Fatalf("tree silhouettes too alike ab=%.1f ac=%.1f", ab, ac)
-	}
-	if sway := frameDelta(cropRow(treeImg, 256, 288, 0), 256, 0, 2); sway < 0.4 {
-		t.Fatal("tree sway frames do not move")
 	}
 }
 

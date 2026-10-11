@@ -3,7 +3,7 @@
   "frameH": 288,
   "anchorX": 128,
   "anchorY": 282,
-  "fps": 4,
-  "loop": true,
+  "fps": 0,
+  "loop": false,
   "rows": ["E", "SE", "S"]
 }

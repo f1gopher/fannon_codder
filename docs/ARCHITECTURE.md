@@ -198,7 +198,7 @@ Actor keys: `snake`, `eagle`, `panther`, `grunt`, `grenadier`, `rocketeer`, `civ
 
 Ground sheets are 128×128. Grass and snow keep extra frames on disk. The battle draws frame 0 only. Arctic terrain uses snow for grass and tree cells. Shallow and deep water, quicksand, and ice do loop. Neighbours of those use `SceneryFrame` (`tx*3+ty*5`). Cliff, ramp, and bridge are one frame. The mine is a short glint on grass.
 
-`tree/sway` stores three silhouettes on rows E, SE, and S. The row is `(tx+ty*2) mod 3`. The anchor is the trunk foot.
+`tree/sway` stores three silhouettes on rows E, SE, and S. The row is `(tx+ty*2) mod 3`. The battle draws column 0 only, so a canopy does not sway. The anchor is the trunk foot.
 
 Flavour in `internal/render/flavour.go` does not block movement or fire. Birds cross every map. Grass grows scrub. Arctic maps grow snowmen and igloos.
 

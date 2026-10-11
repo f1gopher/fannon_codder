@@ -215,6 +215,13 @@ func poseFrame(p pose, u *sim.Unit, sh *Sheet) int {
 		return FrameScrub(throwFrac(u), sh.Frames)
 	case poseShoot:
 		return FrameScrub(u.SinceShot/shotWindow, sh.Frames)
+	case poseIdle:
+		// Idle frames grow the helmet. The squad under the pointer stays
+		// on the standing cel. Everyone else keeps the cycle.
+		if u.Side == sim.SidePlayer && u.SquadID == controlledSquad {
+			return 0
+		}
+		return FrameAt(animTime, sh.FPS, sh.Frames, sh.Loop)
 	default:
 		return FrameAt(animTime, sh.FPS, sh.Frames, sh.Loop)
 	}

@@ -135,6 +135,29 @@ func TestParkedSquadKneels(t *testing.T) {
 	}
 }
 
+func TestSelectedSquadHoldsIdleFrame(t *testing.T) {
+	controlledSquad = sim.SquadSnake
+	defer func() { controlledSquad = sim.SquadSnake }()
+	sh := activeSheets().Get("snake/idle")
+	if sh == nil || sh.Frames < 2 {
+		t.Fatal("snake idle sheet")
+	}
+	saved := animTime
+	animTime = 0.3 // fps 8, frame 2 of 4
+	defer func() { animTime = saved }()
+	player := &sim.Unit{Side: sim.SidePlayer, SquadID: sim.SquadSnake}
+	if got := poseFrame(poseIdle, player, sh); got != 0 {
+		t.Fatalf("selected idle frame = %d, want 0", got)
+	}
+	enemy := &sim.Unit{Side: sim.SideEnemy}
+	if got := poseFrame(poseIdle, enemy, sh); got == 0 {
+		t.Fatal("enemy idle stayed on frame 0")
+	}
+	if got := poseFrame(poseWalk, player, sh); got == 0 {
+		t.Fatal("selected walk stayed on frame 0")
+	}
+}
+
 func TestThrowScrub(t *testing.T) {
 	u := &sim.Unit{GrenadeWind: sim.GrenadierWindup, SinceThrow: 0}
 	if throwFrac(u) != 0 {

@@ -150,8 +150,12 @@ func TestSelectedSquadHoldsIdleFrame(t *testing.T) {
 		t.Fatalf("selected idle frame = %d, want 0", got)
 	}
 	enemy := &sim.Unit{Side: sim.SideEnemy}
-	if got := poseFrame(poseIdle, enemy, sh); got == 0 {
-		t.Fatal("enemy idle stayed on frame 0")
+	if got := poseFrame(poseIdle, enemy, sh); got != 0 {
+		t.Fatalf("enemy idle frame = %d, want the standing cel", got)
+	}
+	civil := &sim.Unit{Side: sim.SideCivilian}
+	if got := poseFrame(poseIdle, civil, sh); got == 0 {
+		t.Fatal("civilian idle stayed on frame 0")
 	}
 	if got := poseFrame(poseWalk, player, sh); got == 0 {
 		t.Fatal("selected walk stayed on frame 0")

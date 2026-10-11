@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/draw"
 	"image/png"
 	"io/fs"
 	"math"
@@ -36,6 +37,9 @@ type Sheet struct {
 	Frames         int
 	place          map[string]placement
 	cels           [][]*ebiten.Image
+	// pix is the straight-alpha cel for idle and kneel. The fidget splits
+	// the helmet off this copy. Other sheets leave it nil.
+	pix [][]*image.RGBA
 }
 
 type placement struct {
@@ -164,20 +168,58 @@ func loadSheet(fsys fs.FS, key string) (*Sheet, error) {
 	}
 	frames := b.Dx() / m.FrameW
 	cels := make([][]*ebiten.Image, len(m.Rows))
+	var pix [][]*image.RGBA
+	// Idle and kneel keep a CPU copy so a glance can lift the helmet
+	// without reading the GPU image back.
+	if strings.HasSuffix(key, "/idle") || strings.HasSuffix(key, "/kneel") {
+		pix = make([][]*image.RGBA, len(m.Rows))
+	}
 	for row := range m.Rows {
 		cels[row] = make([]*ebiten.Image, frames)
+		if pix != nil {
+			pix[row] = make([]*image.RGBA, frames)
+		}
 		for frame := 0; frame < frames; frame++ {
 			x0 := b.Min.X + frame*m.FrameW
 			y0 := b.Min.Y + row*m.FrameH
-			cels[row][frame] = crop(decoded, image.Rect(x0, y0, x0+m.FrameW, y0+m.FrameH))
+			r := image.Rect(x0, y0, x0+m.FrameW, y0+m.FrameH)
+			cels[row][frame] = crop(decoded, r)
+			if pix != nil {
+				pix[row][frame] = cropRGBA(decoded, r)
+			}
 		}
 	}
 	return &Sheet{
 		FrameW: m.FrameW, FrameH: m.FrameH,
 		AnchorX: m.AnchorX, AnchorY: m.AnchorY,
 		FPS: m.FPS, Loop: m.Loop, Frames: frames,
-		place: place, cels: cels,
+		place: place, cels: cels, pix: pix,
 	}, nil
+}
+
+// celRGBA is the straight-alpha frame for a direction, before mirroring.
+// Idle and kneel have one. Anything else returns nil.
+func (s *Sheet) celRGBA(dir string, frame int) *image.RGBA {
+	if s == nil || s.pix == nil || s.Frames == 0 {
+		return nil
+	}
+	p, found := s.place[dir]
+	if !found {
+		return nil
+	}
+	if frame < 0 {
+		frame = 0
+	}
+	if frame >= s.Frames {
+		frame = s.Frames - 1
+	}
+	return s.pix[p.row][frame]
+}
+
+func cropRGBA(src image.Image, r image.Rectangle) *image.RGBA {
+	dst := image.NewRGBA(image.Rect(0, 0, r.Dx(), r.Dy()))
+	draw.Draw(dst, dst.Bounds(), src, r.Min, draw.Src)
+	return dst
 }
 
 func crop(src image.Image, r image.Rectangle) *ebiten.Image {

@@ -899,8 +899,15 @@ func TestSheetPlaysAFrame(t *testing.T) {
 	u.Facing = 0
 	Advance(1, nil)
 	paintTrooper(w)
+	// The controlled squad holds idle frame 0. The clock still advances a walk.
+	if rects != 0 || len(drawn) != 1 || drawn[0] != frame0 || mirrored[0] {
+		t.Fatalf("idle holds frame 0: rects=%d drawn=%d", rects, len(drawn))
+	}
+	drawn, mirrored, rects = nil, nil, 0
+	u.VX = 20
+	paintTrooper(w)
 	if rects != 0 || len(drawn) != 1 || drawn[0] != frame1 || mirrored[0] {
-		t.Fatalf("second frame: rects=%d drawn=%d", rects, len(drawn))
+		t.Fatalf("walk frame: rects=%d drawn=%d", rects, len(drawn))
 	}
 
 	drawn, rects = nil, 0

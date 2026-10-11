@@ -93,4 +93,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Phase maps are at least 24×16 tiles. Mission 1 grew from 20×16 so a 16:10 fullscreen view stays on the map.
 - Title, briefing, and Boot Hill are new 16:9 paintings. A narrower window crops them instead of leaving side gaps.
 - Player soldiers outside the controlled squad kneel while they stand still.
+- Idle and kneeling soldiers glance. The leader of the controlled squad keeps his head on the pointer. A hop, a look up, or a salute to the camera is rare.
 

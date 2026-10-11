@@ -216,9 +216,9 @@ func poseFrame(p pose, u *sim.Unit, sh *Sheet) int {
 	case poseShoot:
 		return FrameScrub(u.SinceShot/shotWindow, sh.Frames)
 	case poseIdle:
-		// Idle frames grow the helmet. The squad under the pointer stays
-		// on the standing cel. Everyone else keeps the cycle.
-		if u.Side == sim.SidePlayer && u.SquadID == controlledSquad {
+		// Idle frames grow the helmet. Soldiers hold the standing cel and
+		// glance instead. Civilians still play the cycle.
+		if u.Side == sim.SidePlayer || u.Side == sim.SideEnemy {
 			return 0
 		}
 		return FrameAt(animTime, sh.FPS, sh.Frames, sh.Loop)
@@ -526,12 +526,16 @@ func collectBodies(w *sim.World, arctic bool) []body {
 		}
 		bodies = append(bodies, crateBody(cam, p))
 	}
+	leadID := -1
+	if s := w.ActiveSquad(); s != nil && s.ID == controlledSquad {
+		leadID = s.LeaderID
+	}
 	for i := range w.Units {
 		u := w.Units[i]
 		if u.VehicleID != 0 {
 			continue
 		}
-		bodies = append(bodies, unitBody(cam, u))
+		bodies = append(bodies, unitBody(cam, u, u.ID == leadID))
 	}
 	for i := range w.Vehicles {
 		v := w.Vehicles[i]
@@ -738,7 +742,7 @@ func crateBody(cam sim.Camera, p sim.Pickup) body {
 	return spriteBody(p.Y, sx, sy, img, sh.AnchorX, sh.AnchorY, false, fallback)
 }
 
-func unitBody(cam sim.Camera, u sim.Unit) body {
+func unitBody(cam sim.Camera, u sim.Unit, aimLock bool) body {
 	sx := cam.ScreenX(u.X)
 	sy := cam.ScreenY(u.Y)
 	dx, dy := bodyShift(&u)
@@ -748,17 +752,24 @@ func unitBody(cam sim.Camera, u sim.Unit) body {
 	if sh == nil {
 		return body{y: u.Y, draw: fallback}
 	}
-	img, mirror, ok := sh.image(Direction(u.Facing), poseFrame(p, &u, sh))
+	dir := Direction(u.Facing)
+	frame := poseFrame(p, &u, sh)
+	img, mirror, ok := sh.image(dir, frame)
 	if !ok {
 		return body{y: u.Y, draw: fallback}
 	}
-	if dx == 0 && dy == 0 {
+	cue := soldierFidget(&u, p, aimLock)
+	if dx == 0 && dy == 0 && !cue.movesHead() && !cue.salute && cue.hop == 0 {
 		return spriteBody(u.Y, sx, sy, img, sh.AnchorX, sh.AnchorY, mirror, fallback)
 	}
+	ax, ay := sh.AnchorX, sh.AnchorY
+	src := sh.celRGBA(dir, frame)
 	return body{
 		y:      u.Y,
 		shadow: func(dst *ebiten.Image) { castShadow(dst, sx, sy, img) },
-		draw:   func(dst *ebiten.Image) { DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, mirror, sx+dx, sy+dy) },
+		draw: func(dst *ebiten.Image) {
+			drawFidget(dst, &u, img, src, ax, ay, mirror, sx+dx, sy+dy, cue)
+		},
 	}
 }
 

@@ -16,6 +16,27 @@ const terrainPx = 4
 // shoreWobble is how far a drawn edge may leave its cell, in world pixels.
 const shoreWobble = 3.0
 
+// A beach is paint where jungle or forest land meets water: sand on the land,
+// then that terrain's shallow plate on the water. Widths are world pixels.
+// beachCorner rounds both the land's corners and the water's. beachSandWander
+// is how far the grass side of the sand moves in and out.
+const (
+	beachSand       = 4.0
+	beachSandFade   = 1.25
+	beachSandWander = 2.8
+	beachCorner     = 10.0
+	// Shallow stays solid for a few pixels, then fades into deep. The fade
+	// wanders so the light-to-dark join is not a ruled line.
+	beachShallowHold = 3.5
+	beachWaterFade   = 14.0
+	beachFadeWander  = 6.0
+	beachFadeReach   = beachShallowHold + beachWaterFade + beachFadeWander*0.5
+	// beachJoin is how far a second shore pulls that fade. Two shallow
+	// bands, such as a shore and a close island, blend into one pool
+	// instead of leaving a dark seam where they meet.
+	beachJoin = 32.0
+)
+
 const (
 	surfGrass surface = iota
 	surfSnow
@@ -153,11 +174,18 @@ func paintMap(m sim.Map, terrain string) terrainPaint {
 	noise := buildNoise(m.W, m.H, 11)
 	wob := buildNoise(m.W, m.H, 29)
 	edge := edgeCells(surf, m.W, m.H)
+	var corners []shoreCorner
+	vw := 0
+	var joins []*shoreJoin
+	if lk.beach {
+		corners, vw = shoreCorners(surf, m.W, m.H)
+		joins = shoreJoins(surf, landMasses(surf, m.W, m.H), m.W, m.H)
+	}
 
 	for ty := 0; ty < m.H; ty++ {
 		for tx := 0; tx < m.W; tx++ {
 			if edge[ty*m.W+tx] {
-				paintEdgeCell(ground, kind, m, surf, lk, wob, tx, ty)
+				paintEdgeCell(ground, kind, m, surf, lk, wob, corners, vw, joins, tx, ty)
 				continue
 			}
 			fillCell(ground, kind, m, surf, lk, tx, ty)
@@ -229,11 +257,12 @@ func groundSurface(surf []surface, w, h int, s surface, tx, ty int) surface {
 	}
 }
 
-func paintEdgeCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk look, wob *noiseGrid, tx, ty int) {
+func paintEdgeCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk look, wob *noiseGrid, corners []shoreCorner, vw int, joins []*shoreJoin, tx, ty int) {
 	pw := dst.Bounds().Dx()
 	x0 := tx * sim.TileSize * terrainPx
 	y0 := ty * sim.TileSize * terrainPx
 	span := sim.TileSize * terrainPx
+	round := cellRounded(corners, vw, tx, ty)
 	for y := 0; y < span; y++ {
 		for x := 0; x < span; x++ {
 			px := x0 + x
@@ -251,7 +280,12 @@ func paintEdgeCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk 
 				base = trueS
 			}
 			c, k := colorOf(lk, surf, m.W, m.H, base, tx, ty, wx, wy)
-			c = shadeCell(lk, surf, m, tx, ty, trueS, wx, wy, c)
+			var over bool
+			var mk uint8
+			c, mk, over = shadeCell(lk, surf, m, tx, ty, trueS, wx, wy, c, corners, vw, joins, round)
+			if over {
+				k = mk
+			}
 			setRGBA(dst, px, py, c)
 			kind[py*pw+px] = k
 		}
@@ -353,10 +387,22 @@ func bridgeUnder(surf []surface, w, h, tx, ty int, open surface) surface {
 	return open
 }
 
-func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx, wy float64, c color.RGBA) color.RGBA {
+func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx, wy float64, c color.RGBA, corners []shoreCorner, vw int, joins []*shoreJoin, round bool) (color.RGBA, uint8, bool) {
 	localX := wx - float64(tx*sim.TileSize)
 	localY := wy - float64(ty*sim.TileSize)
-	if trueS == surfGrass || trueS == surfSnow {
+	onBeach := trueS == surfGrass || trueS == surfTree || trueS == surfShallow || trueS == surfDeep
+	graded := false
+	var mk uint8
+	var over bool
+	if lk.beach && onBeach {
+		painted, mask, replace, took := paintBeach(lk, surf, m, tx, ty, trueS, wx, wy, c, corners, vw, joins, round)
+		if took {
+			c = painted
+			mk = mask
+			over = replace
+			graded = true
+		}
+	} else if trueS == surfGrass || trueS == surfSnow {
 		if d, ok := nearWater(surf, m.W, m.H, tx, ty, wx, wy); ok && d < sim.TileSize {
 			t := 1 - d/sim.TileSize
 			if lk.shore != nil && lk.shoreMix > 0 {
@@ -365,7 +411,7 @@ func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx
 			c = beadFoam(c, lk.pal, wx, wy, d)
 		}
 	}
-	if trueS == surfShallow || trueS == surfDeep {
+	if !graded && (trueS == surfShallow || trueS == surfDeep) {
 		c = gradeWater(lk, c, surf, m.W, m.H, tx, ty, trueS, wx, wy)
 	}
 	if trueS == surfCliff {
@@ -381,7 +427,294 @@ func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx
 			c = mixRGBA(c, color.RGBA{R: 20, G: 24, B: 28, A: 255}, 0.4*(1-localY/4))
 		}
 	}
-	return c
+	return c, mk, over
+}
+
+// paintBeach lays sand, then shallow water, along a rounded shore.
+// took is true when this pixel's water or beach colour is finished,
+// so the straight water grade does not run again.
+func paintBeach(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx, wy float64, c color.RGBA, corners []shoreCorner, vw int, joins []*shoreJoin, round bool) (color.RGBA, uint8, bool, bool) {
+	onWater := trueS == surfShallow || trueS == surfDeep
+	sd, dLand, ok := beachSD(surf, m.W, m.H, tx, ty, wx, wy, onWater, corners, vw, round)
+	if !ok {
+		if onWater {
+			c = blendWaterDepth(lk, c, surf, m.W, m.H, tx, ty, trueS, wx, wy, valueNoise(wx, wy, 18, 31))
+			return c, 0, false, true
+		}
+		return c, 0, false, false
+	}
+	if sd > 0 {
+		reach := sandReach(wx, wy)
+		if sd >= reach {
+			return c, 0, false, false
+		}
+		t := 1.0
+		if sd > reach-beachSandFade {
+			t = (reach - sd) / beachSandFade
+		}
+		c = mixRGBA(c, sandPlate.at(wx, wy), t)
+		return beachFoam(c, lk.pal, wx, wy, sd), maskNone, true, true
+	}
+	d := -sd
+	if onWater {
+		n := valueNoise(wx, wy, 18, 31)
+		c = blendWaterDepth(lk, c, surf, m.W, m.H, tx, ty, trueS, wx, wy, n)
+		if dLand < 16 {
+			c = mixRGBA(c, lk.bank, (1-dLand/16)*lk.bankMix)
+		}
+		fadeD := d
+		var join *shoreJoin
+		lx, ly := 0, 0
+		if j := shoreAt(joins, m.W, tx, ty); j != nil && d < beachFadeReach+beachJoin*0.25 {
+			lx = int(wx) - tx*sim.TileSize
+			ly = int(wy) - ty*sim.TileSize
+			d2 := float64(j.far[ly*sim.TileSize+lx])
+			if d2 < d+beachJoin {
+				fadeD = smoothMin(d, d2, beachJoin)
+				join = j
+			}
+		}
+		if shallowFade(fadeD, n) < 1 {
+			if join != nil {
+				sh := join.shallow(lk, ly*sim.TileSize+lx, wx, wy)
+				return mixShallow(c, sh, d, fadeD, wx, wy, n), maskWater, true, true
+			}
+			return beachShallowBand(lk, c, d, fadeD, wx, wy, n), maskWater, true, true
+		}
+		return c, 0, false, true
+	}
+	if d >= beachFadeReach {
+		return c, 0, false, false
+	}
+	return beachShallowBand(lk, c, d, d, wx, wy, valueNoise(wx, wy, 18, 31)), maskWater, true, true
+}
+
+// sandReach is the inland width of the sand at this point. Noise keeps the
+// grass line from being a ruled edge. The wet side stays put.
+func sandReach(wx, wy float64) float64 {
+	n := valueNoise(wx, wy, 14, 23)
+	reach := beachSand + (n-0.5)*beachSandWander
+	if reach < 2.2 {
+		reach = 2.2
+	}
+	return reach
+}
+
+// landMasses numbers each body of land. Water stays -1. Tiles that only
+// touch at a corner stay separate, so the water in that gap still blends.
+func landMasses(surf []surface, w, h int) []int {
+	ids := make([]int, w*h)
+	for i := range ids {
+		ids[i] = -1
+	}
+	next := 0
+	stack := make([]int, 0, 64)
+	dirs := [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			start := y*w + x
+			if ids[start] >= 0 || !landBesideWater(surf[start]) {
+				continue
+			}
+			ids[start] = next
+			stack = append(stack[:0], start)
+			for len(stack) > 0 {
+				n := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				nx, ny := n%w, n/w
+				for _, d := range dirs {
+					xx, yy := nx+d[0], ny+d[1]
+					if xx < 0 || yy < 0 || xx >= w || yy >= h {
+						continue
+					}
+					j := yy*w + xx
+					if ids[j] >= 0 || !landBesideWater(surf[j]) {
+						continue
+					}
+					ids[j] = next
+					stack = append(stack, j)
+				}
+			}
+			next++
+		}
+	}
+	return ids
+}
+
+// shoreCorner is one grid vertex. kind 1 rounds a water corner, kind 2 a land corner.
+// dx and dy point from the vertex into the single odd cell.
+type shoreCorner struct {
+	kind uint8
+	dx   int8
+	dy   int8
+}
+
+func shoreCorners(surf []surface, w, h int) ([]shoreCorner, int) {
+	vw := w + 1
+	out := make([]shoreCorner, vw*(h+1))
+	for j := 0; j <= h; j++ {
+		for i := 0; i <= w; i++ {
+			out[j*vw+i] = classifyVertex(surf, w, h, i, j)
+		}
+	}
+	return out, vw
+}
+
+func classifyVertex(surf []surface, w, h, i, j int) shoreCorner {
+	spots := [4]struct {
+		cx, cy int
+		dx, dy int8
+	}{
+		{i - 1, j - 1, -1, -1},
+		{i, j - 1, 1, -1},
+		{i - 1, j, -1, 1},
+		{i, j, 1, 1},
+	}
+	nWater := 0
+	var dry, wet shoreCorner
+	for _, s := range spots {
+		water, inside := cellWater(surf, w, h, s.cx, s.cy)
+		if !inside {
+			return shoreCorner{}
+		}
+		if water {
+			nWater++
+			wet = shoreCorner{kind: 1, dx: s.dx, dy: s.dy}
+		} else {
+			dry = shoreCorner{kind: 2, dx: s.dx, dy: s.dy}
+		}
+	}
+	switch nWater {
+	case 1:
+		return wet
+	case 3:
+		return dry
+	default:
+		return shoreCorner{}
+	}
+}
+
+func cellRounded(corners []shoreCorner, vw, tx, ty int) bool {
+	if len(corners) == 0 {
+		return false
+	}
+	for oy := 0; oy <= 1; oy++ {
+		for ox := 0; ox <= 1; ox++ {
+			if corners[(ty+oy)*vw+tx+ox].kind != 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// beachSD is the signed distance to the rounded shoreline. Positive is land,
+// negative is water. dLand is the straight distance into the water, used for
+// the bank shade past the shallow band. Corners use a quarter-circle of
+// beachCorner instead of the tile's right angle.
+func beachSD(surf []surface, w, h, tx, ty int, wx, wy float64, onWater bool, corners []shoreCorner, vw int, round bool) (float64, float64, bool) {
+	var sd, dLand float64
+	if onWater {
+		d, hit := distToMatch(surf, w, h, tx, ty, wx, wy, landBesideWater)
+		if !hit {
+			return 0, 0, false
+		}
+		dLand = d
+		sd = -d
+	} else {
+		d, hit := nearWater(surf, w, h, tx, ty, wx, wy)
+		if !hit {
+			return 0, 0, false
+		}
+		if d < 0 {
+			d = 0
+		}
+		sd = d
+	}
+	if round {
+		sd = roundShore(corners, vw, tx, ty, wx, wy, sd)
+	}
+	return sd, dLand, true
+}
+
+func roundShore(corners []shoreCorner, vw, tx, ty int, wx, wy, sd float64) float64 {
+	for oy := 0; oy <= 1; oy++ {
+		for ox := 0; ox <= 1; ox++ {
+			c := corners[(ty+oy)*vw+tx+ox]
+			if c.kind == 0 {
+				continue
+			}
+			vx := float64((tx + ox) * sim.TileSize)
+			vy := float64((ty + oy) * sim.TileSize)
+			if c.kind == 1 {
+				sd = filletWater(vx, vy, int(c.dx), int(c.dy), wx, wy, sd)
+			} else {
+				sd = filletLand(vx, vy, int(c.dx), int(c.dy), wx, wy, sd)
+			}
+		}
+	}
+	return sd
+}
+
+func cellWater(surf []surface, w, h, x, y int) (water, inside bool) {
+	if x < 0 || y < 0 || x >= w || y >= h {
+		return false, false
+	}
+	s := surf[y*w+x]
+	return s == surfShallow || s == surfDeep, true
+}
+
+// filletWater rounds a corner where water sticks into the land.
+// arc is positive on the new land side of that curve.
+func filletWater(vx, vy float64, dx, dy int, wx, wy, sd float64) float64 {
+	lx := (wx - vx) * float64(dx)
+	ly := (wy - vy) * float64(dy)
+	if lx < 0 || ly < 0 || lx > beachCorner || ly > beachCorner {
+		return sd
+	}
+	ccx := vx + float64(dx)*beachCorner
+	ccy := vy + float64(dy)*beachCorner
+	arc := math.Hypot(wx-ccx, wy-ccy) - beachCorner
+	if arc > sd {
+		return arc
+	}
+	return sd
+}
+
+// filletLand rounds a corner where land sticks into the water.
+// arc is positive deeper into the land, negative on the bitten-off tip.
+func filletLand(vx, vy float64, dx, dy int, wx, wy, sd float64) float64 {
+	lx := (wx - vx) * float64(dx)
+	ly := (wy - vy) * float64(dy)
+	if lx < -beachFadeReach || ly < -beachFadeReach || lx > beachCorner || ly > beachCorner {
+		return sd
+	}
+	ccx := vx + float64(dx)*beachCorner
+	ccy := vy + float64(dy)*beachCorner
+	arc := beachCorner - math.Hypot(wx-ccx, wy-ccy)
+	if arc < sd {
+		// This corner's curve is only a few pixels off the sharp tile.
+		// A bigger drop means another shore is closer, and that bank wins.
+		if sd-arc > 6 {
+			return sd
+		}
+		return arc
+	}
+	return sd
+}
+
+// beachFoam is a broken line on the wet edge of the sand, narrower than the
+// strip so the sand stays visible.
+func beachFoam(c color.RGBA, pal Palette, wx, wy, d float64) color.RGBA {
+	const reach = 1.15
+	if d >= reach {
+		return c
+	}
+	n := fineNoise(wx, wy)
+	if n < 0.45 {
+		return c
+	}
+	return mixRGBA(c, pal.Foam, (1-d/reach)*0.55*n)
 }
 
 // beadFoam breaks the shoreline into soft clumps instead of one ruled stroke.
@@ -396,18 +729,280 @@ func beadFoam(c color.RGBA, pal Palette, wx, wy, d float64) color.RGBA {
 
 // gradeWater lets shallow and deep meet, and pulls a bank down to a deeper blue.
 func gradeWater(lk look, c color.RGBA, surf []surface, w, h, tx, ty int, self surface, wx, wy float64) color.RGBA {
-	other := surfDeep
-	if self == surfDeep {
-		other = surfShallow
-	}
-	if d, ok := distToMatch(surf, w, h, tx, ty, wx, wy, func(s surface) bool { return s == other }); ok && d < 14 {
-		oc, _ := lk.plateColor(other, wx, wy)
-		c = mixRGBA(c, oc, (1-d/14)*0.5)
-	}
+	c = blendWaterDepth(lk, c, surf, w, h, tx, ty, self, wx, wy, valueNoise(wx, wy, 18, 31))
 	if d, ok := distToMatch(surf, w, h, tx, ty, wx, wy, landBesideWater); ok && d < 16 {
 		c = mixRGBA(c, lk.bank, (1-d/16)*lk.bankMix)
 	}
 	return c
+}
+
+func blendWaterDepth(lk look, c color.RGBA, surf []surface, w, h, tx, ty int, self surface, wx, wy, n float64) color.RGBA {
+	other := surfDeep
+	if self == surfDeep {
+		other = surfShallow
+	}
+	d, ok := distToMatch(surf, w, h, tx, ty, wx, wy, func(s surface) bool { return s == other })
+	if !ok {
+		return c
+	}
+	// n is shared by both sides of a tile edge, so the colours meet.
+	d += (n - 0.5) * 6
+	if d < 0 {
+		d = 0
+	}
+	if d >= sim.TileSize {
+		return c
+	}
+	oc, _ := lk.plateColor(other, wx, wy)
+	t := (1 - smooth01(d/float64(sim.TileSize))) * 0.5
+	return mixRGBA(c, oc, t)
+}
+
+// shoreJoin lists land rectangles, grouped by landmass, that can blend
+// into one cell. A nil join means the cell sees a single shore.
+// Rectangles are tile coordinates, with x1 and y1 exclusive.
+// far is the blended distance to every landmass except the nearest,
+// at each world pixel of the cell, so the per-pixel paint is a lookup.
+type shoreJoin struct {
+	n              int
+	off            [17]int
+	x0, y0, x1, y1 [49]int16
+	far            [sim.TileSize * sim.TileSize]float32
+	// Shallow plate samples shared by the four source pixels of one world
+	// pixel. The joined pool is the only caller, and the plate is smooth.
+	have [sim.TileSize * sim.TileSize]uint8
+	col  [sim.TileSize * sim.TileSize]color.RGBA
+}
+
+// shoreJoins records, once per cell, every landmass inside the blend
+// reach. Cells with one shore stay nil so a straight coast pays nothing
+// per pixel. The window is wide enough that a landmass just outside it
+// cannot move the colour, so the join stays continuous across a tile edge.
+func shoreJoins(surf []surface, landID []int, w, h int) []*shoreJoin {
+	out := make([]*shoreJoin, w*h)
+	const rad = 3
+	for ty := 0; ty < h; ty++ {
+		for tx := 0; tx < w; tx++ {
+			s := surf[ty*w+tx]
+			if s != surfShallow && s != surfDeep {
+				continue
+			}
+			var id [16]int
+			var which [49]int
+			var tiles [49][2]int16
+			nMass, nTile := 0, 0
+			for oy := -rad; oy <= rad; oy++ {
+				for ox := -rad; ox <= rad; ox++ {
+					xx, yy := tx+ox, ty+oy
+					if xx < 0 || yy < 0 || xx >= w || yy >= h {
+						continue
+					}
+					mass := landID[yy*w+xx]
+					if mass < 0 {
+						continue
+					}
+					slot := -1
+					for i := 0; i < nMass; i++ {
+						if id[i] == mass {
+							slot = i
+							break
+						}
+					}
+					if slot < 0 {
+						if nMass == len(id) {
+							continue
+						}
+						slot = nMass
+						id[nMass] = mass
+						nMass++
+					}
+					tiles[nTile] = [2]int16{int16(xx), int16(yy)}
+					which[nTile] = slot
+					nTile++
+				}
+			}
+			if nMass < 2 {
+				continue
+			}
+			j := &shoreJoin{n: nMass}
+			off := 0
+			for m := 0; m < nMass; m++ {
+				j.off[m] = off
+				off = packShoreMass(&tiles, &which, nTile, m, j, off)
+			}
+			j.off[nMass] = off
+			fillShoreFar(j, tx, ty)
+			out[ty*w+tx] = j
+		}
+	}
+	return out
+}
+
+// packShoreMass appends the solid rectangles of one landmass. Adjacent
+// tiles become one rectangle so a straight bank is a single distance.
+func packShoreMass(tiles *[49][2]int16, which *[49]int, nTile, slot int, j *shoreJoin, off int) int {
+	var xs, ys [49]int16
+	n := 0
+	for k := 0; k < nTile; k++ {
+		if which[k] != slot {
+			continue
+		}
+		xs[n] = tiles[k][0]
+		ys[n] = tiles[k][1]
+		n++
+	}
+	for i := 1; i < n; i++ {
+		x, y := xs[i], ys[i]
+		k := i
+		for k > 0 && (ys[k-1] > y || (ys[k-1] == y && xs[k-1] > x)) {
+			xs[k] = xs[k-1]
+			ys[k] = ys[k-1]
+			k--
+		}
+		xs[k], ys[k] = x, y
+	}
+	type run struct{ x0, x1, y int16 }
+	var runs [49]run
+	nr := 0
+	for i := 0; i < n; {
+		x0, y := xs[i], ys[i]
+		x1 := x0 + 1
+		i++
+		for i < n && ys[i] == y && xs[i] == x1 {
+			x1++
+			i++
+		}
+		runs[nr] = run{x0, x1, y}
+		nr++
+	}
+	var used [49]bool
+	for a := 0; a < nr; a++ {
+		if used[a] {
+			continue
+		}
+		y0 := runs[a].y
+		y1 := y0 + 1
+		for {
+			found := -1
+			for b := a + 1; b < nr; b++ {
+				if used[b] || runs[b].y != y1 || runs[b].x0 != runs[a].x0 || runs[b].x1 != runs[a].x1 {
+					continue
+				}
+				found = b
+				break
+			}
+			if found < 0 {
+				break
+			}
+			used[found] = true
+			y1++
+		}
+		j.x0[off] = runs[a].x0
+		j.x1[off] = runs[a].x1
+		j.y0[off] = y0
+		j.y1[off] = y1
+		off++
+	}
+	return off
+}
+
+// fillShoreFar stores, for each world pixel, how close the other shores are.
+func fillShoreFar(j *shoreJoin, tx, ty int) {
+	var dist [16]float64
+	for ly := 0; ly < sim.TileSize; ly++ {
+		wy := float64(ty*sim.TileSize+ly) + 0.5
+		for lx := 0; lx < sim.TileSize; lx++ {
+			wx := float64(tx*sim.TileSize+lx) + 0.5
+			for i := 0; i < j.n; i++ {
+				dist[i] = math.MaxFloat64
+				for k := j.off[i]; k < j.off[i+1]; k++ {
+					d := distToRect(wx, wy,
+						float64(int(j.x0[k])*sim.TileSize),
+						float64(int(j.y0[k])*sim.TileSize),
+						float64(int(j.x1[k])*sim.TileSize),
+						float64(int(j.y1[k])*sim.TileSize))
+					if d < 0 {
+						d = 0
+					}
+					if d < dist[i] {
+						dist[i] = d
+					}
+				}
+			}
+			first := 0
+			for i := 1; i < j.n; i++ {
+				if dist[i] < dist[first] {
+					first = i
+				}
+			}
+			acc := math.MaxFloat64
+			for i := 0; i < j.n; i++ {
+				if i == first {
+					continue
+				}
+				acc = smoothMin(acc, dist[i], beachJoin)
+			}
+			j.far[ly*sim.TileSize+lx] = float32(acc)
+		}
+	}
+}
+
+func (j *shoreJoin) shallow(lk look, i int, wx, wy float64) color.RGBA {
+	if j.have[i] == 0 {
+		j.col[i], _ = lk.plateColor(surfShallow, wx, wy)
+		j.have[i] = 1
+	}
+	return j.col[i]
+}
+
+func shoreAt(joins []*shoreJoin, w, tx, ty int) *shoreJoin {
+	if ty*w+tx >= len(joins) {
+		return nil
+	}
+	return joins[ty*w+tx]
+}
+
+func smoothMin(a, b, k float64) float64 {
+	h := k - math.Abs(a-b)
+	if h <= 0 {
+		if a < b {
+			return a
+		}
+		return b
+	}
+	h /= k
+	if b < a {
+		a = b
+	}
+	return a - h*h*k*0.25
+}
+
+// shallowFade is 0 in the shallow water and 1 once the deep colour has taken
+// over. n moves that fade so it is not a straight contour.
+func shallowFade(d, n float64) float64 {
+	if d <= 2.6 {
+		return 0
+	}
+	if d >= beachFadeReach {
+		return 1
+	}
+	shift := (n - 0.5) * beachFadeWander
+	return smooth01((d - beachShallowHold - shift) / beachWaterFade)
+}
+
+// beachShallowBand paints shallow water just off the sand, then fades into
+// the cell's own water. shoreD is the real shoreline, so only that edge
+// picks up sand. fadeD may be nearer when a second shore joins the pool.
+func beachShallowBand(lk look, graded color.RGBA, shoreD, fadeD, wx, wy, n float64) color.RGBA {
+	sh, _ := lk.plateColor(surfShallow, wx, wy)
+	return mixShallow(graded, sh, shoreD, fadeD, wx, wy, n)
+}
+
+func mixShallow(graded, sh color.RGBA, shoreD, fadeD, wx, wy, n float64) color.RGBA {
+	if shoreD < 1 {
+		sh = mixRGBA(sandPlate.at(wx, wy), sh, shoreD)
+	}
+	return mixRGBA(sh, graded, shallowFade(fadeD, n))
 }
 
 func landBesideWater(s surface) bool {
@@ -1222,6 +1817,12 @@ func distToRect(px, py, x0, y0, x1, y1 float64) float64 {
 	}
 	if dy < 0 {
 		dy = 0
+	}
+	if dx == 0 {
+		return dy
+	}
+	if dy == 0 {
+		return dx
 	}
 	return math.Hypot(dx, dy)
 }

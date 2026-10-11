@@ -97,5 +97,6 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Ground, water, sand, ice, snow, rock, and trees are painted from joined map cells, sampling the meadow plates in world space. The old ground sheets stay on disk and the battle does not sample them.
 - Grass does not grow the scrub bush. `prop/scrub` stays on disk. Arctic maps still grow snowmen and igloos.
 - Each phase names jungle, forest, desert, or snow. Ground, water, and trees are separate plates per kind. Missions 1, 2, and 4 are jungle. Missions 3 and 5 are snow.
+- Jungle and forest shores are a thin sand strip, then shallow water that fades into the deep. The grass side and that fade wander, and the corners are rounded. A shore and a nearby island blend those shallow bands into one pool. Desert and snow keep the wide shore lip.
 - The map editor views campaign phases with the shared ground painter. It does not save.
 

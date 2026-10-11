@@ -39,9 +39,10 @@ func init() {
 	loadKind(&forestLook, "forest")
 	loadKind(&desertLook, "desert")
 	loadKind(&snowLook, "snow")
-	// The jungle beach is the same sand as quicksand. The other kinds keep
-	// their own shore file, so a jungle bank edit does not move them.
+	// Jungle and forest beaches use this sand. Desert and snow keep the shore
+	// file loaded for their wide lip. A forest shore edit does not move the beach.
 	jungleLook.shore = sandPlate
+	forestLook.shore = sandPlate
 }
 
 func loadKind(lk *look, name string) {
@@ -50,7 +51,7 @@ func loadKind(lk *look, name string) {
 	lk.canopy = mustPlate(dir + "canopy.png")
 	lk.shallow = mustPlate(dir + "shallow.png")
 	lk.deep = mustPlate(dir + "deep.png")
-	if name != "jungle" {
+	if name != "jungle" && name != "forest" {
 		lk.shore = mustPlate(dir + "shore.png")
 	}
 }

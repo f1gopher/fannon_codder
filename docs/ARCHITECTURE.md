@@ -10,7 +10,7 @@ Already done: `docs/CHUNKS.md`. Not done: `docs/BACKLOG.md`. Bindings: `controls
 - `internal/sim` must not import Ebitengine or `internal/audio`. The sim appends `Cue` values. The battle plays them after `Step`.
 - `Update` samples input, steps the world once, then advances the picture clock. No gameplay in `Draw`. `ebiten.TPS` is 60.
 - A new rule gets a named test in `internal/sim` or `internal/campaign`.
-- `go test ./...` and `go build ./cmd/fannon` pass.
+- `go test ./...`, `go build ./cmd/fannon`, and `go build ./cmd/mapedit` pass.
 - Launch from the repo root. Mission JSON loads relative to the working directory. Main package is `cmd/fannon`.
 
 ## Legal
@@ -20,17 +20,24 @@ Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, m
 ## Packages
 
 - `cmd/fannon` — window, `RunGame`
+- `cmd/mapedit` — read-only map editor window
 - `internal/app` — `ebiten.Game`, scenes, scale, pause, quit
 - `internal/input` — pointer
 - `internal/sim` — world, combat, AI, objectives
 - `internal/campaign` — recruits, names, ranks, heroes, save
-- `internal/render` — sheets, or a coloured rectangle when a sheet is missing
+- `internal/render` — sheets, or a coloured rectangle when a sheet is missing. The battle ground call is a short adapter.
+- `internal/terrain` — ground painter. Plates, water shader, canopies. The battle and the editor both call it.
+- `internal/mapedit` — phase list and scrolling viewport
 - `internal/audio` — the only package that opens the audio device
 - `internal/data` — mission JSON
 - `data/missions` — one JSON per phase, listed by `campaign.json`
 - `assets/art` — one PNG and one JSON per animation
 
 `SpawnUnit` appends to `World.Units` and can move earlier pointers. Re-fetch with `World.Unit(id)` across `Step`. `AddSkidoo` does the same to vehicles. Re-fetch with `vehicleByID`.
+
+## Map editor
+
+`go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. The selected phase is painted by `internal/terrain` through `data.Phase.Grid`, the same loader and painter as the battle. A left rail picks the phase. The rest of the window is that whole map at the game's picture scale, and it scrolls. Escape closes it. Nothing is written. Soldiers, huts, crates, and birds are not drawn. In the battle, tree slices are still Y-sorted with the actors. A later save would rewrite only that phase's `map.tiles`, using `data.TileRune`.
 
 ## Display
 
@@ -196,7 +203,7 @@ A missing walk sheet uses that actor's idle. Any other missing sheet, or a facin
 
 Actor keys: `snake`, `eagle`, `panther`, `grunt`, `grenadier`, `rocketeer`, `civilian`. Eagle and Panther are Snake recolors. Enemies have no walk sheet.
 
-The battle paints ground from the tile grid. Touching cells of the same material are one area. Each material samples one painted plate in world space (grass, canopy, shallow water, deep water, sand, snow, ice, rock, dirt), so a clearing is one picture and not a repeated stamp. Grass, snow, trees, shallow water, deep water, ice, sand, and rock share that painter. A grass cell in an arctic phase (`terrain` "snow" or "arctic") paints as snow. Ice stays cyan. Quicksand paints as sand. A grass cell that touches water gets a sand lip about one tile wide and a broken foam line. Shallow and deep water share one painted current and ease into each other. Water is darker blue along a bank. The lip is paint. The cell underneath is still grass or water. A drawn edge may sit up to 3 world pixels off the cell. Bridges are planks on the water under them. Ramps are the gap in a cliff face. Mines are a mark on the open ground and the picture rebuilds when the mine becomes grass. Water, sand, and ice shimmer from `water.kage`. The other materials stay still.
+The painter lives in `internal/terrain`. `Field` and the map editor both call it. The battle paints ground from the tile grid. Touching cells of the same material are one area. Each material samples one painted plate in world space (grass, canopy, shallow water, deep water, sand, snow, ice, rock, dirt), so a clearing is one picture and not a repeated stamp. Grass, snow, trees, shallow water, deep water, ice, sand, and rock share that painter. A grass cell in an arctic phase (`terrain` "snow" or "arctic") paints as snow. Ice stays cyan. Quicksand paints as sand. A grass cell that touches water gets a sand lip about one tile wide and a broken foam line. Shallow and deep water share one painted current and ease into each other. Water is darker blue along a bank. The lip is paint. The cell underneath is still grass or water. A drawn edge may sit up to 3 world pixels off the cell. Bridges are planks on the water under them. Ramps are the gap in a cliff face. Mines are a mark on the open ground and the picture rebuilds when the mine becomes grass. Water, sand, and ice shimmer from `water.kage`. The other materials stay still.
 
 Trees in one connected stand share a canopy. The outline is a cluster of crowns with a ragged fringe that fades into the ground, and a soft shadow falls to the south-east. Each tree cell draws its own slice of that canopy and Y-sorts on the south edge of the cell. The old ground sheets and `tree/sway` stay on disk. The battle does not sample them.
 

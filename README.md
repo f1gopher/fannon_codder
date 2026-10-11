@@ -10,7 +10,13 @@ Run from the repo root:
 go run ./cmd/fannon
 ```
 
-Flags: `-skip-title`, `-cover`, `-river`, `-hut`, `-hazards`, `-skidoo`.
+The map editor is a second program. It shows a campaign phase and does not save.
+
+```
+go run ./cmd/mapedit
+```
+
+Game flags: `-skip-title`, `-cover`, `-river`, `-hut`, `-hazards`, `-skidoo`.
 
 | File | What it is |
 | --- | --- |
@@ -19,4 +25,4 @@ Flags: `-skip-title`, `-cover`, `-river`, `-hut`, `-hazards`, `-skidoo`.
 | `docs/BACKLOG.md` | Work not done. |
 | `controls.md` | Bindings. Generated from `internal/app/controls.go`. Do not edit by hand. |
 
-`internal/sim` does not import Ebitengine or `internal/audio`. Check with `go test ./...` and `go build ./cmd/fannon`.
+`internal/sim` does not import Ebitengine or `internal/audio`. Check with `go test ./...`, `go build ./cmd/fannon`, and `go build ./cmd/mapedit`.

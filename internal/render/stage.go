@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"fannon-codder/internal/sim"
+	ground "fannon-codder/internal/terrain"
 )
 
 const (
@@ -508,7 +509,7 @@ func collectBodies(w *sim.World, terrain string) []body {
 	cam := w.Camera
 	var bodies []body
 	bodies = append(bodies, terrainTreeBodies(w.Map, cam, terrain)...)
-	bodies = append(bodies, flavourBodies(w, arcticTerrain(terrain))...)
+	bodies = append(bodies, flavourBodies(w, ground.Arctic(terrain))...)
 	for i := range w.Buildings {
 		b := w.Buildings[i]
 		if !b.Alive {

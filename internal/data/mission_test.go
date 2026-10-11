@@ -920,3 +920,27 @@ func TestParseWaterTiles(t *testing.T) {
 		}
 	}
 }
+
+func TestTileRuneRoundTrip(t *testing.T) {
+	tiles := []sim.Tile{
+		sim.TileGrass,
+		sim.TileTree,
+		sim.TileWaterShallow,
+		sim.TileWaterDeep,
+		sim.TileBridge,
+		sim.TileIce,
+		sim.TileCliff,
+		sim.TileRamp,
+		sim.TileQuicksand,
+		sim.TileMine,
+	}
+	for _, tile := range tiles {
+		got, err := parseTile(TileRune(tile))
+		if err != nil {
+			t.Fatalf("parse %q: %v", string(TileRune(tile)), err)
+		}
+		if got != tile {
+			t.Fatalf("round trip %v -> %q -> %v", tile, string(TileRune(tile)), got)
+		}
+	}
+}

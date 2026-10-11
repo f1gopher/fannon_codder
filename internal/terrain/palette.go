@@ -1,4 +1,4 @@
-package render
+package terrain
 
 import "image/color"
 
@@ -73,6 +73,8 @@ func paletteFor(terrain string) Palette {
 	return junglePalette()
 }
 
-func arcticTerrain(terrain string) bool {
+// Arctic reports whether open ground paints as snow and canopies as snowy trees.
+// Ice stays cyan. "snow" and "arctic" are the phase file values.
+func Arctic(terrain string) bool {
 	return terrain == "snow" || terrain == "arctic"
 }

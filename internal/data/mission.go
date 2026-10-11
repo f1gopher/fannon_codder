@@ -233,6 +233,11 @@ func (p *Phase) World() (*sim.World, error) {
 	return w, nil
 }
 
+// Grid is the phase tile map. The map editor uses this and does not spawn units.
+func (p *Phase) Grid() (sim.Map, error) {
+	return p.Map.toSim()
+}
+
 func (tm Tilemap) toSim() (sim.Map, error) {
 	if tm.W <= 0 || tm.H <= 0 {
 		return sim.Map{}, fmt.Errorf("invalid map size %dx%d", tm.W, tm.H)
@@ -280,5 +285,32 @@ func parseTile(ch rune) (sim.Tile, error) {
 		return sim.TileMine, nil
 	default:
 		return 0, fmt.Errorf("unknown tile %q", string(ch))
+	}
+}
+
+// TileRune is the canonical character for a cell. A later editor save writes
+// these into map.tiles only. P, x, and space load as grass and do not round-trip.
+func TileRune(t sim.Tile) rune {
+	switch t {
+	case sim.TileTree:
+		return 'T'
+	case sim.TileWaterShallow:
+		return '~'
+	case sim.TileWaterDeep:
+		return 'W'
+	case sim.TileBridge:
+		return 'B'
+	case sim.TileIce:
+		return 'I'
+	case sim.TileCliff:
+		return 'C'
+	case sim.TileRamp:
+		return 'R'
+	case sim.TileQuicksand:
+		return 'Q'
+	case sim.TileMine:
+		return 'M'
+	default:
+		return '.'
 	}
 }

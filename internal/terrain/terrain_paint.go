@@ -1,4 +1,4 @@
-package render
+package terrain
 
 import (
 	"image"
@@ -146,7 +146,7 @@ func labelRegions(surf []surface, w, h int) []int {
 }
 
 func paintMap(m sim.Map, terrain string) terrainPaint {
-	arctic := arcticTerrain(terrain)
+	arctic := Arctic(terrain)
 	pal := paletteFor(terrain)
 	surf := surfacesOf(m, arctic)
 	ids := labelRegions(surf, m.W, m.H)

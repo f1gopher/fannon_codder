@@ -64,7 +64,8 @@ func usedInputTokens(t *testing.T, root string) map[string]bool {
 		}
 		if d.IsDir() {
 			base := d.Name()
-			if base == "vendor" || base == ".git" {
+			// mapedit is a separate program. Its keys are not game bindings.
+			if base == "vendor" || base == ".git" || base == "mapedit" {
 				return filepath.SkipDir
 			}
 			return nil

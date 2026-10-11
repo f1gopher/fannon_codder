@@ -17,5 +17,6 @@ When an item lands, add one line to `docs/CHUNKS.md` and delete it here. Update 
 - Desert, moors, and underground tiles.
 - Fullscreen toggle.
 - Headless sim replay of each phase. No record format exists. `go test` is the check until this exists.
+- Map editor: paint tiles and write canonical runes back to that phase's `map.tiles` only. The viewer is done.
 
 Leave these alone unless the user asks: pathfinding, patrols, and retuning Mission 1 by deleting grunts or shortening the gun.

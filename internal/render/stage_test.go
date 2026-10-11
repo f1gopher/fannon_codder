@@ -112,6 +112,29 @@ func TestVictorySalutePose(t *testing.T) {
 	}
 }
 
+func TestParkedSquadKneels(t *testing.T) {
+	controlledSquad = sim.SquadSnake
+	defer func() { controlledSquad = sim.SquadSnake }()
+	u := &sim.Unit{HP: sim.Alive, Side: sim.SidePlayer, SquadID: sim.SquadEagle, SinceShot: 1, SinceThrow: 1}
+	if got := unitPose(u, 0, 0); got != poseKneel || got.name() != "kneel" {
+		t.Fatalf("parked eagle = %s", got.name())
+	}
+	u.SquadID = sim.SquadSnake
+	if got := unitPose(u, 0, 0); got != poseIdle {
+		t.Fatalf("controlled snake = %s", got.name())
+	}
+	u.SquadID = sim.SquadEagle
+	u.VX = walkMin + 1
+	if got := unitPose(u, 0, 0); got != poseWalk {
+		t.Fatalf("walking eagle = %s", got.name())
+	}
+	u.VX = 0
+	u.Side = sim.SideEnemy
+	if got := unitPose(u, 0, 0); got != poseIdle {
+		t.Fatalf("enemy = %s", got.name())
+	}
+}
+
 func TestThrowScrub(t *testing.T) {
 	u := &sim.Unit{GrenadeWind: sim.GrenadierWindup, SinceThrow: 0}
 	if throwFrac(u) != 0 {

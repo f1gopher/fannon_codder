@@ -61,7 +61,7 @@ type Library struct {
 }
 
 // Men use snake, eagle, panther, grunt, grenadier, rocketeer, or civilian,
-// plus idle, walk, shoot, throw, death, corpse, swim, sink, or salute.
+// plus idle, walk, shoot, throw, death, corpse, swim, sink, salute, or kneel.
 // Salute is the south row only. A won phase turns living player soldiers
 // to face the camera, which is south.
 // Ground uses ground/grass, ground/snow, ground/water-shallow,

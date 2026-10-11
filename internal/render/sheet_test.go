@@ -690,7 +690,7 @@ func TestEagleAndPantherRecolorSnake(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	poses := []string{"idle", "walk", "shoot", "throw", "death", "corpse", "swim", "sink"}
+	poses := []string{"idle", "walk", "shoot", "throw", "death", "corpse", "swim", "sink", "kneel"}
 	for _, pose := range poses {
 		snake := lib.Get("snake/" + pose)
 		if snake == nil {

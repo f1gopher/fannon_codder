@@ -32,6 +32,7 @@ const (
 	poseShoot
 	poseWalk
 	poseSalute
+	poseKneel
 	poseIdle
 )
 
@@ -53,10 +54,16 @@ func (p pose) name() string {
 		return "walk"
 	case poseSalute:
 		return "salute"
+	case poseKneel:
+		return "kneel"
 	default:
 		return "idle"
 	}
 }
+
+// controlledSquad is the player squad the pointer is ordering. Field sets it.
+// Other living player squads kneel while they stand still.
+var controlledSquad sim.SquadID
 
 // victorySalute is set for the draw of a won phase. Living player soldiers
 // on foot then use the salute sheet.
@@ -90,6 +97,9 @@ func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
 	}
 	if victorySalute && u.Side == sim.SidePlayer && !u.InWater {
 		return poseSalute
+	}
+	if u.Side == sim.SidePlayer && u.SquadID != controlledSquad {
+		return poseKneel
 	}
 	return poseIdle
 }
@@ -127,7 +137,7 @@ func clamp01(p float64) float64 {
 func sheetForPose(u *sim.Unit, p pose) *Sheet {
 	key := actorKey(u)
 	sh := activeSheets().Get(key + "/" + p.name())
-	if sh == nil && p == poseWalk {
+	if sh == nil && (p == poseWalk || p == poseKneel) {
 		sh = activeSheets().Get(key + "/idle")
 	}
 	return sh
@@ -459,6 +469,10 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 		return
 	}
 	victorySalute = w.Status == sim.Won
+	controlledSquad = sim.SquadSnake
+	if s := w.ActiveSquad(); s != nil {
+		controlledSquad = s.ID
+	}
 	paintTerrain(dst, w.Map, w.Camera, terrain)
 	Tiles(dst, w.Map, w.Camera)
 	bodies := collectBodies(w, terrain == "snow")

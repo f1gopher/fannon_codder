@@ -92,4 +92,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A battle picture grows sideways to the window. Menus keep the 320×256 frame.
 - Phase maps are at least 24×16 tiles. Mission 1 grew from 20×16 so a 16:10 fullscreen view stays on the map.
 - Title, briefing, and Boot Hill are new 16:9 paintings. A narrower window crops them instead of leaving side gaps.
+- Player soldiers outside the controlled squad kneel while they stand still.
 

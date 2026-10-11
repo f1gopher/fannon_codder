@@ -8,7 +8,7 @@ This page is generated from the control list in `internal/app/controls.go`. When
 
 ## Any screen
 
-- **Escape** — Opens “Quit the game?” on the title, Boot Hill, briefing, and a finished phase. A battle that is still being played opens the pause menu instead. The screen underneath stays frozen until you answer, so a press does not also give an order.
+- **Escape** — Opens “Quit the game?” on the title, Boot Hill, briefing, the debrief, and a finished phase. A battle that is still being played opens the pause menu instead. The screen underneath stays frozen until you answer, so a press does not also give an order.
 - **Y or Enter, while the quit prompt is open** — Quits the game.
 - **N or Escape, while the quit prompt is open** — Closes the prompt and returns to the screen you were on.
 
@@ -66,5 +66,5 @@ This page is generated from the control list in `internal/app/controls.go`. When
 
 ## Battle — end of a phase
 
-- **Left click, or Enter, after victory or defeat** — Leaves the battlefield for Boot Hill. In a debug sandbox, this returns to the title instead.
+- **Left click, or Enter, after victory or defeat** — After a defeat, or in a debug sandbox, leaves for Boot Hill or the title. After a victory, opens Achievements for the soldiers still alive, then Remembrance for the soldiers who died, then Boot Hill.
 

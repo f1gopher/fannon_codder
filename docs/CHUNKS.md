@@ -87,4 +87,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Escape during a live phase opens a pause menu: restart, main menu, save, load, or quit. Other screens still ask before quitting.
 - A finished phase lets shots, blasts, throws, and hops already in motion finish. New fire and new orders stop.
 - A won phase shows gold Victory! Survivors on foot face the camera and salute.
+- After a cleared phase, Achievements lists the living and Remembrance lists the dead, then Boot Hill.
 - The phase is not called until rounds, grenades, blasts, and flying roofs finish. A shot that kills the last player after the enemy is down is a wipe.

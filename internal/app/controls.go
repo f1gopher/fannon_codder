@@ -24,7 +24,7 @@ func controls() []binding {
 		{
 			section: "Any screen",
 			input:   "Escape",
-			action:  "Opens “Quit the game?” on the title, Boot Hill, briefing, and a finished phase. A battle that is still being played opens the pause menu instead. The screen underneath stays frozen until you answer, so a press does not also give an order.",
+			action:  "Opens “Quit the game?” on the title, Boot Hill, briefing, the debrief, and a finished phase. A battle that is still being played opens the pause menu instead. The screen underneath stays frozen until you answer, so a press does not also give an order.",
 			tokens:  []string{"KeyEscape"},
 		},
 		{
@@ -192,7 +192,7 @@ func controls() []binding {
 		{
 			section: "Battle — end of a phase",
 			input:   "Left click, or Enter, after victory or defeat",
-			action:  "Leaves the battlefield for Boot Hill. In a debug sandbox, this returns to the title instead.",
+			action:  "After a defeat, or in a debug sandbox, leaves for Boot Hill or the title. After a victory, opens Achievements for the soldiers still alive, then Remembrance for the soldiers who died, then Boot Hill.",
 			tokens:  []string{"MouseButtonLeft", "KeyEnter"},
 		},
 	}

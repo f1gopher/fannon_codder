@@ -84,6 +84,8 @@ type Battle struct {
 	deployed  []campaign.Soldier
 	unitIDs   []int
 	settled   bool
+	survivors []campaign.Soldier
+	fallen    []campaign.Soldier
 	sandbox   bool
 	mapOpen   bool
 	paused    bool
@@ -408,18 +410,20 @@ func (b *Battle) settleOnce(won bool) {
 	if b.sandbox {
 		return
 	}
-	graves, survivors := b.tally()
+	graves, survivors, fallen := b.tally()
 	if won {
 		for i := range survivors {
 			survivors[i].PhasesThisMission++
 		}
 	}
+	b.survivors = survivors
+	b.fallen = fallen
 	b.prog.Graves += graves
 	b.prog.Pool.Return(survivors)
 	b.remaining = b.prog.Pool.Remaining()
 }
 
-func (b *Battle) tally() (graves int, survivors []campaign.Soldier) {
+func (b *Battle) tally() (graves int, survivors, fallen []campaign.Soldier) {
 	for i, id := range b.unitIDs {
 		u := b.world.Unit(id)
 		if i >= len(b.deployed) {
@@ -432,12 +436,13 @@ func (b *Battle) tally() (graves int, survivors []campaign.Soldier) {
 		}
 		if u == nil || !u.Living() {
 			graves++
+			fallen = append(fallen, man)
 			b.prog.NoteHero(man)
 			continue
 		}
 		survivors = append(survivors, man)
 	}
-	return graves, survivors
+	return graves, survivors, fallen
 }
 
 func (b *Battle) leaveBattle(h Host, won bool) {
@@ -452,9 +457,10 @@ func (b *Battle) leaveBattle(h Host, won bool) {
 	}
 	if won {
 		b.prog.OnPhaseWon()
-	} else {
-		b.prog.MarkGameOverIfNeeded()
+		h.Switch(NewService(b.prog, b.survivors, b.fallen))
+		return
 	}
+	b.prog.MarkGameOverIfNeeded()
 	h.Switch(NewBootHill(b.prog))
 }
 

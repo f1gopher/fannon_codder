@@ -108,7 +108,7 @@ func controls() []binding {
 		{
 			section: "Battle — moving and looking",
 			input:   "Left click the troop logo, or the active squad’s letter again",
-			action:  "Splits the highlighted troopers into the next free squad. With nobody highlighted, the logo still tries to split.",
+			action:  "Splits the highlighted troopers into the next free squad and selects that squad. With nobody highlighted, the logo still tries to split.",
 			tokens:  []string{"MouseButtonLeft"},
 		},
 		{

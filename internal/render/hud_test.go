@@ -44,19 +44,24 @@ func TestHitHUDSplitSwitchAndAmmo(t *testing.T) {
 	if !w.Split() {
 		t.Fatal("split")
 	}
-	found = false
+	foundEagle, foundSnake := false, false
 	for _, m := range layoutHUD(w).men {
-		if m.squad != sim.SquadEagle {
-			continue
-		}
 		kind, id = HitHUD(w, 4, float64(m.y+2))
-		if kind != HitSquad || sim.SquadID(id) != sim.SquadEagle {
-			t.Fatalf("eagle row hit = %v id %v", kind, id)
+		if m.squad == sim.SquadEagle {
+			if kind != HitMember || id != m.id {
+				t.Fatalf("selected squad row hit = %v id %v", kind, id)
+			}
+			foundEagle = true
 		}
-		found = true
+		if m.squad == sim.SquadSnake {
+			if kind != HitSquad || sim.SquadID(id) != sim.SquadSnake {
+				t.Fatalf("snake row hit = %v id %v", kind, id)
+			}
+			foundSnake = true
+		}
 	}
-	if !found {
-		t.Fatal("eagle squad missing from the HUD")
+	if !foundEagle || !foundSnake {
+		t.Fatal("split should list both squads on the HUD")
 	}
 }
 

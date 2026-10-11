@@ -113,7 +113,7 @@ func (w *World) Split() bool {
 		ns.Trail = []Vec2{{X: l.X, Y: l.Y}}
 	}
 	w.Squads = append(w.Squads, ns)
-	w.Selected = nil
+	w.SetActiveSquad(newID)
 	return true
 }
 

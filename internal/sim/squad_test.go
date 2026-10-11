@@ -29,8 +29,8 @@ func TestSplitThreeIntoTwoPlusOne(t *testing.T) {
 	if eagle.MemberIDs[0] != third || w.Unit(third).SquadID != SquadEagle {
 		t.Fatal("highlighted man should be the Eagle squad")
 	}
-	if !snake.Active || eagle.Active {
-		t.Fatal("original squad stays active")
+	if snake.Active || !eagle.Active {
+		t.Fatal("the new squad should be selected")
 	}
 	if snake.Grenades != 3 || eagle.Grenades != 2 {
 		t.Fatalf("half of 5 grenades: stay %d go %d", snake.Grenades, eagle.Grenades)
@@ -59,6 +59,9 @@ func TestSplitDoesNotRejoinUntilOrderedClose(t *testing.T) {
 		t.Fatal("closing the file must not merge the squads")
 	}
 	eagle := w.Unit(w.SquadByID(SquadEagle).LeaderID)
+	if !w.SetActiveSquad(SquadSnake) {
+		t.Fatal("switch back to Snake")
+	}
 	snake := w.ActiveSquad()
 	w.CommandMove(eagle.X, eagle.Y, true)
 	leader := w.Unit(snake.LeaderID)
@@ -79,7 +82,6 @@ func TestMovingOneSquadStaysSplit(t *testing.T) {
 	for i := 0; i < 90; i++ {
 		w.Step(1.0 / 60)
 	}
-	eagle := w.SquadByID(SquadEagle)
 	leader := w.Unit(w.ActiveSquad().LeaderID)
 	w.CommandMove(leader.X+80, leader.Y, true)
 	if w.ActiveSquad().JoinSeek {
@@ -91,7 +93,7 @@ func TestMovingOneSquadStaysSplit(t *testing.T) {
 	if len(w.Squads) != 2 || w.SquadByID(SquadEagle) == nil {
 		t.Fatal("moving one squad must leave the other squad in place")
 	}
-	if eagle.HasDest {
+	if w.SquadByID(SquadSnake).HasDest {
 		t.Fatal("the squad left behind should hold")
 	}
 	moved := false
@@ -131,6 +133,9 @@ func TestNeverMoreThanThreeSquads(t *testing.T) {
 		{X: 3 * FileSpacing, Y: 0},
 	})
 	for n := 0; n < 2; n++ {
+		if !w.SetActiveSquad(SquadSnake) {
+			t.Fatal("Snake should still be there to split")
+		}
 		s := w.ActiveSquad()
 		last := s.MemberIDs[len(s.MemberIDs)-1]
 		w.ToggleSelect(last)
@@ -163,6 +168,9 @@ func TestMergeUnderActiveSquad(t *testing.T) {
 	snake := w.SquadByID(SquadSnake)
 	eagle.Grenades = 2
 	snake.Grenades = 3
+	if !w.SetActiveSquad(SquadSnake) {
+		t.Fatal("switch back to Snake")
+	}
 	// A click-move onto the guard: he joins Snake, Snake stays in charge.
 	g := w.Unit(guard)
 	leader := w.Unit(snake.LeaderID)
@@ -212,6 +220,9 @@ func TestSwitchLeavesTheMoveGoing(t *testing.T) {
 	w.ToggleSelect(middle)
 	if !w.Split() {
 		t.Fatal("split failed")
+	}
+	if !w.SetActiveSquad(SquadSnake) {
+		t.Fatal("order the original squad")
 	}
 	snake := w.SquadByID(SquadSnake)
 	leader := w.Unit(snake.LeaderID)
@@ -424,6 +435,9 @@ func TestInactiveFireBlockedByTreeAndDeepWater(t *testing.T) {
 	guard := w.ActiveSquad().MemberIDs[2]
 	w.ToggleSelect(guard)
 	w.Split()
+	if !w.SetActiveSquad(SquadSnake) {
+		t.Fatal("leave the guard parked")
+	}
 	g := w.Unit(guard)
 	g.X, g.Y = 8, 8
 	w.SpawnUnit(SideEnemy, Vec2{X: 40, Y: 8})
@@ -437,6 +451,9 @@ func TestInactiveFireBlockedByTreeAndDeepWater(t *testing.T) {
 	guard = w.ActiveSquad().MemberIDs[2]
 	w.ToggleSelect(guard)
 	w.Split()
+	if !w.SetActiveSquad(SquadSnake) {
+		t.Fatal("leave the guard parked")
+	}
 	g = w.Unit(guard)
 	g.X, g.Y = 8, 8
 	w.SpawnUnit(SideEnemy, Vec2{X: 40, Y: 8})
@@ -491,6 +508,9 @@ func parkedAt(enemy Vec2) (*World, *Unit) {
 	w.ToggleSelect(id)
 	if !w.Split() {
 		panic("split")
+	}
+	if !w.SetActiveSquad(SquadSnake) {
+		panic("leave the split man parked")
 	}
 	g := w.Unit(id)
 	g.X, g.Y = 200, 100

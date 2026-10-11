@@ -1,0 +1,44 @@
+//kage:unit pixels
+
+package main
+
+// Time is the battle clock in seconds. Water, sand, and ice are the only
+// pixels with a mask value; grass and rock stay on the still image.
+var Time float
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	clr := imageSrc0At(srcPos)
+	if clr.a < 0.02 {
+		return vec4(0)
+	}
+	k := imageSrc1At(srcPos).r
+	// Water drifts across its own ripples. Ice and sand only breathe.
+	if k > 0.2 && k < 0.55 {
+		ox := sin(srcPos.y*0.045+Time*0.7) * 3.2
+		oy := sin(srcPos.x*0.03-Time*0.45) * 2.0
+		p := srcPos + vec2(ox, oy)
+		if imageSrc1At(p).r > 0.2 && imageSrc1At(p).r < 0.55 {
+			clr = imageSrc0At(p)
+		}
+		wave := sin(srcPos.y*0.06+Time*0.9) * 0.5
+		wave += sin(srcPos.x*0.02+Time*0.35) * 0.5
+		clr.r = clamp(clr.r+wave*0.025, 0.0, clr.a)
+		clr.g = clamp(clr.g+wave*0.03, 0.0, clr.a)
+		clr.b = clamp(clr.b+wave*0.028, 0.0, clr.a)
+		return clr * color
+	}
+	amp := 0.0
+	spd := Time
+	if k > 0.8 {
+		amp = 0.04
+		spd = Time * 0.35
+	} else if k > 0.5 {
+		amp = 0.05
+		spd = Time * 0.18
+	}
+	wave := sin(srcPos.x*0.09+spd) * sin(srcPos.y*0.08-spd*0.7)
+	clr.r = clamp(clr.r+wave*amp, 0.0, clr.a)
+	clr.g = clamp(clr.g+wave*amp, 0.0, clr.a)
+	clr.b = clamp(clr.b+wave*amp*0.65, 0.0, clr.a)
+	return clr * color
+}

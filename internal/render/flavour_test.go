@@ -46,13 +46,8 @@ func TestGrassGrowsScrubAndSnowGrowsIgloos(t *testing.T) {
 	m.Set(4, 4, sim.TileTree)
 	hut := []sim.Building{{X: 6 * 16, Y: 6 * 16, W: 32, H: 32, Alive: true}}
 	grass := FlavourSites(m, hut, false)
-	if len(grass) == 0 {
-		t.Fatal("grass map should grow scrub")
-	}
-	for _, s := range grass {
-		if s.Key != "prop/scrub" {
-			t.Fatalf("grass site %s", s.Key)
-		}
+	if len(grass) != 0 {
+		t.Fatalf("grass map should stay clear, got %d", len(grass))
 	}
 	snow := FlavourSites(m, hut, true)
 	var igloo, man int

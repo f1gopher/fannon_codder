@@ -247,7 +247,7 @@ func TestFootSort(t *testing.T) {
 	w.Map = sim.Map{W: 4, H: 4, Tiles: tiles}
 	w.SpawnUnit(sim.SidePlayer, sim.Vec2{X: 8, Y: 8})
 	w.SpawnUnit(sim.SidePlayer, sim.Vec2{X: 8, Y: 40})
-	bodies := collectBodies(w, false)
+	bodies := collectBodies(w, "grass")
 	sort.SliceStable(bodies, func(i, j int) bool { return bodies[i].y < bodies[j].y })
 	if len(bodies) != 3 {
 		t.Fatalf("bodies = %d, want a tree and two men", len(bodies))

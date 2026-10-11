@@ -470,7 +470,8 @@ func Advance(dt float64, w *sim.World) {
 // Field paints the playfield: ground, shadows, then trees, huts, crates,
 // flavour props, men, and vehicles by foot Y, then birds, grenades,
 // tracers, and blasts.
-// terrain is "snow" or "grass" and selects the base loop when that sheet exists.
+// terrain is "snow" or "grass". Snow paints open ground as snow. The
+// joined-cell painter fills the ground. Trees are canopy runs.
 func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
 		return
@@ -480,9 +481,8 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	if s := w.ActiveSquad(); s != nil {
 		controlledSquad = s.ID
 	}
-	paintTerrain(dst, w.Map, w.Camera, terrain)
-	Tiles(dst, w.Map, w.Camera)
-	bodies := collectBodies(w, terrain == "snow")
+	drawTerrain(dst, w.Map, w.Camera, terrain)
+	bodies := collectBodies(w, terrain)
 	sort.SliceStable(bodies, func(i, j int) bool { return bodies[i].y < bodies[j].y })
 	for i := range bodies {
 		if bodies[i].shadow != nil {
@@ -504,11 +504,11 @@ type body struct {
 	draw   func(*ebiten.Image)
 }
 
-func collectBodies(w *sim.World, arctic bool) []body {
+func collectBodies(w *sim.World, terrain string) []body {
 	cam := w.Camera
 	var bodies []body
-	bodies = append(bodies, treeBodies(w.Map, cam)...)
-	bodies = append(bodies, flavourBodies(w, arctic)...)
+	bodies = append(bodies, terrainTreeBodies(w.Map, cam, terrain)...)
+	bodies = append(bodies, flavourBodies(w, arcticTerrain(terrain))...)
 	for i := range w.Buildings {
 		b := w.Buildings[i]
 		if !b.Alive {
@@ -545,87 +545,6 @@ func collectBodies(w *sim.World, arctic bool) []body {
 		bodies = append(bodies, vehicleBody(cam, v))
 	}
 	return bodies
-}
-
-func paintTerrain(dst *ebiten.Image, m sim.Map, cam sim.Camera, terrain string) {
-	if m.W == 0 {
-		return
-	}
-	if terrain == "" {
-		terrain = "grass"
-	}
-	sh := activeSheets().Get("ground/" + terrain)
-	if sh == nil {
-		return
-	}
-	tx0, ty0, tx1, ty1 := visibleTiles(m, cam)
-	for ty := ty0; ty < ty1; ty++ {
-		for tx := tx0; tx < tx1; tx++ {
-			t := m.At(tx, ty)
-			if t != sim.TileGrass && t != sim.TileTree {
-				continue
-			}
-			// Frame 0 is the rest pose. The other frames only shift fine
-			// strokes, and that shimmer reads as noise, so the fill stays put.
-			img, ok := sh.still(0)
-			if !ok {
-				continue
-			}
-			drawTopLeft(dst, img,
-				cam.ScreenX(float64(tx*sim.TileSize)),
-				cam.ScreenY(float64(ty*sim.TileSize)),
-			)
-		}
-	}
-}
-
-func treeBodies(m sim.Map, cam sim.Camera) []body {
-	if m.W == 0 {
-		return nil
-	}
-	tx0, ty0, tx1, ty1 := visibleTiles(m, cam)
-	tx0 -= 2
-	ty0 -= 4
-	if tx0 < 0 {
-		tx0 = 0
-	}
-	if ty0 < 0 {
-		ty0 = 0
-	}
-	var bodies []body
-	for ty := ty0; ty < ty1; ty++ {
-		for tx := tx0; tx < tx1; tx++ {
-			if m.At(tx, ty) != sim.TileTree {
-				continue
-			}
-			bodies = append(bodies, treeBody(cam, tx, ty))
-		}
-	}
-	return bodies
-}
-
-func treeBody(cam sim.Camera, tx, ty int) body {
-	footX := cam.ScreenX(float64(tx*sim.TileSize) + float64(sim.TileSize)/2)
-	footY := cam.ScreenY(float64((ty + 1) * sim.TileSize))
-	y := float64((ty + 1) * sim.TileSize)
-	sh := activeSheets().Get("tree/sway")
-	var img *ebiten.Image
-	if sh != nil {
-		// Rows are the three silhouettes. Column 0 stays put; later columns are unused sway art.
-		row := mod(tx+ty*2, sh.RowCount())
-		img, _ = sh.Row(row, 0)
-	}
-	if img == nil {
-		return body{y: y, draw: func(dst *ebiten.Image) {
-			blit(dst, tileImage(sim.TileTree),
-				cam.ScreenX(float64(tx*sim.TileSize)),
-				cam.ScreenY(float64(ty*sim.TileSize)),
-				1, 1,
-			)
-		}}
-	}
-	ax, ay := sh.AnchorX, sh.AnchorY
-	return spriteBody(y, footX, footY, img, ax, ay, false, nil)
 }
 
 func buildingBody(cam sim.Camera, b sim.Building) body {

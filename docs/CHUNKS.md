@@ -94,4 +94,6 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Title, briefing, and Boot Hill are new 16:9 paintings. A narrower window crops them instead of leaving side gaps.
 - Player soldiers outside the controlled squad kneel while they stand still.
 - Idle and kneeling soldiers glance. The leader of the controlled squad keeps his head on the pointer. A hop, a look up, or a salute to the camera is rare.
+- Ground, water, sand, ice, snow, rock, and trees are painted from joined map cells, sampling the meadow plates in world space. The old ground sheets stay on disk and the battle does not sample them.
+- Grass does not grow the scrub bush. `prop/scrub` stays on disk. Arctic maps still grow snowmen and igloos.
 

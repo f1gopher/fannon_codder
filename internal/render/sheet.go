@@ -72,7 +72,8 @@ type Library struct {
 // ground/water-deep, ground/quicksand, ground/ice, ground/bridge,
 // ground/cliff, ground/ramp, ground/mine.
 // Props use tree/sway, hut/door, hut/plain, crate/grenade, crate/rocket,
-// skidoo/idle, skidoo/move, prop/scrub, prop/snowman, prop/igloo.
+// skidoo/idle, skidoo/move, prop/snowman, prop/igloo.
+// prop/scrub stays on disk and is not drawn.
 // Birds use bird/flap (east stored, west mirrored) and cross above the field.
 // Fire uses fx/tracer, fx/grenade, fx/rocket, and fx/blast. fx/flash is unused.
 // The cursor and the status strip use ui/pointer, ui/crosshair, ui/board,

@@ -1,0 +1,78 @@
+package render
+
+import "image/color"
+
+// Palette is the painter's colour set for one biome. Jungle and arctic share
+// the same materials. Arctic paints open ground as snow and canopies as
+// snowy trees. Ice stays its own cyan so a frozen sheet does not read as snow.
+type Palette struct {
+	GrassLo, GrassHi     color.RGBA
+	SnowLo, SnowHi       color.RGBA
+	TreeLo, TreeHi       color.RGBA
+	ShallowLo, ShallowHi color.RGBA
+	DeepLo, DeepHi       color.RGBA
+	IceLo, IceHi         color.RGBA
+	SandLo, SandHi       color.RGBA
+	CliffLo, CliffHi     color.RGBA
+	RampLo, RampHi       color.RGBA
+	Foam                 color.RGBA
+	Flower               color.RGBA
+	Bloom                color.RGBA
+	Stone                color.RGBA
+	Plank                color.RGBA
+	PlankGap             color.RGBA
+	Mine                 color.RGBA
+	MineMark             color.RGBA
+}
+
+func junglePalette() Palette {
+	return Palette{
+		GrassLo:   color.RGBA{R: 40, G: 92, B: 36, A: 255},
+		GrassHi:   color.RGBA{R: 118, G: 162, B: 48, A: 255},
+		SnowLo:    color.RGBA{R: 214, G: 222, B: 226, A: 255},
+		SnowHi:    color.RGBA{R: 246, G: 250, B: 252, A: 255},
+		TreeLo:    color.RGBA{R: 16, G: 64, B: 28, A: 255},
+		TreeHi:    color.RGBA{R: 64, G: 132, B: 46, A: 255},
+		ShallowLo: color.RGBA{R: 28, G: 150, B: 158, A: 255},
+		ShallowHi: color.RGBA{R: 96, G: 206, B: 196, A: 255},
+		DeepLo:    color.RGBA{R: 10, G: 58, B: 96, A: 255},
+		DeepHi:    color.RGBA{R: 22, G: 104, B: 132, A: 255},
+		IceLo:     color.RGBA{R: 158, G: 214, B: 224, A: 255},
+		IceHi:     color.RGBA{R: 198, G: 236, B: 248, A: 255},
+		SandLo:    color.RGBA{R: 188, G: 142, B: 62, A: 255},
+		SandHi:    color.RGBA{R: 220, G: 176, B: 84, A: 255},
+		CliffLo:   color.RGBA{R: 96, G: 88, B: 74, A: 255},
+		CliffHi:   color.RGBA{R: 154, G: 144, B: 124, A: 255},
+		RampLo:    color.RGBA{R: 112, G: 84, B: 48, A: 255},
+		RampHi:    color.RGBA{R: 168, G: 128, B: 70, A: 255},
+		Foam:      color.RGBA{R: 226, G: 242, B: 236, A: 255},
+		Flower:    color.RGBA{R: 232, G: 206, B: 128, A: 255},
+		Bloom:     color.RGBA{R: 176, G: 72, B: 48, A: 255},
+		Stone:     color.RGBA{R: 90, G: 84, B: 74, A: 255},
+		Plank:     color.RGBA{R: 128, G: 86, B: 48, A: 255},
+		PlankGap:  color.RGBA{R: 78, G: 52, B: 30, A: 255},
+		Mine:      color.RGBA{R: 70, G: 56, B: 36, A: 255},
+		MineMark:  color.RGBA{R: 28, G: 22, B: 16, A: 255},
+	}
+}
+
+func arcticPalette() Palette {
+	p := junglePalette()
+	p.CliffLo = color.RGBA{R: 78, G: 86, B: 94, A: 255}
+	p.CliffHi = color.RGBA{R: 132, G: 142, B: 150, A: 255}
+	p.TreeLo = color.RGBA{R: 22, G: 58, B: 48, A: 255}
+	p.TreeHi = color.RGBA{R: 78, G: 122, B: 112, A: 255}
+	p.Stone = color.RGBA{R: 70, G: 78, B: 86, A: 255}
+	return p
+}
+
+func paletteFor(terrain string) Palette {
+	if terrain == "snow" || terrain == "arctic" {
+		return arcticPalette()
+	}
+	return junglePalette()
+}
+
+func arcticTerrain(terrain string) bool {
+	return terrain == "snow" || terrain == "arctic"
+}

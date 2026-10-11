@@ -9,8 +9,8 @@ import (
 )
 
 // Flavour is one painted prop. It does not block movement or fire.
-// Arctic maps grow snowmen and igloos. Grass maps grow scrub.
-// Birds are separate and cross every map.
+// Arctic maps grow snowmen and igloos. Grass maps stay clear.
+// prop/scrub stays on disk and is not drawn. Birds are separate.
 type Flavour struct {
 	Key   string
 	X, Y  float64
@@ -28,7 +28,7 @@ type Bird struct {
 // FlavourSites picks open grass cells. An igloo takes the cell and the one
 // east of it. Trees, water, cliffs, and hut footprints stay clear.
 func FlavourSites(m sim.Map, buildings []sim.Building, arctic bool) []Flavour {
-	if m.W < 3 || m.H < 3 || len(m.Tiles) < m.W*m.H {
+	if m.W < 3 || m.H < 3 || len(m.Tiles) < m.W*m.H || !arctic {
 		return nil
 	}
 	used := map[int]bool{}
@@ -41,21 +41,14 @@ func FlavourSites(m sim.Map, buildings []sim.Building, arctic bool) []Flavour {
 			h := tx*13 + ty*29 + m.W*3 + m.H
 			footX := float64(tx*sim.TileSize) + float64(sim.TileSize)/2
 			footY := float64((ty + 1) * sim.TileSize)
-			if arctic {
-				if h%29 == 0 && tx+1 < m.W-1 && openFlavour(m, buildings, tx+1, ty) && !used[ty*m.W+tx+1] {
-					out = append(out, Flavour{Key: "prop/igloo", X: footX + float64(sim.TileSize)/2, Y: footY, Tiles: 2})
-					used[ty*m.W+tx] = true
-					used[ty*m.W+tx+1] = true
-					continue
-				}
-				if h%17 == 0 {
-					out = append(out, Flavour{Key: "prop/snowman", X: footX, Y: footY, Tiles: 1})
-					used[ty*m.W+tx] = true
-				}
+			if h%29 == 0 && tx+1 < m.W-1 && openFlavour(m, buildings, tx+1, ty) && !used[ty*m.W+tx+1] {
+				out = append(out, Flavour{Key: "prop/igloo", X: footX + float64(sim.TileSize)/2, Y: footY, Tiles: 2})
+				used[ty*m.W+tx] = true
+				used[ty*m.W+tx+1] = true
 				continue
 			}
-			if h%19 == 0 {
-				out = append(out, Flavour{Key: "prop/scrub", X: footX, Y: footY, Tiles: 1})
+			if h%17 == 0 {
+				out = append(out, Flavour{Key: "prop/snowman", X: footX, Y: footY, Tiles: 1})
 				used[ty*m.W+tx] = true
 			}
 		}

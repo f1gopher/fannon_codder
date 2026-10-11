@@ -14,6 +14,7 @@ import (
 	"fannon-codder/internal/input"
 	"fannon-codder/internal/render"
 	"fannon-codder/internal/sim"
+	"fannon-codder/internal/terrain"
 )
 
 // Scene is one full-screen mode (title, battle, later Boot Hill).
@@ -41,6 +42,8 @@ type Host interface {
 var (
 	titleColor  = color.RGBA{R: 0x20, G: 0x20, B: 0x20, A: 0xff}
 	battleColor = color.RGBA{R: 0x3a, G: 0x8f, B: 0x3a, A: 0xff}
+	forestColor = color.RGBA{R: 0x1e, G: 0x4a, B: 0x28, A: 0xff}
+	desertColor = color.RGBA{R: 0xc4, G: 0xa0, B: 0x58, A: 0xff}
 	snowColor   = color.RGBA{R: 0xe6, G: 0xec, B: 0xf0, A: 0xff}
 )
 
@@ -477,15 +480,24 @@ func (b *Battle) leaveBattle(h Host, won bool) {
 	h.Switch(NewBootHill(b.prog))
 }
 
-func (b *Battle) arctic() bool {
-	return !b.sandbox && b.prog != nil && b.prog.Phase != nil && b.prog.Phase.Terrain == "arctic"
+func (b *Battle) terrainName() string {
+	if b.sandbox || b.prog == nil || b.prog.Phase == nil || b.prog.Phase.Terrain == "" {
+		return "jungle"
+	}
+	return b.prog.Phase.Terrain
 }
 
 func (b *Battle) battlefieldColor() color.Color {
-	if b.arctic() {
+	switch terrain.KindOf(b.terrainName()) {
+	case terrain.Snow:
 		return snowColor
+	case terrain.Desert:
+		return desertColor
+	case terrain.Forest:
+		return forestColor
+	default:
+		return battleColor
 	}
-	return battleColor
 }
 
 func (b *Battle) Draw(screen *ebiten.Image) {
@@ -493,13 +505,10 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	s := render.PictureScale()
 	left := int(math.Floor(float64(render.HUDWidth) * s))
 	play := screen.SubImage(image.Rect(left, 0, screen.Bounds().Dx(), screen.Bounds().Dy())).(*ebiten.Image)
-	terrain := "grass"
-	if b.arctic() {
-		terrain = "snow"
-	}
-	render.Field(play, b.world, terrain)
+	kind := b.terrainName()
+	render.Field(play, b.world, kind)
 	if b.mapOpen {
-		render.Overview(screen, b.world, terrain)
+		render.Overview(screen, b.world, kind)
 	}
 	render.HUD(screen, b.world, b.paused)
 	if b.menu.open && b.world.Status == sim.Playing {

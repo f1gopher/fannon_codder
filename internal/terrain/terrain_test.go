@@ -3,6 +3,7 @@ package terrain
 import (
 	"bytes"
 	"image"
+	"image/color"
 	"math"
 	"testing"
 	"time"
@@ -230,6 +231,65 @@ func TestCanopySlicesDoNotStack(t *testing.T) {
 	if missing != 0 || stacked != 0 {
 		t.Fatalf("canopy pixels missing=%d stacked=%d", missing, stacked)
 	}
+}
+
+func TestKindsOwnWaterAndTrees(t *testing.T) {
+	kinds := []look{jungleLook, forestLook, desertLook, snowLook}
+	for i := range kinds {
+		for j := i + 1; j < len(kinds); j++ {
+			a, b := kinds[i], kinds[j]
+			if a.shallow == b.shallow || a.deep == b.deep || a.canopy == b.canopy || a.ground == b.ground {
+				t.Fatalf("%s and %s share ground, water, or trees", a.kind, b.kind)
+			}
+		}
+	}
+	const n = 8
+	tiles := make([]sim.Tile, n*n)
+	for y := 1; y <= 4; y++ {
+		for x := 1; x <= 4; x++ {
+			tiles[y*n+x] = sim.TileWaterShallow
+		}
+	}
+	tiles[6*n+6] = sim.TileTree
+	names := []string{"jungle", "forest", "desert", "snow"}
+	water := make([]color.RGBA, len(names))
+	crown := make([]color.RGBA, len(names))
+	for i, name := range names {
+		paint := paintMap(mapOf(n, n, tiles), name)
+		water[i] = paint.ground.RGBAAt(2*sim.TileSize*terrainPx+8*terrainPx, 2*sim.TileSize*terrainPx+8*terrainPx)
+		can := paint.trees[0]
+		cx := int((float64(6*sim.TileSize) + sim.TileSize/2 - can.originX) * terrainPx)
+		cy := int((float64(6*sim.TileSize) + sim.TileSize/2 - can.originY) * terrainPx)
+		crown[i] = can.img.RGBAAt(cx, cy)
+	}
+	for i := range names {
+		for j := i + 1; j < len(names); j++ {
+			if colorDist(water[i], water[j]) < 40 {
+				t.Fatalf("%s water %v and %s water %v are too close", names[i], water[i], names[j], water[j])
+			}
+			if colorDist(crown[i], crown[j]) < 24 {
+				t.Fatalf("%s trees %v and %s trees %v are too close", names[i], crown[i], names[j], crown[j])
+			}
+		}
+	}
+	open := paintMap(mapOf(4, 4, nil), "desert")
+	r, g, _ := meanCell(open.ground, 1, 1)
+	if r <= g {
+		t.Fatalf("desert ground r=%.0f g=%.0f, want sand", r, g)
+	}
+	forest := paintMap(mapOf(4, 4, nil), "forest")
+	fr, fg, _ := meanCell(forest.ground, 1, 1)
+	jr, jg, _ := meanCell(paintMap(mapOf(4, 4, nil), "jungle").ground, 1, 1)
+	if fg <= fr {
+		t.Fatalf("forest ground r=%.0f g=%.0f, want green", fr, fg)
+	}
+	if math.Abs(fr-jr)+math.Abs(fg-jg) < 8 {
+		t.Fatalf("forest ground matches jungle (%.0f,%.0f)", fr, fg)
+	}
+}
+
+func colorDist(a, b color.RGBA) int {
+	return absInt(int(a.R)-int(b.R)) + absInt(int(a.G)-int(b.G)) + absInt(int(a.B)-int(b.B))
 }
 
 func TestArcticSnowAndIce(t *testing.T) {

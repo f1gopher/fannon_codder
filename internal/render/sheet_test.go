@@ -594,14 +594,17 @@ func TestPointerAndStatusIcons(t *testing.T) {
 			t.Fatalf("%s %+v", w.key, sh)
 		}
 	}
-	if overviewTile(sim.TileGrass, false) != overviewGrass || overviewGrass.R != 44 {
-		t.Fatalf("grass %v", overviewTile(sim.TileGrass, false))
+	if overviewTile(sim.TileGrass, "grass") != overviewGrass || overviewGrass.R != 44 {
+		t.Fatalf("grass %v", overviewTile(sim.TileGrass, "grass"))
 	}
-	if overviewTile(sim.TileGrass, true) != overviewSnow {
-		t.Fatal("arctic overview should use the snow painting")
+	if overviewTile(sim.TileGrass, "snow") != overviewSnow || overviewTile(sim.TileTree, "arctic") != overviewSnow {
+		t.Fatal("snow overview should use the snow painting")
 	}
-	if overviewTile(sim.TileWaterDeep, false) != overviewDeep || overviewTile(sim.TileQuicksand, false) != overviewSand {
+	if overviewTile(sim.TileWaterDeep, "jungle") != overviewDeep || overviewTile(sim.TileQuicksand, "jungle") != overviewSand {
 		t.Fatal("water or sand colour drifted")
+	}
+	if overviewTile(sim.TileGrass, "forest") == overviewGrass || overviewTile(sim.TileWaterShallow, "desert") == overviewShallow {
+		t.Fatal("forest ground or desert water reused the jungle diagram")
 	}
 }
 

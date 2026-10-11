@@ -23,7 +23,7 @@ func TestOpensTheFirstPhase(t *testing.T) {
 		t.Fatalf("terrain = %q", ed.biome)
 	}
 	ed.load(3)
-	if ed.phases[3].name != "m03p01" || ed.biome != "arctic" {
+	if ed.phases[3].name != "m03p01" || ed.biome != "snow" {
 		t.Fatalf("phase 4 = %s %q", ed.phases[3].name, ed.biome)
 	}
 	if ed.scrollX != 0 || ed.scrollY != 0 {

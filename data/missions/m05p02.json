@@ -4,7 +4,7 @@
   "title": "Barmy Bazookas",
   "briefing": "With 3 soldiers you must kill all enemy and destroy the huts. The far bank is full of rockets.",
   "deploy": 3,
-  "terrain": "jungle",
+  "terrain": "snow",
   "map": {
     "w": 36,
     "h": 24,

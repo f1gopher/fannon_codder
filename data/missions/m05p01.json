@@ -4,7 +4,7 @@
   "title": "Valley of Ice",
   "briefing": "With 3 soldiers you must destroy the huts and kill all enemy. Cross the ice. Rockets are in the crates.",
   "deploy": 3,
-  "terrain": "arctic",
+  "terrain": "snow",
   "map": {
     "w": 36,
     "h": 24,

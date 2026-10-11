@@ -9,7 +9,7 @@ import (
 )
 
 // Flavour is one painted prop. It does not block movement or fire.
-// Arctic maps grow snowmen and igloos. Grass maps stay clear.
+// Snow maps grow snowmen and igloos. Other terrains stay clear.
 // prop/scrub stays on disk and is not drawn. Birds are separate.
 type Flavour struct {
 	Key   string
@@ -27,8 +27,8 @@ type Bird struct {
 
 // FlavourSites picks open grass cells. An igloo takes the cell and the one
 // east of it. Trees, water, cliffs, and hut footprints stay clear.
-func FlavourSites(m sim.Map, buildings []sim.Building, arctic bool) []Flavour {
-	if m.W < 3 || m.H < 3 || len(m.Tiles) < m.W*m.H || !arctic {
+func FlavourSites(m sim.Map, buildings []sim.Building, snow bool) []Flavour {
+	if m.W < 3 || m.H < 3 || len(m.Tiles) < m.W*m.H || !snow {
 		return nil
 	}
 	used := map[int]bool{}
@@ -119,8 +119,8 @@ func (b Bird) At(mapW, t float64) (x, y float64) {
 	return x - 32, b.Y
 }
 
-func flavourBodies(w *sim.World, arctic bool) []body {
-	sites := FlavourSites(w.Map, w.Buildings, arctic)
+func flavourBodies(w *sim.World, snow bool) []body {
+	sites := FlavourSites(w.Map, w.Buildings, snow)
 	bodies := make([]body, 0, len(sites))
 	for _, s := range sites {
 		sh := activeSheets().Get(s.Key)

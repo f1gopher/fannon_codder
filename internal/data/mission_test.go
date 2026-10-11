@@ -230,6 +230,35 @@ func TestPhasesFillTheScreen(t *testing.T) {
 	}
 }
 
+func TestPhaseTerrains(t *testing.T) {
+	want := map[string]string{
+		"m01p01.json": "jungle",
+		"m02p01.json": "jungle",
+		"m02p02.json": "jungle",
+		"m03p01.json": "snow",
+		"m04p01.json": "jungle",
+		"m04p02.json": "jungle",
+		"m04p03.json": "jungle",
+		"m04p04.json": "jungle",
+		"m05p01.json": "snow",
+		"m05p02.json": "snow",
+		"m05p03.json": "snow",
+	}
+	c, err := LoadCampaign()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.Phases) != len(want) {
+		t.Fatalf("phases = %d, terrain table = %d", len(c.Phases), len(want))
+	}
+	for _, name := range c.Phases {
+		p := mustPhase(t, name)
+		if p.Terrain != want[name] {
+			t.Fatalf("%s terrain = %q, want %q", name, p.Terrain, want[name])
+		}
+	}
+}
+
 func TestCampaignRunsMission2AfterMission1(t *testing.T) {
 	c, err := LoadCampaign()
 	if err != nil {
@@ -404,7 +433,7 @@ func tileDist(ax, ay, bx, by int) float64 {
 
 func TestMission3IcePhase(t *testing.T) {
 	p := mustPhase(t, "m03p01.json")
-	if p.Mission != 3 || p.Phase != 1 || p.Deploy != 4 || p.Terrain != "arctic" {
+	if p.Mission != 3 || p.Phase != 1 || p.Deploy != 4 || p.Terrain != "snow" {
 		t.Fatalf("mission/phase/deploy/terrain = %d/%d/%d/%q", p.Mission, p.Phase, p.Deploy, p.Terrain)
 	}
 	if p.Title != "Blast It's Cold" {
@@ -754,7 +783,7 @@ func livingCivilians(w *sim.World) int {
 
 func TestMission5ValleyOfIce(t *testing.T) {
 	p := mustPhase(t, "m05p01.json")
-	if p.Mission != 5 || p.Phase != 1 || p.Deploy != 3 || p.Title != "Valley of Ice" || p.Terrain != "arctic" {
+	if p.Mission != 5 || p.Phase != 1 || p.Deploy != 3 || p.Title != "Valley of Ice" || p.Terrain != "snow" {
 		t.Fatalf("%d/%d %q deploy %d terrain %q", p.Mission, p.Phase, p.Title, p.Deploy, p.Terrain)
 	}
 	if p.StartGrenadesPerTrooper != 2 || p.StartRocketsPerTrooper != 0 {
@@ -784,7 +813,7 @@ func TestMission5ValleyOfIce(t *testing.T) {
 
 func TestMission5BarmyBazookas(t *testing.T) {
 	p := mustPhase(t, "m05p02.json")
-	if p.Title != "Barmy Bazookas" || p.Deploy != 3 || p.StartRocketsPerTrooper != 0 {
+	if p.Title != "Barmy Bazookas" || p.Deploy != 3 || p.StartRocketsPerTrooper != 0 || p.Terrain != "snow" {
 		t.Fatalf("%q deploy %d rockets %d", p.Title, p.Deploy, p.StartRocketsPerTrooper)
 	}
 	w := mustWorld(t, p)
@@ -805,7 +834,7 @@ func TestMission5BarmyBazookas(t *testing.T) {
 
 func TestMission5Skidoo(t *testing.T) {
 	p := mustPhase(t, "m05p03.json")
-	if p.Title != "My Beautiful Skidoo" || p.Deploy != 4 || p.StartRocketsPerTrooper != 1 {
+	if p.Title != "My Beautiful Skidoo" || p.Deploy != 4 || p.StartRocketsPerTrooper != 1 || p.Terrain != "snow" {
 		t.Fatalf("%q deploy %d rockets %d", p.Title, p.Deploy, p.StartRocketsPerTrooper)
 	}
 	if len(p.Objectives) != 1 || p.Objectives[0] != "destroy_enemy_buildings" {

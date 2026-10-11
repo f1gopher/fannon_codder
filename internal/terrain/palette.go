@@ -2,9 +2,8 @@ package terrain
 
 import "image/color"
 
-// Palette is the painter's colour set for one biome. Jungle and arctic share
-// the same materials. Arctic paints open ground as snow and canopies as
-// snowy trees. Ice stays its own cyan so a frozen sheet does not read as snow.
+// Palette is the flat paint for one terrain: foam, planks, and the mine mark.
+// Ground, water, and trees come from that terrain's own plates.
 type Palette struct {
 	GrassLo, GrassHi     color.RGBA
 	SnowLo, SnowHi       color.RGBA
@@ -56,25 +55,37 @@ func junglePalette() Palette {
 	}
 }
 
-func arcticPalette() Palette {
+func forestPalette() Palette {
 	p := junglePalette()
+	p.Foam = color.RGBA{R: 214, G: 224, B: 196, A: 255}
+	p.Plank = color.RGBA{R: 96, G: 72, B: 44, A: 255}
+	p.PlankGap = color.RGBA{R: 54, G: 40, B: 26, A: 255}
+	p.TreeLo = color.RGBA{R: 18, G: 52, B: 36, A: 255}
+	p.TreeHi = color.RGBA{R: 42, G: 96, B: 64, A: 255}
+	return p
+}
+
+func desertPalette() Palette {
+	p := junglePalette()
+	p.Foam = color.RGBA{R: 236, G: 232, B: 210, A: 255}
+	p.Plank = color.RGBA{R: 176, G: 144, B: 96, A: 255}
+	p.PlankGap = color.RGBA{R: 120, G: 92, B: 58, A: 255}
+	p.CliffLo = color.RGBA{R: 150, G: 112, B: 72, A: 255}
+	p.CliffHi = color.RGBA{R: 196, G: 160, B: 112, A: 255}
+	p.TreeLo = color.RGBA{R: 96, G: 78, B: 36, A: 255}
+	p.TreeHi = color.RGBA{R: 168, G: 140, B: 72, A: 255}
+	return p
+}
+
+func snowPalette() Palette {
+	p := junglePalette()
+	p.Foam = color.RGBA{R: 246, G: 250, B: 252, A: 255}
 	p.CliffLo = color.RGBA{R: 78, G: 86, B: 94, A: 255}
 	p.CliffHi = color.RGBA{R: 132, G: 142, B: 150, A: 255}
 	p.TreeLo = color.RGBA{R: 22, G: 58, B: 48, A: 255}
 	p.TreeHi = color.RGBA{R: 78, G: 122, B: 112, A: 255}
 	p.Stone = color.RGBA{R: 70, G: 78, B: 86, A: 255}
+	p.Plank = color.RGBA{R: 132, G: 136, B: 140, A: 255}
+	p.PlankGap = color.RGBA{R: 78, G: 84, B: 90, A: 255}
 	return p
-}
-
-func paletteFor(terrain string) Palette {
-	if terrain == "snow" || terrain == "arctic" {
-		return arcticPalette()
-	}
-	return junglePalette()
-}
-
-// Arctic reports whether open ground paints as snow and canopies as snowy trees.
-// Ice stays cyan. "snow" and "arctic" are the phase file values.
-func Arctic(terrain string) bool {
-	return terrain == "snow" || terrain == "arctic"
 }

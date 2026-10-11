@@ -4,7 +4,7 @@
   "title": "My Beautiful Skidoo",
   "briefing": "With 4 soldiers you must destroy the huts. Take the skidoo. Each man carries a rocket.",
   "deploy": 4,
-  "terrain": "arctic",
+  "terrain": "snow",
   "map": {
     "w": 36,
     "h": 24,

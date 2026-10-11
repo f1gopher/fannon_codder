@@ -44,9 +44,7 @@ func terrainHash(m sim.Map, terrain string) uint64 {
 	var h uint64 = 14695981039346656037
 	h = (h ^ uint64(m.W)) * 1099511628211
 	h = (h ^ uint64(m.H)) * 1099511628211
-	if Arctic(terrain) {
-		h ^= 0xff
-	}
+	h = (h ^ uint64(KindOf(terrain))) * 1099511628211
 	for _, t := range m.Tiles {
 		h = (h ^ uint64(t)) * 1099511628211
 	}

@@ -10,7 +10,7 @@ import (
 	"math"
 )
 
-//go:embed plates/*.png
+//go:embed plates
 var plateFS embed.FS
 
 // plateScale is painted pixels per world pixel. One keeps a campaign map
@@ -24,27 +24,35 @@ type painted struct {
 }
 
 var (
-	grassPlate   *painted
-	canopyPlate  *painted
-	shallowPlate *painted
-	deepPlate    *painted
-	sandPlate    *painted
-	snowPlate    *painted
-	rockPlate    *painted
-	icePlate     *painted
-	dirtPlate    *painted
+	sandPlate *painted
+	rockPlate *painted
+	icePlate  *painted
+	dirtPlate *painted
 )
 
 func init() {
-	grassPlate = mustPlate("plates/grass.png")
-	canopyPlate = mustPlate("plates/canopy.png")
-	shallowPlate = mustPlate("plates/shallow.png")
-	deepPlate = mustPlate("plates/deep.png")
 	sandPlate = mustPlate("plates/sand.png")
-	snowPlate = mustPlate("plates/snow.png")
 	rockPlate = mustPlate("plates/rock.png")
 	icePlate = mustPlate("plates/ice.png")
 	dirtPlate = mustPlate("plates/dirt.png")
+	loadKind(&jungleLook, "jungle")
+	loadKind(&forestLook, "forest")
+	loadKind(&desertLook, "desert")
+	loadKind(&snowLook, "snow")
+	// The jungle beach is the same sand as quicksand. The other kinds keep
+	// their own shore file, so a jungle bank edit does not move them.
+	jungleLook.shore = sandPlate
+}
+
+func loadKind(lk *look, name string) {
+	dir := "plates/" + name + "/"
+	lk.ground = mustPlate(dir + "ground.png")
+	lk.canopy = mustPlate(dir + "canopy.png")
+	lk.shallow = mustPlate(dir + "shallow.png")
+	lk.deep = mustPlate(dir + "deep.png")
+	if name != "jungle" {
+		lk.shore = mustPlate(dir + "shore.png")
+	}
 }
 
 func mustPlate(name string) *painted {

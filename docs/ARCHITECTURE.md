@@ -119,7 +119,7 @@ An armed enemy skidoo drops the throttle inside `VehicleMGRange` (110) and outsi
 
 The view is the playfield. Origin is (`HUDWidth`, 0), so a map as wide as the picture still pans by the strip. On a wide window the playfield is wider than 268×256 and shows more of the map. A phase map is at least 24×16 tiles (384×256). That covers a 1440×900 battle, whose playfield is about 358×256. `LeaderMargin` is 32. `Camera.Contain` keeps the active leader, or the driven vehicle via `CameraFocus`, inside that margin. Edge scroll uses playfield coordinates.
 
-The strip is opaque. Rank is a `ui/rank-*` flash on the left of the name, on the same line. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. M, or the M icon, opens and closes it. A left click on the open map closes it. Arctic grass and tree cells use the snow colour.
+The strip is opaque. Rank is a `ui/rank-*` flash on the left of the name, on the same line. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. M, or the M icon, opens and closes it. A left click on the open map closes it. Overview ground, trees, and water follow the phase terrain. Snow grass and snow trees use the snow colour.
 
 ## Campaign
 
@@ -129,11 +129,11 @@ One slot at `userConfig/fannon-codder/save.json`. Boot Hill saves only after a f
 
 `campaign.json` plays missions 1–5 (11 phases). After Mission 5, Boot Hill says the campaign continues.
 
-- m01p01 deploy 2, kill-all.
-- m02p01 Bridge Over the River Pie, deploy 3, kill-all. m02p02 Trash Enemy HQ, deploy 3, kill-all and one door hut.
-- m03p01 Blast It's Cold, deploy 4, arctic, ice, cliff, four door huts, scarce crates.
-- m04p01 Beachy Head, deploy 4, five huts, two crates, start grenades 0. m04p02 Pier Pressure, deploy 4, kill-all and four huts, start grenades 2 from here on. m04p03 Village People, deploy 5, civilians, doorless huts, one quicksand. m04p04 Quicksand, deploy 5, pools, mines, grenadiers.
-- m05p01 Valley of Ice, deploy 3, rocketeers, both crate types, start rockets 0. m05p02 Barmy Bazookas, deploy 3. Rocket crate at tile (14, 7). m05p03 My Beautiful Skidoo, deploy 4, player and enemy skidoos, start rockets 1, destroy buildings only.
+- m01p01 deploy 2, jungle, kill-all.
+- m02p01 Bridge Over the River Pie, deploy 3, jungle, kill-all. m02p02 Trash Enemy HQ, deploy 3, jungle, kill-all and one door hut.
+- m03p01 Blast It's Cold, deploy 4, snow, ice, cliff, four door huts, scarce crates.
+- m04p01 Beachy Head, deploy 4, jungle, five huts, two crates, start grenades 0. m04p02 Pier Pressure, deploy 4, jungle, kill-all and four huts, start grenades 2 from here on. m04p03 Village People, deploy 5, jungle, civilians, doorless huts, one quicksand. m04p04 Quicksand, deploy 5, jungle, pools, mines, grenadiers.
+- m05p01 Valley of Ice, deploy 3, snow, rocketeers, both crate types, start rockets 0. m05p02 Barmy Bazookas, deploy 3, snow. Rocket crate at tile (14, 7). m05p03 My Beautiful Skidoo, deploy 4, snow, player and enemy skidoos, start rockets 1, destroy buildings only.
 
 Sandboxes from `cmd/fannon`: `-cover`, `-river`, `-hut`, `-hazards`, `-skidoo`. `-skip-title` opens Mission 1. The river sandbox shows all three squad colours.
 
@@ -203,11 +203,11 @@ A missing walk sheet uses that actor's idle. Any other missing sheet, or a facin
 
 Actor keys: `snake`, `eagle`, `panther`, `grunt`, `grenadier`, `rocketeer`, `civilian`. Eagle and Panther are Snake recolors. Enemies have no walk sheet.
 
-The painter lives in `internal/terrain`. `Field` and the map editor both call it. The battle paints ground from the tile grid. Touching cells of the same material are one area. Each material samples one painted plate in world space (grass, canopy, shallow water, deep water, sand, snow, ice, rock, dirt), so a clearing is one picture and not a repeated stamp. Grass, snow, trees, shallow water, deep water, ice, sand, and rock share that painter. A grass cell in an arctic phase (`terrain` "snow" or "arctic") paints as snow. Ice stays cyan. Quicksand paints as sand. A grass cell that touches water gets a sand lip about one tile wide and a broken foam line. Shallow and deep water share one painted current and ease into each other. Water is darker blue along a bank. The lip is paint. The cell underneath is still grass or water. A drawn edge may sit up to 3 world pixels off the cell. Bridges are planks on the water under them. Ramps are the gap in a cliff face. Mines are a mark on the open ground and the picture rebuilds when the mine becomes grass. Water, sand, and ice shimmer from `water.kage`. The other materials stay still.
+The painter lives in `internal/terrain`. `Field` and the map editor both call it with the phase `terrain`: jungle, forest, desert, or snow. "grass" paints as jungle. "arctic" paints as snow. The battle paints ground from the tile grid. Touching cells of the same material are one area. Each terrain has its own ground, canopy, shallow water, and deep water plates, so editing one kind does not change the others. Ice, rock, dirt, and quicksand stay shared. A grass cell on snow paints as snow. Ice stays cyan. Quicksand paints as sand. Open ground that touches water gets that terrain's shore lip, about one tile wide, and a broken foam line. Shallow and deep water ease into each other and darken along a bank. The lip is paint. The cell underneath is still grass or water. A drawn edge may sit up to 3 world pixels off the cell. Bridges are planks on the water under them. Ramps are the gap in a cliff face. Mines are a mark on the open ground and the picture rebuilds when the mine becomes grass. Water, sand, and ice shimmer from `water.kage`. The other materials stay still. Missions 1, 2, and 4 are jungle. Missions 3 and 5 are snow. Forest and desert paint when a phase names them.
 
 Trees in one connected stand share a canopy. The outline is a cluster of crowns with a ragged fringe that fades into the ground, and a soft shadow falls to the south-east. Each tree cell draws its own slice of that canopy and Y-sorts on the south edge of the cell. The old ground sheets and `tree/sway` stay on disk. The battle does not sample them.
 
-Flavour in `internal/render/flavour.go` does not block movement or fire. Birds cross every map. Grass stays clear. Arctic maps grow snowmen and igloos. `prop/scrub` stays on disk and is not drawn.
+Flavour in `internal/render/flavour.go` does not block movement or fire. Birds cross every map. Jungle, forest, and desert stay clear. Snow maps grow snowmen and igloos. `prop/scrub` stays on disk and is not drawn.
 
 `fx/blast` is the only explosion painting, about 0.2 s. A grenade, rocket, mine, or crate marker still lasts `blastTime` (0.35 s) and draws nothing after the last frame. The orange outline is only the missing-sheet fallback. A destroyed shed adds a second blast at the hut: the same sheet, looped slower, about 1.25 s, drawn larger and drifting up. The roof (eaves and chimney cut from `hut/door` or `hut/plain`) tumbles for `RoofFlight` (1.2 s) to a point `RoofReach` (64 px) past the hut, away from the blast. On the way down it kills soldiers inside `RoofHitR` (16 px). The landed roof stays. That flight is pending, so a finished phase waits for it.
 

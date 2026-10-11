@@ -471,8 +471,8 @@ func Advance(dt float64, w *sim.World) {
 // Field paints the playfield: ground, shadows, then trees, huts, crates,
 // flavour props, men, and vehicles by foot Y, then birds, grenades,
 // tracers, and blasts.
-// terrain is "snow" or "grass". Snow paints open ground as snow. The
-// joined-cell painter fills the ground. Trees are canopy runs.
+// terrain is jungle, forest, desert, or snow. Snow paints open ground as
+// snow. The joined-cell painter fills the ground. Trees are canopy runs.
 func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
 		return
@@ -509,7 +509,7 @@ func collectBodies(w *sim.World, terrain string) []body {
 	cam := w.Camera
 	var bodies []body
 	bodies = append(bodies, terrainTreeBodies(w.Map, cam, terrain)...)
-	bodies = append(bodies, flavourBodies(w, ground.Arctic(terrain))...)
+	bodies = append(bodies, flavourBodies(w, ground.KindOf(terrain) == ground.Snow)...)
 	for i := range w.Buildings {
 		b := w.Buildings[i]
 		if !b.Alive {

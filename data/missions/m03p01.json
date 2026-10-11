@@ -4,7 +4,7 @@
   "title": "Blast It's Cold",
   "briefing": "With 4 soldiers you must destroy the huts and kill all enemy. Grenades are scarce.",
   "deploy": 4,
-  "terrain": "arctic",
+  "terrain": "snow",
   "map": {
     "w": 36,
     "h": 26,

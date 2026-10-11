@@ -66,7 +66,7 @@ type treeRun struct {
 	footX  float64
 }
 
-func cellSurface(t sim.Tile, arctic bool) surface {
+func cellSurface(t sim.Tile, open surface) surface {
 	switch t {
 	case sim.TileTree:
 		return surfTree
@@ -85,17 +85,14 @@ func cellSurface(t sim.Tile, arctic bool) surface {
 	case sim.TileBridge:
 		return surfBridge
 	default:
-		if arctic {
-			return surfSnow
-		}
-		return surfGrass
+		return open
 	}
 }
 
-func surfacesOf(m sim.Map, arctic bool) []surface {
+func surfacesOf(m sim.Map, open surface) []surface {
 	s := make([]surface, m.W*m.H)
 	for i := range s {
-		s[i] = cellSurface(m.Tiles[i], arctic)
+		s[i] = cellSurface(m.Tiles[i], open)
 	}
 	return s
 }
@@ -146,9 +143,8 @@ func labelRegions(surf []surface, w, h int) []int {
 }
 
 func paintMap(m sim.Map, terrain string) terrainPaint {
-	arctic := Arctic(terrain)
-	pal := paletteFor(terrain)
-	surf := surfacesOf(m, arctic)
+	lk := lookOf(terrain)
+	surf := surfacesOf(m, lk.open)
 	ids := labelRegions(surf, m.W, m.H)
 	pw := m.W * sim.TileSize * terrainPx
 	ph := m.H * sim.TileSize * terrainPx
@@ -161,18 +157,18 @@ func paintMap(m sim.Map, terrain string) terrainPaint {
 	for ty := 0; ty < m.H; ty++ {
 		for tx := 0; tx < m.W; tx++ {
 			if edge[ty*m.W+tx] {
-				paintEdgeCell(ground, kind, m, surf, pal, wob, arctic, tx, ty)
+				paintEdgeCell(ground, kind, m, surf, lk, wob, tx, ty)
 				continue
 			}
-			fillCell(ground, kind, m, surf, arctic, tx, ty)
+			fillCell(ground, kind, m, surf, lk, tx, ty)
 		}
 	}
-	stampTreeShade(ground, m, surf, arctic)
-	stampMines(ground, m, pal)
+	stampTreeShade(ground, m, surf, lk)
+	stampMines(ground, m, lk.pal)
 	anim, mask := animLayers(ground, kind)
-	stampBridges(ground, m, surf, pal)
+	stampBridges(ground, m, surf, lk.pal)
 	clearBridgeAnim(anim, mask, m, surf)
-	trees := paintCanopies(m, surf, ids, arctic, noise, ground)
+	trees := paintCanopies(m, surf, ids, lk, noise, ground)
 	return terrainPaint{ground: ground, anim: anim, mask: mask, surf: surf, ids: ids, trees: trees}
 }
 
@@ -203,7 +199,7 @@ func edgeCells(surf []surface, w, h int) []bool {
 	return edge
 }
 
-func fillCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, arctic bool, tx, ty int) {
+func fillCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk look, tx, ty int) {
 	s := surf[ty*m.W+tx]
 	base := groundSurface(surf, m.W, m.H, s, tx, ty)
 	x0 := tx * sim.TileSize * terrainPx
@@ -215,7 +211,7 @@ func fillCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, arctic b
 		row := (y0 + y) * pw
 		for x := 0; x < span; x++ {
 			wx := (float64(x0+x) + 0.5) / terrainPx
-			c, k := plateColor(base, wx, wy, arctic)
+			c, k := lk.plateColor(base, wx, wy)
 			setRGBA(dst, x0+x, y0+y, c)
 			kind[row+x0+x] = k
 		}
@@ -233,7 +229,7 @@ func groundSurface(surf []surface, w, h int, s surface, tx, ty int) surface {
 	}
 }
 
-func paintEdgeCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, pal Palette, wob *noiseGrid, arctic bool, tx, ty int) {
+func paintEdgeCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk look, wob *noiseGrid, tx, ty int) {
 	pw := dst.Bounds().Dx()
 	x0 := tx * sim.TileSize * terrainPx
 	y0 := ty * sim.TileSize * terrainPx
@@ -254,8 +250,8 @@ func paintEdgeCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, pal
 			if trueS == surfShallow || trueS == surfDeep {
 				base = trueS
 			}
-			c, k := colorOf(arctic, surf, m.W, m.H, base, tx, ty, wx, wy)
-			c = shadeCell(pal, surf, m, tx, ty, trueS, wx, wy, c)
+			c, k := colorOf(lk, surf, m.W, m.H, base, tx, ty, wx, wy)
+			c = shadeCell(lk, surf, m, tx, ty, trueS, wx, wy, c)
 			setRGBA(dst, px, py, c)
 			kind[py*pw+px] = k
 		}
@@ -280,40 +276,38 @@ func cellAt(m sim.Map, wx, wy float64) (int, int) {
 	return tx, ty
 }
 
-func colorOf(arctic bool, surf []surface, w, h int, s surface, tx, ty int, wx, wy float64) (color.RGBA, uint8) {
+func colorOf(lk look, surf []surface, w, h int, s surface, tx, ty int, wx, wy float64) (color.RGBA, uint8) {
 	switch s {
 	case surfTree:
 		s = openGround(surf, w, h)
 	case surfBridge:
 		s = bridgeUnder(surf, w, h, tx, ty, openGround(surf, w, h))
 	}
-	return plateColor(s, wx, wy, arctic)
+	return lk.plateColor(s, wx, wy)
 }
 
-// plateColor reads the approved meadow painting. Arctic rock is the same
-// ledge cooled down so it does not sit warm against the snow.
-func plateColor(s surface, wx, wy float64, arctic bool) (color.RGBA, uint8) {
+// plateColor reads this terrain's ground, water, and nothing of another
+// terrain's. Ice, quicksand, rock, and ramps stay the shared materials.
+func (lk look) plateColor(s surface, wx, wy float64) (color.RGBA, uint8) {
 	switch s {
-	case surfSnow:
-		return snowPlate.at(wx, wy), maskNone
 	case surfShallow:
-		return shallowPlate.at(wx, wy), maskWater
+		return lk.shallow.at(wx, wy), maskWater
 	case surfDeep:
-		return deepPlate.at(wx, wy), maskWater
+		return lk.deep.at(wx, wy), maskWater
 	case surfIce:
 		return icePlate.at(wx, wy), maskIce
 	case surfSand:
 		return sandPlate.at(wx, wy), maskSand
 	case surfCliff:
 		c := rockPlate.atScale(wx, wy, 5)
-		if arctic {
-			c = mixRGBA(c, color.RGBA{R: 168, G: 184, B: 196, A: 255}, 0.35)
+		if lk.rockMix > 0 {
+			c = mixRGBA(c, lk.rockTint, lk.rockMix)
 		}
 		return c, maskNone
 	case surfRamp:
 		return dirtPlate.at(wx, wy), maskNone
 	default:
-		return grassPlate.at(wx, wy), maskNone
+		return lk.ground.at(wx, wy), maskNone
 	}
 }
 
@@ -359,22 +353,20 @@ func bridgeUnder(surf []surface, w, h, tx, ty int, open surface) surface {
 	return open
 }
 
-func shadeCell(pal Palette, surf []surface, m sim.Map, tx, ty int, trueS surface, wx, wy float64, c color.RGBA) color.RGBA {
+func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx, wy float64, c color.RGBA) color.RGBA {
 	localX := wx - float64(tx*sim.TileSize)
 	localY := wy - float64(ty*sim.TileSize)
 	if trueS == surfGrass || trueS == surfSnow {
 		if d, ok := nearWater(surf, m.W, m.H, tx, ty, wx, wy); ok && d < sim.TileSize {
 			t := 1 - d/sim.TileSize
-			if trueS == surfGrass {
-				c = mixRGBA(c, sandPlate.at(wx, wy), t*0.85)
-			} else {
-				c = mixRGBA(c, grassPlate.at(wx, wy), t*0.35)
+			if lk.shore != nil && lk.shoreMix > 0 {
+				c = mixRGBA(c, lk.shore.at(wx, wy), t*lk.shoreMix)
 			}
-			c = beadFoam(c, pal, wx, wy, d)
+			c = beadFoam(c, lk.pal, wx, wy, d)
 		}
 	}
 	if trueS == surfShallow || trueS == surfDeep {
-		c = gradeWater(c, surf, m.W, m.H, tx, ty, trueS, wx, wy)
+		c = gradeWater(lk, c, surf, m.W, m.H, tx, ty, trueS, wx, wy)
 	}
 	if trueS == surfCliff {
 		if south, ok := neighbor(surf, m.W, m.H, tx, ty, 0, 1); ok && south != surfCliff && south != surfRamp && localY > 11 {
@@ -403,18 +395,17 @@ func beadFoam(c color.RGBA, pal Palette, wx, wy, d float64) color.RGBA {
 }
 
 // gradeWater lets shallow and deep meet, and pulls a bank down to a deeper blue.
-func gradeWater(c color.RGBA, surf []surface, w, h, tx, ty int, self surface, wx, wy float64) color.RGBA {
+func gradeWater(lk look, c color.RGBA, surf []surface, w, h, tx, ty int, self surface, wx, wy float64) color.RGBA {
 	other := surfDeep
 	if self == surfDeep {
 		other = surfShallow
 	}
 	if d, ok := distToMatch(surf, w, h, tx, ty, wx, wy, func(s surface) bool { return s == other }); ok && d < 14 {
-		oc, _ := plateColor(other, wx, wy, false)
+		oc, _ := lk.plateColor(other, wx, wy)
 		c = mixRGBA(c, oc, (1-d/14)*0.5)
 	}
 	if d, ok := distToMatch(surf, w, h, tx, ty, wx, wy, landBesideWater); ok && d < 16 {
-		bank := color.RGBA{R: 14, G: 96, B: 128, A: 255}
-		c = mixRGBA(c, bank, (1-d/16)*0.42)
+		c = mixRGBA(c, lk.bank, (1-d/16)*lk.bankMix)
 	}
 	return c
 }
@@ -601,7 +592,7 @@ func animLayers(ground *image.RGBA, kind []uint8) (*image.RGBA, *image.RGBA) {
 	return anim, mask
 }
 
-func paintCanopies(m sim.Map, surf []surface, ids []int, arctic bool, noise *noiseGrid, ground *image.RGBA) []treeCanopy {
+func paintCanopies(m sim.Map, surf []surface, ids []int, lk look, noise *noiseGrid, ground *image.RGBA) []treeCanopy {
 	seen := map[int]bool{}
 	var out []treeCanopy
 	for i, s := range surf {
@@ -609,7 +600,7 @@ func paintCanopies(m sim.Map, surf []surface, ids []int, arctic bool, noise *noi
 			continue
 		}
 		seen[ids[i]] = true
-		out = append(out, paintOneCanopy(m, surf, ids, ids[i], arctic, noise, ground))
+		out = append(out, paintOneCanopy(m, surf, ids, ids[i], lk, noise, ground))
 	}
 	return out
 }
@@ -633,7 +624,7 @@ type lobe struct {
 	x, y, r float64
 }
 
-func paintOneCanopy(m sim.Map, surf []surface, ids []int, id int, arctic bool, noise *noiseGrid, ground *image.RGBA) treeCanopy {
+func paintOneCanopy(m sim.Map, surf []surface, ids []int, id int, lk look, noise *noiseGrid, ground *image.RGBA) treeCanopy {
 	minX, minY := m.W, m.H
 	maxX, maxY := 0, 0
 	var cells []image.Point
@@ -691,9 +682,9 @@ func paintOneCanopy(m sim.Map, surf []surface, ids []int, id int, arctic bool, n
 				continue
 			}
 			// Scale 4 puts one painted crown on about a tile.
-			c := canopyPlate.atScale(wx, wy, 4)
-			c = shadeCrown(c, d, wx-float64(ccx[row+px]), wy-float64(ccy[row+px]), arctic, sampleNoise(noise, wx*1.7, wy*1.7))
-			c = mergeFringe(c, ground, gw, gh, wx, wy, a, arctic)
+			c := lk.canopy.atScale(wx, wy, 4)
+			c = shadeCrown(c, d, wx-float64(ccx[row+px]), wy-float64(ccy[row+px]), lk, sampleNoise(noise, wx*1.7, wy*1.7))
+			c = mergeFringe(c, ground, gw, gh, wx, wy, a, lk)
 			c.A = uint8(a * 255)
 			if c.A == 0 {
 				continue
@@ -912,25 +903,20 @@ func canopyAlpha(d, wx, wy float64, noise *noiseGrid) float64 {
 	return 1 - smooth01((e+4.2)/11.7)
 }
 
-func shadeCrown(c color.RGBA, d, dx, dy float64, arctic bool, n float64) color.RGBA {
-	if arctic && n > 0.58 && d < -2 {
+func shadeCrown(c color.RGBA, d, dx, dy float64, lk look, n float64) color.RGBA {
+	if lk.snowCaps && n > 0.58 && d < -2 {
 		c = mixRGBA(c, color.RGBA{R: 232, G: 242, B: 246, A: 255}, 0.28)
 	}
 	// A little south-east shade only. A dark stroke around the whole crown
-	// reads as a cut-out, which is the opposite of foliage meeting grass.
+	// reads as a cut-out, which is the opposite of foliage meeting the ground.
 	se := clamp01((dx + dy) / 36)
-	if arctic {
-		c = mixRGBA(c, color.RGBA{R: 150, G: 168, B: 172, A: 255}, se*0.12)
-		return c
-	}
-	c = mixRGBA(c, color.RGBA{R: 46, G: 78, B: 38, A: 255}, se*0.16)
-	return c
+	return mixRGBA(c, lk.crown, se*lk.crownMix)
 }
 
 // mergeFringe pulls the transparent tips toward the ground already painted
 // there, and lifts the plate's dark gaps so the rim is leaves rather than
 // a black line.
-func mergeFringe(c color.RGBA, ground *image.RGBA, gw, gh int, wx, wy, a float64, arctic bool) color.RGBA {
+func mergeFringe(c color.RGBA, ground *image.RGBA, gw, gh int, wx, wy, a float64, lk look) color.RGBA {
 	if ground == nil {
 		return c
 	}
@@ -938,11 +924,7 @@ func mergeFringe(c color.RGBA, ground *image.RGBA, gw, gh int, wx, wy, a float64
 	// recolour here draws a halo around the whole stand.
 	sum := int(c.R) + int(c.G) + int(c.B)
 	if a < 0.85 && sum < 96 {
-		leaf := color.RGBA{R: 70, G: 108, B: 46, A: 255}
-		if arctic {
-			leaf = color.RGBA{R: 120, G: 150, B: 130, A: 255}
-		}
-		c = mixRGBA(c, leaf, 0.45)
+		c = mixRGBA(c, lk.leaf, 0.45)
 	}
 	if a > 0.5 {
 		return c
@@ -1053,7 +1035,7 @@ func nearestTree(cells []image.Point, wx, wy float64) int {
 
 // stampTreeShade lays a soft south-east shadow on the ground under each
 // stand so the fringe blends into the meadow instead of sitting on it.
-func stampTreeShade(dst *image.RGBA, m sim.Map, surf []surface, arctic bool) {
+func stampTreeShade(dst *image.RGBA, m sim.Map, surf []surface, lk look) {
 	var cells []image.Point
 	for ty := 0; ty < m.H; ty++ {
 		for tx := 0; tx < m.W; tx++ {
@@ -1138,17 +1120,13 @@ func stampTreeShade(dst *image.RGBA, m sim.Map, surf []surface, arctic bool) {
 			}
 		}
 	}
-	shadow := color.RGBA{R: 78, G: 98, B: 52, A: 255}
-	if arctic {
-		shadow = color.RGBA{R: 118, G: 136, B: 146, A: 255}
-	}
 	for i, v := range strength {
 		if v == 0 {
 			continue
 		}
 		o := i * 4
 		c := color.RGBA{R: dst.Pix[o], G: dst.Pix[o+1], B: dst.Pix[o+2], A: dst.Pix[o+3]}
-		c = mixRGBA(c, shadow, float64(v)/255)
+		c = mixRGBA(c, lk.shadow, float64(v)/255)
 		dst.Pix[o] = c.R
 		dst.Pix[o+1] = c.G
 		dst.Pix[o+2] = c.B

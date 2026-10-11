@@ -169,6 +169,14 @@ var (
 	victoryEdge = color.RGBA{R: 0x3a, G: 0x28, B: 0x08, A: 0xff}
 )
 
+// victoryTitle is the stroked "Victory!" painted once per picture scale.
+// Drawing that outline straight onto the frame repeats the whole word for
+// every pixel of the stroke, and at this size it stalls the frame.
+var victoryTitle struct {
+	scale float64
+	img   *ebiten.Image
+}
+
 // Victory draws a gold "Victory!" over the middle of the frame, with the
 // same leave hint the other result plaques use.
 func Victory(dst *ebiten.Image) {
@@ -179,26 +187,35 @@ func Victory(dst *ebiten.Image) {
 	if s <= 0 {
 		s = 1
 	}
+	title := victoryTitleImage(s)
 	b := dst.Bounds()
-	cx := float64(b.Dx()) / s / 2
-	cy := float64(b.Dy()) / s / 2
-	head := TextPixels(s) * 7
-	face := &text.GoTextFace{Source: uiFont, Size: head}
-	drawEdgedLine(dst, "Victory!", face, cx, cy, victoryInk, victoryEdge)
+	tb := title.Bounds()
+	top := float64(b.Dy()-tb.Dy()) / 2
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(float64(b.Dx()-tb.Dx())/2, top)
+	dst.DrawImage(title, op)
 	hint := &text.GoTextFace{Source: uiFont, Size: TextPixels(s)}
 	_, hh := text.Measure("Click or Enter", hint, hint.Size)
-	drawNoticeLine(dst, "Click or Enter", hint, cx, cy+head/s*0.9+hh/s/2)
+	cx := float64(b.Dx()) / s / 2
+	drawNoticeLine(dst, "Click or Enter", hint, cx, (top+float64(tb.Dy()))/s+8+hh/s/2)
 }
 
-func drawEdgedLine(dst *ebiten.Image, str string, face *text.GoTextFace, x, y float64, ink, edge color.Color) {
-	s := pictureScale
-	if s <= 0 {
-		s = 1
+func victoryTitleImage(s float64) *ebiten.Image {
+	if victoryTitle.img != nil && victoryTitle.scale == s {
+		return victoryTitle.img
 	}
-	rad := face.Size * 0.16
+	const word = "Victory!"
+	head := TextPixels(s) * 7
+	face := &text.GoTextFace{Source: uiFont, Size: head}
+	w, h := text.Measure(word, face, head)
+	rad := head * 0.16
 	if rad < 1 {
 		rad = 1
 	}
+	pad := int(math.Ceil(rad)) + 2
+	img := ebiten.NewImage(int(math.Ceil(w))+pad*2, int(math.Ceil(h))+pad*2)
+	cx := float64(img.Bounds().Dx()) / 2
+	cy := float64(img.Bounds().Dy()) / 2
 	n := int(math.Ceil(rad))
 	rr := rad * rad
 	for oy := -n; oy <= n; oy++ {
@@ -209,10 +226,13 @@ func drawEdgedLine(dst *ebiten.Image, str string, face *text.GoTextFace, x, y fl
 			if float64(ox*ox+oy*oy) > rr {
 				continue
 			}
-			drawFace(dst, str, face, x+float64(ox)/s, y+float64(oy)/s, edge)
+			drawFaceDevice(img, word, face, cx+float64(ox), cy+float64(oy), victoryEdge)
 		}
 	}
-	drawFace(dst, str, face, x, y, ink)
+	drawFaceDevice(img, word, face, cx, cy, victoryInk)
+	victoryTitle.scale = s
+	victoryTitle.img = img
+	return img
 }
 
 func drawFace(dst *ebiten.Image, str string, face *text.GoTextFace, x, y float64, c color.Color) {
@@ -220,10 +240,14 @@ func drawFace(dst *ebiten.Image, str string, face *text.GoTextFace, x, y float64
 	if s <= 0 {
 		s = 1
 	}
+	drawFaceDevice(dst, str, face, x*s, y*s, c)
+}
+
+func drawFaceDevice(dst *ebiten.Image, str string, face *text.GoTextFace, x, y float64, c color.Color) {
 	op := &text.DrawOptions{}
 	op.PrimaryAlign = text.AlignCenter
 	op.SecondaryAlign = text.AlignCenter
-	op.GeoM.Translate(x*s, y*s)
+	op.GeoM.Translate(x, y)
 	op.ColorScale.ScaleWithColor(c)
 	text.Draw(dst, str, face, op)
 }

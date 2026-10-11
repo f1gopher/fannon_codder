@@ -37,7 +37,7 @@ This page is generated from the control list in `internal/app/controls.go`. When
 - **Left click on open ground** — Orders the active squad to move there. Holding the button and dragging updates the destination while they are already moving.
 - **Left click the squad letter on the status strip (S, E, or P), or press 1, 2, or 3** — Selects that squad: 1 Snake, 2 Eagle, 3 Panther. Clicking a trooper in a squad that is not active selects that squad too.
 - **Left click a trooper in the active squad** — Highlights or unhighlights that trooper. Highlighted troopers are the ones a split hands to the new squad.
-- **Left click the troop logo, or the active squad’s letter again** — Splits the highlighted troopers into the next free squad and selects that squad. With nobody highlighted, the logo still tries to split.
+- **Left click the active squad’s letter again** — Splits the highlighted troopers into the next free squad and selects that squad. With nobody highlighted, the click still tries to split.
 
 ## Battle — firing
 

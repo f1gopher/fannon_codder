@@ -11,15 +11,15 @@ func TestHitHUDSplitSwitchAndAmmo(t *testing.T) {
 	w.SpawnPlayerSquad(sim.SquadSnake, []sim.Vec2{{}, {}, {}})
 	ids := append([]int(nil), w.ActiveSquad().MemberIDs...)
 
-	kind, _ := HitHUD(w, 6, 6)
-	if kind != HitSplit {
-		t.Fatalf("logo hit = %v", kind)
+	kind, id := HitHUD(w, 12, float64(hudSquadTop+2))
+	if kind != HitSplit || sim.SquadID(id) != sim.SquadSnake {
+		t.Fatalf("active header hit = %v id %v", kind, id)
 	}
-	kind, _ = HitHUD(w, 4, 20)
+	kind, _ = HitHUD(w, 4, 4)
 	if kind != HitGrenade {
 		t.Fatalf("grenade hit = %v", kind)
 	}
-	kind, _ = HitHUD(w, 30, 20)
+	kind, _ = HitHUD(w, 30, 4)
 	if kind != HitRocket {
 		t.Fatalf("rocket hit = %v", kind)
 	}
@@ -35,7 +35,7 @@ func TestHitHUDSplitSwitchAndAmmo(t *testing.T) {
 	if !found {
 		t.Fatal("no row for the third man")
 	}
-	kind, id := HitHUD(w, 4, float64(row.y+2))
+	kind, id = HitHUD(w, 4, float64(row.y+2))
 	if kind != HitMember || id != ids[2] {
 		t.Fatalf("name hit = %v id %v", kind, id)
 	}
@@ -76,7 +76,7 @@ func TestHitHUDMapIcon(t *testing.T) {
 	if kind != HitPause {
 		t.Fatalf("pause button hit = %v", kind)
 	}
-	kind, _ = HitHUD(w, 4, 20)
+	kind, _ = HitHUD(w, 4, 4)
 	if kind != HitGrenade {
 		t.Fatalf("grenade hit = %v", kind)
 	}

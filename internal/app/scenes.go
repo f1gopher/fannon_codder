@@ -83,7 +83,6 @@ func (t *Title) Draw(screen *ebiten.Image) {
 type Battle struct {
 	prog      *Progress
 	world     *sim.World
-	remaining int
 	deployed  []campaign.Soldier
 	unitIDs   []int
 	settled   bool
@@ -186,11 +185,10 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	if sandbox {
 		nameCoverSquad(w)
 		return &Battle{
-			prog:      prog,
-			world:     w,
-			remaining: 13,
-			unitIDs:   ids,
-			sandbox:   true,
+			prog:    prog,
+			world:   w,
+			unitIDs: ids,
+			sandbox: true,
 		}
 	}
 	n := prog.DeployCount()
@@ -200,11 +198,10 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	men := prog.Pool.Deploy(n)
 	nameSquad(w, men)
 	return &Battle{
-		prog:      prog,
-		world:     w,
-		remaining: prog.Pool.Remaining(),
-		deployed:  men,
-		unitIDs:   ids,
+		prog:     prog,
+		world:    w,
+		deployed: men,
+		unitIDs:  ids,
 	}
 }
 
@@ -437,7 +434,6 @@ func (b *Battle) settleOnce(won bool) {
 	b.fallen = fallen
 	b.prog.Graves += graves
 	b.prog.Pool.Return(survivors)
-	b.remaining = b.prog.Pool.Remaining()
 }
 
 func (b *Battle) tally() (graves int, survivors, fallen []campaign.Soldier) {
@@ -505,7 +501,7 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	if b.mapOpen {
 		render.Overview(screen, b.world, terrain)
 	}
-	render.HUD(screen, b.world, b.remaining, b.paused)
+	render.HUD(screen, b.world, b.paused)
 	if b.menu.open && b.world.Status == sim.Playing {
 		render.Notice(screen, b.menu.lines()...)
 	} else if b.paused && b.world.Status == sim.Playing {

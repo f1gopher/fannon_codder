@@ -27,14 +27,13 @@ const (
 )
 
 const (
-	hudLogoX, hudLogoY, hudLogoS    = 4, 4, 12
-	hudGrenX, hudGrenY              = 2, 18
+	hudGrenX, hudGrenY              = 2, 2
 	hudRockX                        = 28
 	hudIconW, hudIconH              = 22, 16
-	hudSquadTop                     = 36
+	hudSquadTop                     = 20
 	hudHeadH                        = 12
 	hudManH                         = 18
-	hudFootX, hudFootY, hudFootS    = 40, 4, 8
+	hudFootS                        = 8
 	hudMapX, hudMapY, hudMapS       = 2, 238, 16
 	hudPauseX, hudPauseY, hudPauseS = 20, 238, 16
 )
@@ -109,19 +108,17 @@ type hudBlock struct {
 }
 
 type hudLayout struct {
-	logo, gren, rock     hudRect
-	foot, mapIcon, pause hudRect
-	headers              []hudHeader
-	men                  []hudMan
-	blocks               []hudBlock
+	gren, rock     hudRect
+	mapIcon, pause hudRect
+	headers        []hudHeader
+	men            []hudMan
+	blocks         []hudBlock
 }
 
 func layoutHUD(w *sim.World) hudLayout {
 	lay := hudLayout{
-		logo:    hudRect{hudLogoX, hudLogoY, hudLogoS, hudLogoS},
 		gren:    hudRect{hudGrenX, hudGrenY, hudIconW, hudIconH},
 		rock:    hudRect{hudRockX, hudGrenY, hudIconW, hudIconH},
-		foot:    hudRect{hudFootX, hudFootY, hudFootS, hudFootS},
 		mapIcon: hudRect{hudMapX, hudMapY, hudMapS, hudMapS},
 		pause:   hudRect{hudPauseX, hudPauseY, hudPauseS, hudPauseS},
 	}
@@ -179,9 +176,6 @@ func layoutHUD(w *sim.World) hudLayout {
 // HitHUD maps a logical screen pixel on the status strip to a control.
 func HitHUD(w *sim.World, x, y float64) (HUDHit, int) {
 	lay := layoutHUD(w)
-	if lay.logo.contains(x, y) {
-		return HitSplit, 0
-	}
 	if lay.gren.contains(x, y) {
 		return HitGrenade, 0
 	}
@@ -214,33 +208,21 @@ func HitHUD(w *sim.World, x, y float64) (HUDHit, int) {
 	return HitNone, 0
 }
 
-// HUD draws the left status strip: troop logo, ammo, and every squad.
+// HUD draws the left status strip: ammo and every squad.
 // paused strokes the pause button.
-func HUD(dst *ebiten.Image, w *sim.World, remaining int, paused bool) {
+func HUD(dst *ebiten.Image, w *sim.World, paused bool) {
 	if w == nil {
 		return
 	}
 	blit(dst, hudBG(), 0, 0, 1, 1)
 	lay := layoutHUD(w)
 	active := w.ActiveSquad()
-	logoID := sim.SquadSnake
-	if active != nil {
-		logoID = active.ID
-	}
-	if !drawUIAt(dst, squadMark(logoID), float64(lay.logo.x), float64(lay.logo.y)) {
-		blit(dst, colorLogo(squadFill(logoID, false), hudLogoS), float64(lay.logo.x), float64(lay.logo.y), 1, 1)
-	}
-	Text(dst, logoID.Letter(), float64(lay.logo.x+2), float64(lay.logo.y+1))
-	if remaining >= 0 {
-		Text(dst, fmt.Sprintf("R%d", remaining), 20, 6)
-	}
 	gCount, rCount := 0, 0
 	if active != nil {
 		gCount, rCount = active.Grenades, active.Rockets
 	}
 	drawAmmoIcon(dst, lay.gren, gCount, "ui/grenade", grenIcon(), w.GrenadeShare, w.Special == sim.SpecialGrenade)
 	drawAmmoIcon(dst, lay.rock, rCount, "ui/rocket", rocketIcon(), w.RocketShare, w.Special == sim.SpecialRocket)
-	drawStance(dst, lay.foot, leaderOnFoot(w, active))
 	drawMapIcon(dst, lay.mapIcon)
 	drawPauseIcon(dst, lay.pause, paused)
 
@@ -264,6 +246,8 @@ func HUD(dst *ebiten.Image, w *sim.World, remaining int, paused bool) {
 			mark = ">" + mark
 		}
 		Text(dst, mark, 12, float64(h.y+2))
+		stance := hudRect{HUDWidth - hudFootS - 2, h.y + 2, hudFootS, hudFootS}
+		drawStance(dst, stance, leaderOnFoot(w, w.SquadByID(h.id)))
 	}
 	for _, m := range lay.men {
 		u := w.Unit(m.id)

@@ -1,5 +1,7 @@
 package sim
 
+import "math"
+
 // Settle keeps pictures that were already moving after the phase ends:
 // shots and rockets in the air, grenades, shed roofs, blasts, a throw that had started,
 // a skidding vehicle, hopping bodies, and the shoot and throw clocks.
@@ -16,6 +18,28 @@ func (w *World) Settle(dt float64) {
 	w.stepBodies(dt)
 	w.coastVehicles(dt)
 	w.stepAnimClocks(dt)
+	w.saluteSurvivors()
+}
+
+// saluteSurvivors turns every living player soldier who is on his feet
+// toward the camera. South is down the screen, which is where the view
+// sits. They stop where they are. Crew inside a vehicle stay with the hull.
+func (w *World) saluteSurvivors() {
+	if w == nil || w.Status != Won {
+		return
+	}
+	for i := range w.Squads {
+		w.Squads[i].HasDest = false
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != SidePlayer || !u.Living() || u.VehicleID != 0 || u.Sinking || u.InWater {
+			continue
+		}
+		u.VX = 0
+		u.VY = 0
+		u.Facing = math.Pi / 2
+	}
 }
 
 // Pending reports effects that can still change who is alive. The battle

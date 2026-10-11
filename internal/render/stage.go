@@ -31,6 +31,7 @@ const (
 	poseThrow
 	poseShoot
 	poseWalk
+	poseSalute
 	poseIdle
 )
 
@@ -50,10 +51,16 @@ func (p pose) name() string {
 		return "shoot"
 	case poseWalk:
 		return "walk"
+	case poseSalute:
+		return "salute"
 	default:
 		return "idle"
 	}
 }
+
+// victorySalute is set for the draw of a won phase. Living player soldiers
+// on foot then use the salute sheet.
+var victorySalute bool
 
 func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
 	if u.Wounded() {
@@ -80,6 +87,9 @@ func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
 	}
 	if math.Hypot(u.VX, u.VY) > walkMin {
 		return poseWalk
+	}
+	if victorySalute && u.Side == sim.SidePlayer && !u.InWater {
+		return poseSalute
 	}
 	return poseIdle
 }
@@ -417,6 +427,7 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
 		return
 	}
+	victorySalute = w.Status == sim.Won
 	paintTerrain(dst, w.Map, w.Camera, terrain)
 	Tiles(dst, w.Map, w.Camera)
 	bodies := collectBodies(w, terrain == "snow")

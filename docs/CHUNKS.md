@@ -86,3 +86,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Pause, quit, phase complete, and phase failed sit on the painted olive plaque (`ui/notice`) in cream letters with an olive edge.
 - Escape during a live phase opens a pause menu: restart, main menu, save, load, or quit. Other screens still ask before quitting.
 - A finished phase lets shots, blasts, throws, and hops already in motion finish. New fire and new orders stop.
+- A won phase shows gold Victory! Survivors on foot face the camera and salute.
+- The phase is not called until rounds, grenades, blasts, and flying roofs finish. A shot that kills the last player after the enemy is down is a wipe.

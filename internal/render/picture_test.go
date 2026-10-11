@@ -81,6 +81,8 @@ func TestNotice(t *testing.T) {
 	Notice(nil, "PAUSED")
 	Notice(dst)
 	Notice(dst, "")
+	Victory(dst)
+	Victory(nil)
 	SetSheets(&Library{})
 	Notice(dst, "PHASE FAILED", "Click or Enter")
 	SetSheets(nil)

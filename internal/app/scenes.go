@@ -270,6 +270,12 @@ func (b *Battle) Update(h Host) error {
 	if held || err != nil {
 		return err
 	}
+	if b.world.HoldOutcome() {
+		b.paused = false
+		b.world.Firing = false
+		b.world.Step(1.0 / TPS)
+		return nil
+	}
 	if b.world.Status != sim.Playing {
 		b.paused = false
 		// Shots, blasts, and throws that had already started keep playing.
@@ -484,7 +490,7 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	}
 	switch b.world.Status {
 	case sim.Won:
-		render.Notice(screen, "PHASE COMPLETE", "Click or Enter")
+		render.Victory(screen)
 	case sim.Lost:
 		render.Notice(screen, "PHASE FAILED", "Click or Enter")
 	}

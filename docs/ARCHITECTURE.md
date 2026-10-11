@@ -72,7 +72,7 @@ Player MG passes through a standing friendly and finishes a wounded friendly. Ex
 
 `Living()` means alive. A wounded enemy still blocks kill-all. The phase is lost when no player is `Living()`.
 
-When the phase is won or lost, `World.Settle` keeps going what had already started: rounds and rockets in the air, grenades, blasts, a grenade or rocket telegraph, an ice skid, hopping bodies, and the shoot and throw clocks. Men stop walking and nobody starts a new burst. The squad is tallied once those effects can no longer change who lived. Click or Enter finishes anything still in the air, then leaves. The result plaque is up while this plays. The quit prompt still freezes the screen.
+The phase is not called while a round, rocket, grenade, blast, or flying roof is still going. Men stop walking and nobody starts a new burst. When that has finished, no living player is a wipe. Objectives met with someone still up is a win, including when a late shot has already killed a squadmate. `World.Settle` then keeps the shoot and throw clocks, an ice skid, and hopping bodies going. The squad is tallied once nothing left can change who lived. Click or Enter finishes anything still in the air, then leaves. The result is up once the phase is called. A win says a large gold Victory! and a wipe keeps the plaque. The quit prompt still freezes the screen.
 
 Shooting an enemy or civilian corpse shoves it about one tile. A dead player stays put. Keep the shove that short. In `combat.go`, `juggleKick` is 36 px/s along the shot and does not stack past that, `juggleHop` is 64 px/s upward and refreshes, gravity is 420, bounce is 0.28, ground drag is 200, and rest is 12. Three seconds after death (`juggleLife`), further MG hits leave the body still. A hop already in the air finishes. Corpses do not sink or walk off cliffs. The shadow stays on the ground while the sprite lifts.
 
@@ -152,7 +152,7 @@ Escape during a phase that is still playing opens the pause menu on the same pla
 
 Escape on the title, Boot Hill, briefing, and a finished phase still opens the quit prompt and freezes the screen. Y or Enter ends the process. N or a second Escape cancels. A cleared phase and a wipe leave on click or Enter.
 
-Pause, the quit prompt, PHASE COMPLETE, and PHASE FAILED share `render.Notice`. It draws `ui/notice`, a painted olive plaque with a cream rim, and cream letters with an olive edge, in the middle of the frame. The first line is the headline. A missing plaque is a flat olive fill. The quit lines are QUIT THE GAME?, Y or Enter quit, and N or Escape stay. A clear says PHASE COMPLETE. A wipe says PHASE FAILED. Both add Click or Enter.
+Pause, the quit prompt, and PHASE FAILED share `render.Notice`. It draws `ui/notice`, a painted olive plaque with a cream rim, and cream letters with an olive edge, in the middle of the frame. The first line is the headline. A missing plaque is a flat olive fill. The quit lines are QUIT THE GAME?, Y or Enter quit, and N or Escape stay. A wipe says PHASE FAILED and adds Click or Enter. A clear draws gold `Victory!` in the middle of the frame, with the same Click or Enter hint under it. Living player soldiers who are on their feet stop, face south toward the camera, and play `salute` (snake, eagle, and panther). Swimmers, men who are sinking, and vehicle crews stay as they were.
 
 ## Audio
 

@@ -29,6 +29,33 @@ func TestSettlePlaysOutShotsAndBlasts(t *testing.T) {
 	}
 }
 
+func TestWonPhaseFacesTheCamera(t *testing.T) {
+	w := quietWorld()
+	w.Status = Won
+	w.SpawnUnit(SidePlayer, Vec2{X: 20, Y: 20})
+	w.SpawnUnit(SideEnemy, Vec2{X: 80, Y: 20})
+	w.Units[0].Facing = 0
+	w.Units[0].VX = 40
+	w.Units[1].Facing = 0
+	w.Settle(0.05)
+	man := &w.Units[0]
+	foe := &w.Units[1]
+	if math.Abs(man.Facing-math.Pi/2) > 1e-9 || man.VX != 0 {
+		t.Fatalf("survivor facing %v vx %v, want south and stopped", man.Facing, man.VX)
+	}
+	if foe.Facing != 0 {
+		t.Fatalf("enemy facing %v, want unchanged", foe.Facing)
+	}
+	still := quietWorld()
+	walker := still.SpawnUnit(SidePlayer, Vec2{X: 20, Y: 20})
+	walker.Facing = 0
+	walker.VX = 40
+	still.Settle(0.05)
+	if walker.Facing != 0 || walker.VX != 40 {
+		t.Fatalf("playing settle facing %v vx %v", walker.Facing, walker.VX)
+	}
+}
+
 func TestSettleDoesNothingWhilePlaying(t *testing.T) {
 	w := quietWorld()
 	w.Explosions = append(w.Explosions, Explosion{X: 4, Y: 4, R: 8})

@@ -337,6 +337,20 @@ func (w *World) Step(dt float64) {
 	if dt <= 0 {
 		return
 	}
+	if w.HoldOutcome() {
+		// No new orders or bursts. What is already in the air still lands,
+		// and only then does the phase become a win or a wipe.
+		w.Firing = false
+		w.finishWindups(dt)
+		w.stepProjectiles(dt)
+		w.stepGrenades(dt)
+		w.stepRoofs(dt)
+		w.stepBlasts(dt)
+		w.stepBodies(dt)
+		w.evaluateObjectives()
+		w.stepAnimClocks(dt)
+		return
+	}
 	w.trapQuicksand()
 	w.pruneSquads()
 	for i := range w.Squads {

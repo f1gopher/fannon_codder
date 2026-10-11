@@ -55,8 +55,57 @@ func (w *World) anyRemaining(side Side) bool {
 	return false
 }
 
+// HoldOutcome is true when the phase would already be over, but a round,
+// rocket, grenade, blast, or flying roof can still kill someone. The result
+// waits until those finish.
+func (w *World) HoldOutcome() bool {
+	if w == nil || w.Status != Playing || len(w.Objectives) == 0 || !w.unresolvedHarm() {
+		return false
+	}
+	if !w.anyLiving(SidePlayer) {
+		return true
+	}
+	return w.objectivesMet()
+}
+
+// unresolvedHarm is something already started that can still change who lives.
+// A blast's damage landed when it opened; it still holds the result so the
+// phase is not called until the explosion has finished.
+func (w *World) unresolvedHarm() bool {
+	if len(w.Grenades) > 0 || len(w.Projectiles) > 0 || len(w.Explosions) > 0 {
+		return true
+	}
+	for i := range w.Roofs {
+		if w.Roofs[i].Flying {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *World) objectivesMet() bool {
+	for _, o := range w.Objectives {
+		switch o {
+		case KillAllEnemy:
+			if w.anyRemaining(SideEnemy) {
+				return false
+			}
+		case DestroyEnemyBuildings:
+			if w.anyDoorBuilding() {
+				return false
+			}
+		case ProtectCivilians:
+			// Unused. Killing civilians does not fail Village People.
+		}
+	}
+	return true
+}
+
 func (w *World) evaluateObjectives() {
 	if w.Status != Playing || len(w.Objectives) == 0 {
+		return
+	}
+	if w.unresolvedHarm() {
 		return
 	}
 	if !w.anyLiving(SidePlayer) {
@@ -64,19 +113,8 @@ func (w *World) evaluateObjectives() {
 		w.Firing = false
 		return
 	}
-	for _, o := range w.Objectives {
-		switch o {
-		case KillAllEnemy:
-			if w.anyRemaining(SideEnemy) {
-				return
-			}
-		case DestroyEnemyBuildings:
-			if w.anyDoorBuilding() {
-				return
-			}
-		case ProtectCivilians:
-			// Unused. Killing civilians does not fail Village People.
-		}
+	if !w.objectivesMet() {
+		return
 	}
 	w.Status = Won
 	w.Firing = false

@@ -84,6 +84,34 @@ func TestPoseFirstMatch(t *testing.T) {
 	}
 }
 
+func TestVictorySalutePose(t *testing.T) {
+	victorySalute = true
+	defer func() { victorySalute = false }()
+	u := &sim.Unit{HP: sim.Alive, Side: sim.SidePlayer, SinceShot: 1, SinceThrow: 1}
+	if got := unitPose(u, 0, 0); got != poseSalute || got.name() != "salute" {
+		t.Fatalf("winner = %s", got.name())
+	}
+	u.Side = sim.SideEnemy
+	if got := unitPose(u, 0, 0); got != poseIdle {
+		t.Fatalf("enemy = %s, want idle", got.name())
+	}
+	u.Side = sim.SidePlayer
+	u.InWater = true
+	if got := unitPose(u, 0, 0); got != poseSwim {
+		t.Fatalf("swimmer = %s, want swim", got.name())
+	}
+	u.InWater = false
+	u.HP = sim.Dead
+	if got := unitPose(u, 0, 0); got != poseCorpse {
+		t.Fatalf("dead winner = %s, want corpse", got.name())
+	}
+	victorySalute = false
+	u.HP = sim.Alive
+	if got := unitPose(u, 0, 0); got != poseIdle {
+		t.Fatalf("still playing = %s, want idle", got.name())
+	}
+}
+
 func TestThrowScrub(t *testing.T) {
 	u := &sim.Unit{GrenadeWind: sim.GrenadierWindup, SinceThrow: 0}
 	if throwFrac(u) != 0 {

@@ -164,6 +164,57 @@ func drawNoticeLine(dst *ebiten.Image, str string, face *text.GoTextFace, x, y f
 	drawFace(dst, str, face, x, y, noticeInk)
 }
 
+var (
+	victoryInk  = color.RGBA{R: 0xf6, G: 0xc4, B: 0x34, A: 0xff}
+	victoryEdge = color.RGBA{R: 0x3a, G: 0x28, B: 0x08, A: 0xff}
+)
+
+// Victory draws a gold "Victory!" over the middle of the frame, with the
+// same leave hint the other result plaques use.
+func Victory(dst *ebiten.Image) {
+	if dst == nil {
+		return
+	}
+	s := pictureScale
+	if s <= 0 {
+		s = 1
+	}
+	b := dst.Bounds()
+	cx := float64(b.Dx()) / s / 2
+	cy := float64(b.Dy()) / s / 2
+	head := TextPixels(s) * 7
+	face := &text.GoTextFace{Source: uiFont, Size: head}
+	drawEdgedLine(dst, "Victory!", face, cx, cy, victoryInk, victoryEdge)
+	hint := &text.GoTextFace{Source: uiFont, Size: TextPixels(s)}
+	_, hh := text.Measure("Click or Enter", hint, hint.Size)
+	drawNoticeLine(dst, "Click or Enter", hint, cx, cy+head/s*0.9+hh/s/2)
+}
+
+func drawEdgedLine(dst *ebiten.Image, str string, face *text.GoTextFace, x, y float64, ink, edge color.Color) {
+	s := pictureScale
+	if s <= 0 {
+		s = 1
+	}
+	rad := face.Size * 0.16
+	if rad < 1 {
+		rad = 1
+	}
+	n := int(math.Ceil(rad))
+	rr := rad * rad
+	for oy := -n; oy <= n; oy++ {
+		for ox := -n; ox <= n; ox++ {
+			if ox == 0 && oy == 0 {
+				continue
+			}
+			if float64(ox*ox+oy*oy) > rr {
+				continue
+			}
+			drawFace(dst, str, face, x+float64(ox)/s, y+float64(oy)/s, edge)
+		}
+	}
+	drawFace(dst, str, face, x, y, ink)
+}
+
 func drawFace(dst *ebiten.Image, str string, face *text.GoTextFace, x, y float64, c color.Color) {
 	s := pictureScale
 	if s <= 0 {

@@ -662,6 +662,29 @@ func edgeDelta(img image.Image, n int) float64 {
 	return acc / samples / 256
 }
 
+func TestSaluteFacesSouth(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snake := lib.Get("snake/salute")
+	if snake == nil || snake.Frames != 4 || !snake.Loop || snake.FPS != 4 {
+		t.Fatalf("snake salute %+v", snake)
+	}
+	if _, _, ok := snake.image("S", 0); !ok {
+		t.Fatal("salute needs a south row")
+	}
+	if _, _, ok := snake.image("E", 0); ok {
+		t.Fatal("salute stores south only")
+	}
+	for _, squad := range []string{"eagle", "panther"} {
+		sh := lib.Get(squad + "/salute")
+		if sh == nil || sh.Frames != snake.Frames || sh.FrameW != snake.FrameW || sh.FrameH != snake.FrameH {
+			t.Fatalf("%s salute does not match snake", squad)
+		}
+	}
+}
+
 func TestEagleAndPantherRecolorSnake(t *testing.T) {
 	lib, err := Load(art.Files)
 	if err != nil {

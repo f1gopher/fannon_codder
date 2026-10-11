@@ -243,6 +243,31 @@ func DrawSheet(dst *ebiten.Image, key, dir string, frame int, x, y float64) bool
 	return true
 }
 
+// DrawMenu paints a full-frame menu sheet so it covers dst.
+// The sheet is a 16:9 painting. It is centered on the picture, and a
+// narrower window crops the sides. The scale stays uniform.
+func DrawMenu(dst *ebiten.Image, key string) bool {
+	if dst == nil {
+		return false
+	}
+	lib := activeSheets()
+	if lib == nil {
+		return false
+	}
+	sh := lib.Get(key)
+	if sh == nil || sh.FrameW < 1 {
+		return false
+	}
+	ps := pictureScale
+	if ps <= 0 {
+		ps = 1
+	}
+	logicalW := float64(dst.Bounds().Dx()) / ps
+	worldW := float64(sh.FrameW) / ArtScale
+	x := (logicalW - worldW) / 2
+	return DrawSheet(dst, key, "E", 0, x, 0)
+}
+
 // DrawSprite puts the cel's anchor on a logical screen point. mirror flips
 // the cel around that anchor. The filter is linear.
 func DrawSprite(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y float64) {

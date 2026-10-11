@@ -22,11 +22,11 @@ func TestLoadMission1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sx, sy := sim.TileCenter(10, 13).X, sim.TileCenter(10, 13).Y
+	sx, sy := sim.TileCenter(p.PlayerStart[0], p.PlayerStart[1]).X, sim.TileCenter(p.PlayerStart[0], p.PlayerStart[1]).Y
 	if !w.Map.Walkable(sx, sy, 4) {
 		t.Fatal("player start should be walkable")
 	}
-	tx, ty := sim.TileCenter(11, 1).X, sim.TileCenter(11, 1).Y
+	tx, ty := sim.TileCenter(13, 1).X, sim.TileCenter(13, 1).Y
 	if w.Map.Walkable(tx, ty, 4) {
 		t.Fatal("tree tile should block")
 	}
@@ -209,6 +209,24 @@ func TestPhaseLoadsHutAndCrate(t *testing.T) {
 	}
 	if len(w.Objectives) != 2 {
 		t.Fatalf("objectives=%d", len(w.Objectives))
+	}
+}
+
+func TestPhasesFillTheScreen(t *testing.T) {
+	// Fullscreen on the 2880×1800 panel (scale 2) is a 1440×900 window.
+	// The battle keeps a 256-tall picture and grows sideways, so the
+	// playfield is about 358×256. 24×16 tiles (384×256) covers it.
+	const minW, minH = 24 * 16, 16 * 16
+	c, err := LoadCampaign()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range c.Phases {
+		w := mustWorld(t, mustPhase(t, name))
+		mw, mh := w.Map.PixelSize()
+		if mw < minW || mh < minH {
+			t.Fatalf("%s is %v×%v, want at least %d×%d", name, mw, mh, minW, minH)
+		}
 	}
 }
 

@@ -76,7 +76,7 @@ type Library struct {
 // ui/mark-eagle, ui/mark-panther, and ui/rank-* (one flash per player rank).
 // Those draw in screen space at S/8.
 // The menus use menu/title, menu/briefing, and menu/hill as full-frame
-// paintings (2560×2048, anchor at the top-left), plus menu/grave,
+// paintings (3648×2048, a 16:9 frame, anchor at the top-left), plus menu/grave,
 // menu/save, and menu/load. The hill queue is the Snake idle sheet.
 //
 // Ground frames pin their top-left to the cell and ignore the anchor.

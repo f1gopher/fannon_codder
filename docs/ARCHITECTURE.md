@@ -34,11 +34,11 @@ Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, m
 
 ## Display
 
-The world frame is 320×256. A tile is 16 px. A trooper body is about 8 px. The status strip is 52×256 (`HUDWidth`). The playfield is 268×256. The camera does not zoom. Audio distances are world pixels. A larger window is a sharper picture of that same frame.
+The world frame is 320×256 of content. A tile is 16 px. A trooper body is about 8 px. The status strip is 52×256 (`HUDWidth`). The camera does not zoom. Audio distances are world pixels. A larger window is a sharper picture of the same world pixels.
 
-The window opens at 1024×768 device pixels. Limits are 1024×768 through 3840×2160. The frame fits uniformly, by height. 1024×768 is scale 3 (picture 960×768, 32 px of bar each side). 3840×2160 is scale 8.4375 (picture 2700×2160).
+The window opens at 1024×768 device pixels. Limits are 1024×768 through 3840×2160. Scale fits the 256-tall frame by height. 1024×768 is scale 3. 3840×2160 is scale 8.4375. The picture then grows sideways to the window, for menus and for battles. 1024×768 is 1024×768. 1920×1080 is 1920×1080 at scale 1080/256. A window taller than 320×256 still fits by width, with bars above and below. The offscreen never exceeds 3840×2160.
 
-`Layout` returns an offscreen of 320×S by 256×S. `S` is that fit times `Monitor().DeviceScaleFactor()`, clamped so the offscreen never exceeds 3840×2160. `DrawFinalScreen` clears the bars and blits the offscreen 1:1, nearest, centered. Draws use logical coordinates times `S`. The cursor is divided by `S` and clamped to the frame. A click in the bar does not reach the game.
+`Layout` returns that offscreen. `S` is the fit times `Monitor().DeviceScaleFactor()`. `DrawFinalScreen` clears any remaining bars and blits the offscreen 1:1, nearest, centered. Draws use logical coordinates times `S`. The cursor is divided by `S` and clamped to the picture. A click in a bar does not reach the game.
 
 A painted sheet draws at `S/8` with a linear filter. 8 is source pixels per world pixel. HUD text is `ebiten/v2/text/v2` with Go Regular. The size is 14 px when `S` is 3, otherwise `14×S/3`.
 
@@ -110,7 +110,7 @@ An armed enemy skidoo drops the throttle inside `VehicleMGRange` (110) and outsi
 
 ## Camera and HUD
 
-The view is the playfield. Origin is (`HUDWidth`, 0), so a map as wide as the frame still pans by the strip. `LeaderMargin` is 32. `Camera.Contain` keeps the active leader, or the driven vehicle via `CameraFocus`, inside that margin. Edge scroll uses playfield coordinates.
+The view is the playfield. Origin is (`HUDWidth`, 0), so a map as wide as the picture still pans by the strip. On a wide window the playfield is wider than 268×256 and shows more of the map. A phase map is at least 24×16 tiles (384×256). That covers a 1440×900 battle, whose playfield is about 358×256. `LeaderMargin` is 32. `Camera.Contain` keeps the active leader, or the driven vehicle via `CameraFocus`, inside that margin. Edge scroll uses playfield coordinates.
 
 The strip is opaque. Rank is a `ui/rank-*` flash above the name. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. M, or the M icon, opens and closes it. A left click on the open map closes it. Arctic grass and tree cells use the snow colour.
 
@@ -204,7 +204,7 @@ Flavour in `internal/render/flavour.go` does not block movement or fire. Birds c
 
 `fx/blast` is the only explosion painting, about 0.2 s. A grenade, rocket, mine, or crate marker still lasts `blastTime` (0.35 s) and draws nothing after the last frame. The orange outline is only the missing-sheet fallback. A destroyed shed adds a second blast at the hut: the same sheet, looped slower, about 1.25 s, drawn larger and drifting up. The roof (eaves and chimney cut from `hut/door` or `hut/plain`) tumbles for `RoofFlight` (1.2 s) to a point `RoofReach` (64 px) past the hut, away from the blast. On the way down it kills soldiers inside `RoofHitR` (16 px). The landed roof stays. That flight is pending, so a finished phase waits for it.
 
-Menus `menu/title`, `menu/briefing`, and `menu/hill` are one frame pinned to the top-left of the 320×256 frame. The title painting includes the words Fannon Codder. Boot Hill draws `snake/idle` facing south-east for the queue and one `menu/grave` per death. Save and load use the old click rectangles. Names, the mission line, and the briefing copy stay text.
+Menus `menu/title`, `menu/briefing`, and `menu/hill` are 16:9 paintings, 3648×2048 source pixels (456×256 world pixels). `DrawMenu` centers each one. A window narrower than 16:9 crops the sides, so the picture still meets both edges. The title painting includes the words Fannon Codder. Boot Hill draws `snake/idle` facing south-east for the queue and one `menu/grave` per death. Load stays at the top left. Save stays at the top right of the picture. Names, the mission line, and the briefing copy stay text, over the blank panel in the middle of the map.
 
 The pointer and the board cursor are tinted gold so they stay readable on snow. The crosshair, shown while firing, is red. The black outline is left alone. The exit mark on a skidoo you already occupy stays the small bitmap, in the same gold.
 

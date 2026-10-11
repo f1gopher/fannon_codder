@@ -2,6 +2,7 @@ package render
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -33,11 +34,20 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
 		return
 	}
-	const (
+	const pad = 4
+	s := PictureScale()
+	if s <= 0 {
+		s = 1
+	}
+	b := dst.Bounds()
+	screenW := int(math.Round(float64(b.Dx()) / s))
+	screenH := int(math.Round(float64(b.Dy()) / s))
+	if screenW < 320 {
 		screenW = 320
+	}
+	if screenH < 256 {
 		screenH = 256
-		pad     = 4
-	)
+	}
 	fillRect(dst, HUDWidth, 0, screenW-HUDWidth, screenH, overviewBG)
 	mw, mh := w.Map.W, w.Map.H
 	pw, ph := w.Map.PixelSize()

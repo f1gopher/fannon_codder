@@ -18,6 +18,7 @@ const (
 // dipW and dipH are device-independent pixels. deviceScale is the monitor
 // scale. The returned offscreen is 320×S by 256×S, clamped so neither side
 // exceeds 3840×2160. A wider window does not grow S once height is the fit.
+// PictureSizeFilled is what the window uses, so menus and battles meet the sides.
 func PictureSize(dipW, dipH, deviceScale float64) (s float64, offW, offH int) {
 	if dipW < 1 {
 		dipW = DefaultWindowWidth
@@ -41,6 +42,30 @@ func PictureSize(dipW, dipH, deviceScale float64) (s float64, offW, offH int) {
 	}
 	offW = int(math.Round(float64(ScreenWidth) * s))
 	offH = int(math.Round(float64(ScreenHeight) * s))
+	return s, offW, offH
+}
+
+// PictureSizeFilled is PictureSize, then the offscreen grows sideways until
+// it meets the window. S stays the height fit, so a world pixel is the same
+// size and the playfield simply shows more map. A window taller than 320×256
+// still fits by width, with bars above and below. The offscreen stays inside
+// 3840×2160.
+func PictureSizeFilled(dipW, dipH, deviceScale float64) (s float64, offW, offH int) {
+	s, offW, offH = PictureSize(dipW, dipH, deviceScale)
+	if deviceScale <= 0 {
+		deviceScale = 1
+	}
+	if dipW < 1 {
+		dipW = DefaultWindowWidth
+	}
+	physW := dipW * deviceScale
+	if physW > float64(MaxWindowWidth) {
+		physW = float64(MaxWindowWidth)
+	}
+	wide := int(math.Round(physW))
+	if wide > offW {
+		offW = wide
+	}
 	return s, offW, offH
 }
 
@@ -83,8 +108,14 @@ func FramePoint(offX, offY, s float64, offW, offH int) (x, y float64, inside boo
 	}
 	x = offX / s
 	y = offY / s
-	maxX := float64(ScreenWidth - 1)
-	maxY := float64(ScreenHeight - 1)
+	maxX := float64(ScreenWidth) - 1
+	maxY := float64(ScreenHeight) - 1
+	if offW > 0 {
+		maxX = float64(offW)/s - 1
+	}
+	if offH > 0 {
+		maxY = float64(offH)/s - 1
+	}
 	if x < 0 {
 		x = 0
 	} else if x > maxX {

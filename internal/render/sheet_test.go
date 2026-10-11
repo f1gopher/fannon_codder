@@ -535,7 +535,7 @@ func TestMenuScenes(t *testing.T) {
 	}
 	for _, key := range []string{"menu/title", "menu/briefing", "menu/hill"} {
 		sh := lib.Get(key)
-		if sh == nil || sh.Frames != 1 || sh.FrameW != 2560 || sh.FrameH != 2048 || sh.AnchorX != 0 || sh.AnchorY != 0 {
+		if sh == nil || sh.Frames != 1 || sh.FrameW != 3648 || sh.FrameH != 2048 || sh.AnchorX != 0 || sh.AnchorY != 0 {
 			t.Fatalf("%s %+v", key, sh)
 		}
 	}

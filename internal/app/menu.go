@@ -145,7 +145,8 @@ func (b *Battle) stepMenu(h Host, escape, up, down, confirm bool, p input.Pointe
 	if down {
 		b.menu.move(1)
 	}
-	if row, ok := b.menu.rowAt(float64(ScreenWidth), float64(ScreenHeight), p.X, p.Y); ok {
+	fw, fh := h.Frame()
+	if row, ok := b.menu.rowAt(fw, fh, p.X, p.Y); ok {
 		b.menu.sel = row
 		if p.LeftDown {
 			confirm = true

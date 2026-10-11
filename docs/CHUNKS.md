@@ -89,3 +89,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A won phase shows gold Victory! Survivors on foot face the camera and salute.
 - After a cleared phase, Achievements lists the living and Remembrance lists the dead, then Boot Hill.
 - The phase is not called until rounds, grenades, blasts, and flying roofs finish. A shot that kills the last player after the enemy is down is a wipe.
+- A battle picture grows sideways to the window. Menus keep the 320×256 frame.
+- Phase maps are at least 24×16 tiles. Mission 1 grew from 20×16 so a 16:10 fullscreen view stays on the map.
+- Title, briefing, and Boot Hill are new 16:9 paintings. A narrower window crops them instead of leaving side gaps.
+

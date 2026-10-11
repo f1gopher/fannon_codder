@@ -37,6 +37,8 @@ type Game struct {
 	scale      float64
 	offW, offH int
 	fbW, fbH   int
+	frameW     float64
+	dipW, dipH float64
 }
 
 // newShell is the window shell shared by every entry point, including the sandboxes.
@@ -46,9 +48,12 @@ func newShell() *Game {
 	return &Game{
 		prog:  NewProgress(),
 		sound: audio.NewMixer(),
-		scale: s,
-		offW:  w,
-		offH:  h,
+		scale:  s,
+		offW:   w,
+		offH:   h,
+		frameW: float64(ScreenWidth),
+		dipW:   DefaultWindowWidth,
+		dipH:   DefaultWindowHeight,
 	}
 }
 
@@ -104,6 +109,14 @@ func NewHazard() *Game {
 }
 
 func (g *Game) Pointer() input.Pointer { return g.pointer }
+
+func (g *Game) Frame() (float64, float64) {
+	w := g.frameW
+	if w < float64(ScreenWidth) {
+		w = float64(ScreenWidth)
+	}
+	return w, float64(ScreenHeight)
+}
 
 func (g *Game) Progress() *Progress { return g.prog }
 
@@ -172,6 +185,10 @@ func (g *Game) Update() error {
 		g.scene = g.next
 		g.next = nil
 		g.scene.Enter()
+		g.prepareLayout(g.dipW, g.dipH)
+	}
+	if b, ok := g.scene.(*Battle); ok {
+		widenPlayfield(b.world, g.frameW)
 	}
 	// Escape asks to quit from every screen except a live battle, which
 	// opens its own pause menu. The scene stays frozen until the player
@@ -225,10 +242,15 @@ func (g *Game) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 }
 
 func (g *Game) prepareLayout(outsideWidth, outsideHeight float64) (int, int) {
-	s, w, h := PictureSize(outsideWidth, outsideHeight, monitorScale())
+	g.dipW = outsideWidth
+	g.dipH = outsideHeight
+	s, w, h := PictureSizeFilled(outsideWidth, outsideHeight, monitorScale())
 	g.scale = s
 	g.offW = w
 	g.offH = h
+	if s > 0 {
+		g.frameW = float64(w) / s
+	}
 	return w, h
 }
 

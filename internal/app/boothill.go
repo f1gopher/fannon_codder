@@ -22,8 +22,17 @@ var (
 
 const (
 	loadX, loadY, loadW, loadH = 8, 8, 40, 14
-	saveX, saveY, saveW, saveH = 272, 8, 40, 14
+	saveY, saveW, saveH       = 8, 40, 14
 )
+
+// saveX keeps the save mark on the right of whatever width the picture is.
+func saveX(frameW float64) float64 {
+	x := frameW - 48
+	if x < loadX+loadW {
+		return loadX + loadW
+	}
+	return x
+}
 
 // BootHill is the between-mission hill: queue, graves, mission number.
 type BootHill struct {
@@ -62,7 +71,8 @@ func (b *BootHill) Update(h Host) error {
 		}
 		return nil
 	}
-	if p.LeftDown && inRect(p.X, p.Y, saveX, saveY, saveW, saveH) {
+	fw, _ := h.Frame()
+	if p.LeftDown && inRect(p.X, p.Y, saveX(fw), saveY, saveW, saveH) {
 		if !b.prog.CanSave() {
 			b.prog.SaveNotice = "Save after a mission"
 			return nil
@@ -89,10 +99,16 @@ func inRect(px, py, x, y, w, h float64) bool {
 }
 
 func (b *BootHill) Draw(screen *ebiten.Image) {
-	painted := render.DrawSheet(screen, "menu/hill", "E", 0, 0, 0)
+	painted := render.DrawMenu(screen, "menu/hill")
+	fw := float64(ScreenWidth)
+	if s := render.PictureScale(); s > 0 {
+		if w := float64(screen.Bounds().Dx()) / s; w > fw {
+			fw = w
+		}
+	}
 	if !painted {
 		screen.Fill(hillSky)
-		render.Rect(screen, 0, 140, ScreenWidth, ScreenHeight-140, hillFill)
+		render.Rect(screen, 0, 140, int(fw), ScreenHeight-140, hillFill)
 		render.Rect(screen, 40, 168, 240, 8, pathFill)
 	}
 	n := b.prog.Pool.Remaining()
@@ -118,11 +134,16 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 		render.Rect(screen, loadX, loadY, loadW, loadH, iconFill)
 		render.Text(screen, "LOAD", loadX+4, loadY+2)
 	}
-	if !render.DrawSheet(screen, "menu/save", "E", 0, saveX+saveW/2, saveY+saveH/2) {
-		render.Rect(screen, saveX, saveY, saveW, saveH, iconFill)
-		render.Text(screen, "SAVE", saveX+4, saveY+2)
+	sx := saveX(fw)
+	if !render.DrawSheet(screen, "menu/save", "E", 0, sx+saveW/2, saveY+saveH/2) {
+		render.Rect(screen, int(sx), saveY, saveW, saveH, iconFill)
+		render.Text(screen, "SAVE", sx+4, saveY+2)
 	}
-	render.Rect(screen, 4, 22, 312, 100, color.RGBA{R: 0x14, G: 0x28, B: 0x18, A: 0xaa})
+	panelW := int(fw) - 8
+	if panelW < 40 {
+		panelW = 40
+	}
+	render.Rect(screen, 4, 22, panelW, 100, color.RGBA{R: 0x14, G: 0x28, B: 0x18, A: 0xaa})
 
 	render.Text(screen, fmt.Sprintf(
 		"BOOT HILL  Mission %d  Graves %d  Queue %d",
@@ -164,18 +185,32 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 }
 
 func (b *BootHill) drawHeroes(screen *ebiten.Image) {
-	render.Rect(screen, 24, 36, 272, 176, color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xee})
-	render.Text(screen, "HIGH SCORING HEROES", 36, 44)
+	fw := float64(ScreenWidth)
+	if s := render.PictureScale(); s > 0 && screen != nil {
+		if w := float64(screen.Bounds().Dx()) / s; w > fw {
+			fw = w
+		}
+	}
+	hw := 272
+	if fw-48 < float64(hw) {
+		hw = int(fw) - 48
+	}
+	if hw < 80 {
+		hw = 80
+	}
+	hx := int((fw - float64(hw)) / 2)
+	render.Rect(screen, hx, 36, hw, 176, color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xee})
+	render.Text(screen, "HIGH SCORING HEROES", float64(hx+12), 44)
 	var living []campaign.Soldier
 	if b.prog.Pool != nil {
 		living = b.prog.Pool.Recruits
 	}
 	rows := campaign.HighScorers(living, b.prog.Heroes)
 	if len(rows) == 0 {
-		render.Text(screen, "No scores yet", 36, 64)
+		render.Text(screen, "No scores yet", float64(hx+12), 64)
 	}
 	for i, h := range rows {
-		render.Text(screen, fmt.Sprintf("%2d  %-4s %-12s %d", i+1, h.Rank.Abbrev(), h.Name, h.Kills), 36, float64(64+i*8))
+		render.Text(screen, fmt.Sprintf("%2d  %-4s %-12s %d", i+1, h.Rank.Abbrev(), h.Name, h.Kills), float64(hx+12), float64(64+i*8))
 	}
-	render.Text(screen, "Click or Enter — Boot Hill", 36, 192)
+	render.Text(screen, "Click or Enter — Boot Hill", float64(hx+12), 192)
 }

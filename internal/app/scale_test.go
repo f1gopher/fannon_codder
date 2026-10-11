@@ -42,6 +42,41 @@ func TestTallWindowFitsTheWidth(t *testing.T) {
 	}
 }
 
+func TestFilledPictureUsesTheWidth(t *testing.T) {
+	s, w, h := PictureSizeFilled(1024, 768, 1)
+	if math.Abs(s-3) > 1e-9 {
+		t.Fatalf("S = %v, want 3", s)
+	}
+	if w != 1024 || h != 768 {
+		t.Fatalf("offscreen = %d×%d, want 1024×768", w, h)
+	}
+	s2, w2, h2 := PictureSizeFilled(1920, 1080, 1)
+	if w2 != 1920 || h2 != 1080 {
+		t.Fatalf("1080p offscreen = %d×%d, want 1920×1080", w2, h2)
+	}
+	if math.Abs(s2-1080.0/256.0) > 1e-9 {
+		t.Fatalf("1080p S = %v", s2)
+	}
+	// Taller than 320×256 still fits the width. The sides are already full.
+	s3, w3, h3 := PictureSizeFilled(1024, 2000, 1)
+	sTall, wTall, hTall := PictureSize(1024, 2000, 1)
+	if s3 != sTall || w3 != wTall || h3 != hTall {
+		t.Fatalf("tall filled %v %d×%d, classic %v %d×%d", s3, w3, h3, sTall, wTall, hTall)
+	}
+}
+
+func TestFramePointUsesTheWidePicture(t *testing.T) {
+	s, w, h := PictureSizeFilled(1920, 1080, 1)
+	x, y, inside := FramePoint(float64(w-1), 10, s, w, h)
+	if !inside {
+		t.Fatal("the right edge of a wide picture was treated as a bar")
+	}
+	want := float64(w)/s - 1
+	if math.Abs(x-want) > 1e-6 || math.Abs(y-10/s) > 1e-6 {
+		t.Fatalf("got (%v,%v), want (%v,%v)", x, y, want, 10/s)
+	}
+}
+
 func TestWiderWindowKeepsTheFrame(t *testing.T) {
 	s1, w1, h1 := PictureSize(1024, 768, 1)
 	s2, w2, h2 := PictureSize(1600, 768, 1)

@@ -33,6 +33,9 @@ type Host interface {
 	SetListener(x, y float64)
 	SetEngine(run bool, pitch float64)
 	PlayKind(sim.CueKind)
+	// Frame is the logical picture size. Menus and the battle both use it
+	// once the window is wider than 320×256.
+	Frame() (w, h float64)
 }
 
 var (
@@ -64,7 +67,7 @@ func (t *Title) Update(h Host) error {
 }
 
 func (t *Title) Draw(screen *ebiten.Image) {
-	if !render.DrawSheet(screen, "menu/title", "E", 0, 0, 0) {
+	if !render.DrawMenu(screen, "menu/title") {
 		screen.Fill(titleColor)
 		render.Text(screen, "FANNON CODDER", 8, 8)
 	}
@@ -150,9 +153,23 @@ func NewHazardBattle(prog *Progress) *Battle {
 // A map as wide as the full screen can still pan by the strip's width,
 // so the west edge is not stuck underneath it.
 func applyPlayfield(w *sim.World) {
-	w.Camera.ViewW = float64(ScreenWidth - render.HUDWidth)
+	widenPlayfield(w, float64(ScreenWidth))
+}
+
+// widenPlayfield sets the camera to the area beside the status strip.
+// frameW is the logical picture width. A wide window passes more than 320,
+// so the map fills the sides instead of leaving a bar.
+func widenPlayfield(w *sim.World, frameW float64) {
+	if w == nil {
+		return
+	}
+	if frameW < float64(ScreenWidth) {
+		frameW = float64(ScreenWidth)
+	}
+	w.Camera.ViewW = frameW - float64(render.HUDWidth)
 	w.Camera.ViewH = float64(ScreenHeight)
 	w.Camera.OriginX = float64(render.HUDWidth)
+	w.Camera.Clamp()
 }
 
 func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
@@ -369,7 +386,7 @@ func (b *Battle) Update(h Host) error {
 		// The strip covers the left edge, so pan from the playfield beside it.
 		b.world.Camera.ScrollToward(
 			p.X-float64(render.HUDWidth), p.Y,
-			ScreenWidth-render.HUDWidth, ScreenHeight,
+			b.world.Camera.ViewW, b.world.Camera.ViewH,
 			1.0/TPS,
 		)
 	}

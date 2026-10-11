@@ -43,6 +43,7 @@ func (h *switchHost) PlayCues([]sim.Cue)           {}
 func (h *switchHost) SetListener(float64, float64) {}
 func (h *switchHost) SetEngine(bool, float64)      {}
 func (h *switchHost) PlayKind(sim.CueKind)         {}
+func (h *switchHost) Frame() (float64, float64)    { return 320, 256 }
 
 func TestServiceClickOpensBootHill(t *testing.T) {
 	s := NewService(NewProgress(), []campaign.Soldier{{Name: "Jools"}}, nil)

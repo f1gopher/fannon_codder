@@ -59,3 +59,40 @@ func TestParkedSquadDoesNotTrackThePointer(t *testing.T) {
 		t.Fatalf("parked facing %v, want east", u.Facing)
 	}
 }
+
+func TestParkedSquadFansTheWatch(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Spread = 0
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 0, Y: 0}})
+	w.SpawnPlayerSquad(SquadEagle, []Vec2{
+		{X: 80, Y: 40},
+		{X: 80 - FileSpacing, Y: 40},
+		{X: 80 - 2*FileSpacing, Y: 40},
+	})
+	w.Step(1.0 / 60)
+	s := w.SquadByID(SquadEagle)
+	if !s.WatchSet {
+		t.Fatal("a parked file should take a watch heading")
+	}
+	var prev float64
+	for i, id := range s.MemberIDs {
+		u := w.Unit(id)
+		want := wrapAngle(float64(i) * 2 * math.Pi / 3)
+		if math.Abs(wrapAngle(u.Facing-want)) > 1e-9 {
+			t.Fatalf("man %d facing %v, want %v", i, u.Facing, want)
+		}
+		if i > 0 && math.Abs(wrapAngle(u.Facing-prev)) < 0.2 {
+			t.Fatalf("man %d faces the same way as the man ahead", i)
+		}
+		prev = u.Facing
+	}
+	w.Step(1.0 / 60)
+	for i, id := range s.MemberIDs {
+		u := w.Unit(id)
+		want := wrapAngle(float64(i) * 2 * math.Pi / 3)
+		if math.Abs(wrapAngle(u.Facing-want)) > 1e-9 {
+			t.Fatalf("watch drifted on man %d to %v", i, u.Facing)
+		}
+	}
+}

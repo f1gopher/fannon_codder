@@ -151,30 +151,35 @@ func recordTrail(s *Squad, p Vec2) {
 }
 
 // trailPoint is `back` pixels behind head (the leader), walking the crumb trail.
+// A trail shorter than `back` keeps going in the direction the file came from,
+// so two followers never share the last crumb. With no direction yet, that
+// line runs west, which is how a new file is laid out.
 func trailPoint(head Vec2, trail []Vec2, back float64) (Vec2, bool) {
 	if back <= 0 {
 		return head, true
 	}
 	remaining := back
 	prev := head
+	dirX, dirY := -1.0, 0.0
 	for i := len(trail) - 1; i >= 0; i-- {
 		b := trail[i]
 		seg := hypot(prev.X-b.X, prev.Y-b.Y)
 		if seg <= 0 {
 			continue
 		}
+		dirX = (b.X - prev.X) / seg
+		dirY = (b.Y - prev.Y) / seg
 		if remaining <= seg {
-			t := remaining / seg
 			return Vec2{
-				X: prev.X + (b.X-prev.X)*t,
-				Y: prev.Y + (b.Y-prev.Y)*t,
+				X: prev.X + dirX*remaining,
+				Y: prev.Y + dirY*remaining,
 			}, true
 		}
 		remaining -= seg
 		prev = b
 	}
-	if len(trail) == 0 {
-		return head, true
-	}
-	return trail[0], true
+	return Vec2{
+		X: prev.X + dirX*remaining,
+		Y: prev.Y + dirY*remaining,
+	}, true
 }

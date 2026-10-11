@@ -94,8 +94,10 @@ func (w *World) stepInactiveFire(dt float64) {
 		}
 		// Still walking to a click. The parked burst starts when they arrive.
 		if s.HasDest {
+			s.WatchSet = false
 			continue
 		}
+		w.fanParkedWatch(s)
 		for _, id := range s.MemberIDs {
 			u := w.Unit(id)
 			if !w.CanShoot(u) {
@@ -103,6 +105,41 @@ func (w *World) stepInactiveFire(dt float64) {
 			}
 			w.stepParkedGun(u, dt)
 		}
+	}
+}
+
+// fanParkedWatch points each man on foot a different way around WatchBase
+// while he has no enemy in range. A man who can see one keeps his facing
+// so stepParkedGun can turn him onto the target. One man keeps the heading
+// he arrived on.
+func (w *World) fanParkedWatch(s *Squad) {
+	var ids []int
+	for _, id := range s.MemberIDs {
+		u := w.Unit(id)
+		if u == nil || !u.Living() || u.VehicleID != 0 {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	n := len(ids)
+	if n == 0 {
+		return
+	}
+	if !s.WatchSet {
+		s.WatchBase = w.Unit(ids[0]).Facing
+		s.WatchSet = true
+	}
+	if n == 1 {
+		return
+	}
+	step := 2 * math.Pi / float64(n)
+	for i, id := range ids {
+		u := w.Unit(id)
+		st := GunStatsFor(u.Rank)
+		if _, _, see := w.nearestEnemy(u, st.Range); see {
+			continue
+		}
+		u.Facing = wrapAngle(s.WatchBase + float64(i)*step)
 	}
 }
 

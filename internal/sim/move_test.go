@@ -55,6 +55,55 @@ func TestSpawnFileHoldsWithoutAMove(t *testing.T) {
 	}
 }
 
+func TestShortTrailStillSpacesTheFile(t *testing.T) {
+	head := Vec2{X: 50, Y: 20}
+	trail := []Vec2{{X: 50, Y: 20}}
+	a, _ := trailPoint(head, trail, FileSpacing)
+	b, _ := trailPoint(head, trail, FileSpacing*2)
+	if hypot(a.X-head.X, a.Y-head.Y) < FileSpacing*0.9 {
+		t.Fatalf("first slot stacked on the leader: %+v", a)
+	}
+	if hypot(a.X-b.X, a.Y-b.Y) < FileSpacing*0.9 {
+		t.Fatalf("slots share a point: %+v %+v", a, b)
+	}
+}
+
+func TestJoinedSquadDoesNotStack(t *testing.T) {
+	w := threeMan()
+	guard := w.ActiveSquad().MemberIDs[2]
+	w.ToggleSelect(guard)
+	if !w.Split() {
+		t.Fatal("split")
+	}
+	if !w.SetActiveSquad(SquadSnake) {
+		t.Fatal("snake")
+	}
+	g := w.Unit(guard)
+	w.CommandMove(g.X, g.Y, true)
+	for i := 0; i < 300; i++ {
+		w.Step(1.0 / 60)
+		if len(w.Squads) == 1 && !w.ActiveSquad().HasDest {
+			break
+		}
+	}
+	if len(w.Squads) != 1 {
+		t.Fatal("squads should have joined")
+	}
+	for i := 0; i < 180; i++ {
+		w.Step(1.0 / 60)
+	}
+	s := w.ActiveSquad()
+	for i := 0; i < len(s.MemberIDs); i++ {
+		a := w.Unit(s.MemberIDs[i])
+		for j := i + 1; j < len(s.MemberIDs); j++ {
+			b := w.Unit(s.MemberIDs[j])
+			if d := hypot(a.X-b.X, a.Y-b.Y); d < FileSpacing*0.6 {
+				t.Fatalf("men %d and %d share a spot, distance=%v", a.ID, b.ID, d)
+			}
+		}
+	}
+}
+
 func TestFileAlongPathNotJustOffset(t *testing.T) {
 	// Walk south, then the follower should also be on that north-south line.
 	w := twoManWorld(Vec2{X: 40, Y: 40}, Vec2{X: 40, Y: 40 - FileSpacing})

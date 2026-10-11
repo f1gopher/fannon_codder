@@ -69,6 +69,11 @@ type Squad struct {
 	// Any other move leaves the squads separate.
 	JoinSeek bool
 	Trail    []Vec2
+	// WatchBase is the heading a parked squad covers. WatchSet is true
+	// once that heading is taken from the file, so later turns onto an
+	// enemy do not spin the other men's sectors.
+	WatchBase float64
+	WatchSet  bool
 }
 
 // Vec2 is a world-space point (trail crumbs, destinations).

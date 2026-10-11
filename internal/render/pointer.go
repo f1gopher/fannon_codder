@@ -44,14 +44,20 @@ func Pointer(dst *ebiten.Image, x, y float64, kind int) {
 }
 
 func drawUIAt(dst *ebiten.Image, key string, x, y float64) bool {
+	return drawUIMul(dst, key, x, y, 1)
+}
+
+// drawUIMul paints a UI cel with an extra scale. mul 2 is twice the usual world size.
+// x, y is the anchor, the same point drawUIAt uses.
+func drawUIMul(dst *ebiten.Image, key string, x, y, mul float64) bool {
 	img, ax, ay, ok := uiCel(key)
 	if !ok {
 		return false
 	}
-	if c, ok := cursorTint(key); ok {
-		DrawSpriteTint(dst, img, ax, ay, x, y, c)
+	if c, tint := cursorTint(key); tint {
+		drawSpriteMul(dst, img, ax, ay, false, x, y, c, mul)
 	} else {
-		DrawSprite(dst, img, ax, ay, false, x, y)
+		drawSpriteMul(dst, img, ax, ay, false, x, y, color.White, mul)
 	}
 	return true
 }

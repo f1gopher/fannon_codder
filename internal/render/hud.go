@@ -31,8 +31,10 @@ const (
 	hudRockX                        = 28
 	hudIconW, hudIconH              = 22, 16
 	hudSquadTop                     = 20
-	hudHeadH                        = 12
-	hudManH                         = 18
+	hudHeadH                        = 20
+	hudMarkS                        = 16
+	hudManH                         = 10
+	hudRankS                        = 8
 	hudFootS                        = 8
 	hudMapX, hudMapY, hudMapS       = 2, 238, 16
 	hudPauseX, hudPauseY, hudPauseS = 20, 238, 16
@@ -45,7 +47,6 @@ var (
 	selectFill  = color.RGBA{R: 0x40, G: 0x40, B: 0x10, A: 0xff}
 	outlineFill = color.RGBA{R: 0xff, G: 0xee, B: 0x80, A: 0xff}
 	selectSpec  = color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
-	activeRow   = color.RGBA{R: 0x14, G: 0x28, B: 0x18, A: 0xff}
 	footFill    = color.RGBA{R: 0xc8, G: 0xa0, B: 0x60, A: 0xff}
 	vehicleFill = color.RGBA{R: 0xc0, G: 0xc0, B: 0xc8, A: 0xff}
 	mapIconFill = color.RGBA{R: 0x30, G: 0x48, B: 0x30, A: 0xff}
@@ -231,21 +232,20 @@ func HUD(dst *ebiten.Image, w *sim.World, paused bool) {
 		selected[id] = true
 	}
 	for _, b := range lay.blocks {
-		if !b.active {
-			continue
+		// One dark pixel between squads keeps the plates from running together.
+		fillRect(dst, b.x, b.y, b.w, b.h-1, squadPlate(b.id, b.active))
+		if b.active {
+			strokeRect(dst, hudRect{b.x, b.y, b.w, b.h - 1}, squadEdge(b.id))
+			fillRect(dst, b.x, b.y, 3, b.h-1, squadEdge(b.id))
 		}
-		fillRect(dst, b.x, b.y, b.w, b.h, activeRow)
-		fillRect(dst, b.x, b.y, 3, b.h, squadFill(b.id, false))
 	}
 	for _, h := range lay.headers {
-		if !drawUIAt(dst, squadMark(h.id), 2, float64(h.y+2)) {
-			blit(dst, colorLogo(squadFill(h.id, false), 8), 2, float64(h.y+2), 1, 1)
+		mx := float64(h.x) + float64(h.w-hudMarkS)/2
+		my := float64(h.y) + float64(h.h-hudMarkS)/2
+		// Marks are 64 source px and normally draw at 8 world px. Two times that fills the header.
+		if !drawUIMul(dst, squadMark(h.id), mx, my, float64(hudMarkS)/8) {
+			blit(dst, colorLogo(squadFill(h.id, false), hudMarkS), mx, my, 1, 1)
 		}
-		mark := h.id.Letter()
-		if active != nil && active.ID == h.id {
-			mark = ">" + mark
-		}
-		Text(dst, mark, 12, float64(h.y+2))
 		stance := hudRect{HUDWidth - hudFootS - 2, h.y + 2, hudFootS, hudFootS}
 		drawStance(dst, stance, leaderOnFoot(w, w.SquadByID(h.id)))
 	}
@@ -261,13 +261,15 @@ func HUD(dst *ebiten.Image, w *sim.World, paused bool) {
 		if name == "" {
 			name = "?"
 		}
-		drawRank(dst, campaign.Rank(u.Rank), 2, float64(m.y))
-		Text(dst, name, 2, float64(m.y+9))
+		ry := float64(m.y + (hudManH-hudRankS)/2)
+		drawRank(dst, campaign.Rank(u.Rank), 1, ry)
+		// The face is 14/3 world pixels tall. Center it on the insignia.
+		Text(dst, name, 1+float64(hudRankS)+2, ry+(float64(hudRankS)-TextPixels(1))/2)
 	}
 }
 
 // rankKeys are the status-strip flashes, low rank to high. Each cell is
-// 64×64 and draws at S/8 in the line above the man's name.
+// 64×64 and draws at 8 world pixels to the left of the man's name.
 var rankKeys = [...]string{
 	campaign.Private:             "ui/rank-pte",
 	campaign.Corporal:            "ui/rank-cpl",
@@ -311,6 +313,40 @@ func rocketIcon() *ebiten.Image {
 		rocketPanel.Fill(rocketFill)
 	}
 	return rocketPanel
+}
+
+// squadPlate is the header and roster fill. The hues follow the team marks:
+// snake olive, eagle steel blue, panther bronze. Active lifts the same hue.
+func squadPlate(id sim.SquadID, active bool) color.RGBA {
+	switch id {
+	case sim.SquadEagle:
+		if active {
+			return color.RGBA{R: 0x1c, G: 0x30, B: 0x48, A: 0xff}
+		}
+		return color.RGBA{R: 0x10, G: 0x18, B: 0x28, A: 0xff}
+	case sim.SquadPanther:
+		if active {
+			return color.RGBA{R: 0x34, G: 0x22, B: 0x10, A: 0xff}
+		}
+		return color.RGBA{R: 0x1c, G: 0x12, B: 0x0c, A: 0xff}
+	default:
+		if active {
+			return color.RGBA{R: 0x1c, G: 0x30, B: 0x1c, A: 0xff}
+		}
+		return color.RGBA{R: 0x10, G: 0x1c, B: 0x12, A: 0xff}
+	}
+}
+
+// squadEdge is the bright rim on the selected team, sampled from the mark.
+func squadEdge(id sim.SquadID) color.RGBA {
+	switch id {
+	case sim.SquadEagle:
+		return color.RGBA{R: 0x48, G: 0x88, B: 0xc0, A: 0xff}
+	case sim.SquadPanther:
+		return color.RGBA{R: 0xc8, G: 0x88, B: 0x40, A: 0xff}
+	default:
+		return color.RGBA{R: 0x68, G: 0x98, B: 0x50, A: 0xff}
+	}
 }
 
 func squadMark(id sim.SquadID) string {

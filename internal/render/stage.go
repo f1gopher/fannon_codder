@@ -281,13 +281,19 @@ func DrawSpriteTint(dst, img *ebiten.Image, anchorX, anchorY int, x, y float64, 
 }
 
 func drawSprite(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y float64, c color.Color) {
-	if dst == nil || img == nil {
+	drawSpriteMul(dst, img, anchorX, anchorY, mirror, x, y, c, 1)
+}
+
+// drawSpriteMul is drawSprite with an extra scale on top of SpriteScale.
+// mul 2 draws the cel twice as large in world pixels. The anchor still sits on x, y.
+func drawSpriteMul(dst, img *ebiten.Image, anchorX, anchorY int, mirror bool, x, y float64, c color.Color, mul float64) {
+	if dst == nil || img == nil || mul == 0 {
 		return
 	}
 	if spriteHook != nil {
 		spriteHook(img, mirror)
 	}
-	sc := SpriteScale()
+	sc := SpriteScale() * mul
 	ps := pictureScale
 	if ps <= 0 {
 		ps = 1

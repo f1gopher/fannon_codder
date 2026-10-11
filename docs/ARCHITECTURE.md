@@ -112,7 +112,7 @@ An armed enemy skidoo drops the throttle inside `VehicleMGRange` (110) and outsi
 
 The view is the playfield. Origin is (`HUDWidth`, 0), so a map as wide as the picture still pans by the strip. On a wide window the playfield is wider than 268×256 and shows more of the map. A phase map is at least 24×16 tiles (384×256). That covers a 1440×900 battle, whose playfield is about 358×256. `LeaderMargin` is 32. `Camera.Contain` keeps the active leader, or the driven vehicle via `CameraFocus`, inside that margin. Edge scroll uses playfield coordinates.
 
-The strip is opaque. Rank is a `ui/rank-*` flash above the name. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. M, or the M icon, opens and closes it. A left click on the open map closes it. Arctic grass and tree cells use the snow colour.
+The strip is opaque. Rank is a `ui/rank-*` flash on the left of the name, on the same line. Keys, low to high: pte, cpl, sgt, ssgt, sfc, msg, sgm, sp4, sp6, wo, cwo, cpt, maj, col, bg, gen. The abbreviation is only the missing-sheet fallback. Names and the G and R counts stay text. Crate paintings have no letter. The selected special gets a white stroke. The overview is a diagram. M, or the M icon, opens and closes it. A left click on the open map closes it. Arctic grass and tree cells use the snow colour.
 
 ## Campaign
 

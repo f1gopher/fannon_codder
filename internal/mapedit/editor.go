@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -35,6 +36,7 @@ type Editor struct {
 
 	scrollX, scrollY float64
 	time             float64
+	gridView         bool
 
 	scale      float64
 	offW, offH int
@@ -127,6 +129,9 @@ func (e *Editor) Update() error {
 	e.time += 1.0 / tps
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyV) {
+		e.gridView = !e.gridView
 	}
 	ebiten.SetWindowTitle(e.label())
 
@@ -278,6 +283,15 @@ func (e *Editor) drawInfo(clip *ebiten.Image, rail int, infoTop, rh float64) {
 	drawFace(clip, e.font, e.scale, "Terrain", 8, infoTop+4, railInk)
 	drawFace(clip, e.font, e.scale, terrain, 8, infoTop+4+rh, railInkSel)
 	drawFace(clip, e.font, e.scale, size, 8, infoTop+4+rh*2, railInkSel)
+	drawFace(clip, e.font, e.scale, "View  V", 8, infoTop+4+rh*3, railInk)
+	drawFace(clip, e.font, e.scale, e.viewName(), 8, infoTop+4+rh*4, railInkSel)
+}
+
+func (e *Editor) viewName() string {
+	if e.gridView {
+		return "tile grid"
+	}
+	return "terrain"
 }
 
 func (e *Editor) drawMap(screen *ebiten.Image) {
@@ -290,6 +304,8 @@ func (e *Editor) drawMap(screen *ebiten.Image) {
 	e.view.Fill(color.Black)
 	if e.err != nil {
 		drawFace(e.view, e.font, e.scale, e.err.Error(), 8, 8, railInkSel)
+	} else if e.gridView {
+		e.drawTileGrid(e.view)
 	} else {
 		pic := terrain.Prepare(e.grid, e.biome)
 		pic.DrawGround(e.view, -e.scrollX, -e.scrollY, e.scale, e.time)
@@ -356,6 +372,8 @@ var (
 	railSel    = color.RGBA{R: 96, G: 112, B: 58, A: 255}
 	railInk    = color.RGBA{R: 186, G: 176, B: 120, A: 255}
 	railInkSel = color.RGBA{R: 244, G: 236, B: 200, A: 255}
+	gridLine   = color.RGBA{R: 12, G: 12, B: 12, A: 255}
+	gridInk    = color.RGBA{R: 244, G: 236, B: 200, A: 255}
 )
 
 func drawFace(dst *ebiten.Image, src *text.GoTextFaceSource, scale float64, str string, x, y float64, c color.Color) {
@@ -375,6 +393,58 @@ func drawFace(dst *ebiten.Image, src *text.GoTextFaceSource, scale float64, str 
 var whiteOnce struct {
 	img  *ebiten.Image
 	once sync.Once
+}
+
+func (e *Editor) drawTileGrid(dst *ebiten.Image) {
+	if dst == nil || e.grid.W <= 0 || e.grid.H <= 0 {
+		return
+	}
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	ts := float64(sim.TileSize) * s
+	ox := -e.scrollX * s
+	oy := -e.scrollY * s
+	for ty := 0; ty < e.grid.H; ty++ {
+		for tx := 0; tx < e.grid.W; tx++ {
+			tile := e.grid.At(tx, ty)
+			x0 := int(math.Floor(ox + float64(tx)*ts))
+			y0 := int(math.Floor(oy + float64(ty)*ts))
+			x1 := int(math.Floor(ox + float64(tx+1)*ts))
+			y1 := int(math.Floor(oy + float64(ty+1)*ts))
+			fillRect(dst, x0, y0, x1-x0, y1-y0, tileFill(tile))
+			fillRect(dst, x1-1, y0, 1, y1-y0, gridLine)
+			fillRect(dst, x0, y1-1, x1-x0, 1, gridLine)
+			label := string(data.TileRune(tile))
+			drawFace(dst, e.font, s, label, float64(x0)+4, float64(y0)+2, gridInk)
+		}
+	}
+}
+
+func tileFill(t sim.Tile) color.RGBA {
+	switch t {
+	case sim.TileTree:
+		return color.RGBA{R: 24, G: 72, B: 28, A: 255}
+	case sim.TileWaterShallow:
+		return color.RGBA{R: 64, G: 140, B: 168, A: 255}
+	case sim.TileWaterDeep:
+		return color.RGBA{R: 16, G: 52, B: 112, A: 255}
+	case sim.TileIce:
+		return color.RGBA{R: 176, G: 220, B: 232, A: 255}
+	case sim.TileQuicksand:
+		return color.RGBA{R: 168, G: 140, B: 64, A: 255}
+	case sim.TileCliff:
+		return color.RGBA{R: 88, G: 88, B: 92, A: 255}
+	case sim.TileBridge:
+		return color.RGBA{R: 120, G: 76, B: 40, A: 255}
+	case sim.TileMine:
+		return color.RGBA{R: 160, G: 40, B: 36, A: 255}
+	case sim.TileRamp:
+		return color.RGBA{R: 140, G: 128, B: 72, A: 255}
+	default:
+		return color.RGBA{R: 72, G: 124, B: 48, A: 255}
+	}
 }
 
 func fillRect(dst *ebiten.Image, x, y, w, h int, c color.Color) {

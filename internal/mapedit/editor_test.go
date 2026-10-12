@@ -3,6 +3,8 @@ package mapedit
 import (
 	"fmt"
 	"testing"
+
+	"fannon-codder/internal/sim"
 )
 
 func TestOpensTheFirstPhase(t *testing.T) {
@@ -39,5 +41,29 @@ func TestOpensTheFirstPhase(t *testing.T) {
 	}
 	if ed.scrollX != 0 || ed.scrollY != 0 {
 		t.Fatalf("scroll = %v,%v", ed.scrollX, ed.scrollY)
+	}
+	if ed.gridView || ed.viewName() != "terrain" {
+		t.Fatalf("view = %v %q", ed.gridView, ed.viewName())
+	}
+	ed.gridView = true
+	if ed.viewName() != "tile grid" {
+		t.Fatalf("view = %q", ed.viewName())
+	}
+}
+
+func TestTileFillsDiffer(t *testing.T) {
+	tiles := []sim.Tile{
+		sim.TileGrass, sim.TileTree, sim.TileWaterShallow, sim.TileWaterDeep,
+		sim.TileIce, sim.TileQuicksand, sim.TileCliff, sim.TileBridge,
+		sim.TileMine, sim.TileRamp,
+	}
+	seen := map[string]sim.Tile{}
+	for _, tile := range tiles {
+		c := tileFill(tile)
+		key := fmt.Sprintf("%d,%d,%d", c.R, c.G, c.B)
+		if prev, ok := seen[key]; ok {
+			t.Fatalf("%v and %v share %s", prev, tile, key)
+		}
+		seen[key] = tile
 	}
 }

@@ -37,7 +37,7 @@ Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, m
 
 ## Map editor
 
-`go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. The selected phase is painted by `internal/terrain` through `data.Phase.Grid`, the same loader and painter as the battle. A left rail picks the phase. Under the list, the rail shows the selected phase's terrain and its width and height in tiles. The rest of the window is that whole map at the game's picture scale, and it scrolls. Escape closes it. Nothing is written. Soldiers, huts, crates, and birds are not drawn. In the battle, tree slices are still Y-sorted with the actors. A later save would rewrite only that phase's `map.tiles`, using `data.TileRune`.
+`go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. The selected phase is painted by `internal/terrain` through `data.Phase.Grid`, the same loader and painter as the battle. A left rail picks the phase. Under the list, the rail shows the selected phase's terrain and its width and height in tiles. The rest of the window is that whole map at the game's picture scale, and it scrolls. It opens on the painted terrain. V switches to a grid of tile types, one cell per tile, filled by type and labelled with `data.TileRune`. V switches back. The rail names the current view. Escape closes it. Nothing is written. Soldiers, huts, crates, and birds are not drawn. In the battle, tree slices are still Y-sorted with the actors. A later save would rewrite only that phase's `map.tiles`, using `data.TileRune`.
 
 ## Display
 

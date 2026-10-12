@@ -1,6 +1,9 @@
 package mapedit
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestOpensTheFirstPhase(t *testing.T) {
 	ed, err := New()
@@ -22,9 +25,17 @@ func TestOpensTheFirstPhase(t *testing.T) {
 	if ed.biome != "jungle" {
 		t.Fatalf("terrain = %q", ed.biome)
 	}
+	terrain, size := ed.infoLines()
+	if terrain != "jungle" || size != "24 × 16 tiles" {
+		t.Fatalf("info = %q %q", terrain, size)
+	}
 	ed.load(3)
 	if ed.phases[3].name != "m03p01" || ed.biome != "snow" {
 		t.Fatalf("phase 4 = %s %q", ed.phases[3].name, ed.biome)
+	}
+	terrain, size = ed.infoLines()
+	if terrain != "snow" || size != fmt.Sprintf("%d × %d tiles", ed.grid.W, ed.grid.H) {
+		t.Fatalf("info = %q %q", terrain, size)
 	}
 	if ed.scrollX != 0 || ed.scrollY != 0 {
 		t.Fatalf("scroll = %v,%v", ed.scrollX, ed.scrollY)

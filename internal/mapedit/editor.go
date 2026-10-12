@@ -146,9 +146,11 @@ func (e *Editor) Update() error {
 	cx, cy := e.cursor()
 	rail := RailWidth(e.offW)
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		if row, ok := RailHit(cx, cy, rail, RowHeight(e.scale), len(e.phases)); ok {
-			e.drag = false
-			e.load(row)
+		if cy < InfoTop(e.offH, e.scale) {
+			if row, ok := RailHit(cx, cy, rail, RowHeight(e.scale), len(e.phases)); ok {
+				e.drag = false
+				e.load(row)
+			}
 		} else if cx >= float64(rail) {
 			e.drag = true
 			e.dragX, e.dragY = cx, cy
@@ -234,8 +236,12 @@ func (e *Editor) drawRail(screen *ebiten.Image) {
 		clip = sub
 	}
 	rh := RowHeight(e.scale)
+	infoTop := InfoTop(e.offH, e.scale)
 	for i, row := range e.phases {
 		y := float64(i) * rh
+		if y+rh > infoTop {
+			break
+		}
 		if i == e.index {
 			fillRect(clip, 0, int(y), rail, int(rh)+1, railSel)
 		}
@@ -249,6 +255,29 @@ func (e *Editor) drawRail(screen *ebiten.Image) {
 		}
 		drawFace(clip, e.font, e.scale, label, 8, y+4, ink)
 	}
+	e.drawInfo(clip, rail, infoTop, rh)
+}
+
+func (e *Editor) infoLines() (terrain, size string) {
+	terrain = e.biome
+	if terrain == "" {
+		terrain = "—"
+	}
+	if e.err != nil || e.grid.W <= 0 || e.grid.H <= 0 {
+		return terrain, "—"
+	}
+	return terrain, fmt.Sprintf("%d × %d tiles", e.grid.W, e.grid.H)
+}
+
+func (e *Editor) drawInfo(clip *ebiten.Image, rail int, infoTop, rh float64) {
+	if clip == nil || rail < 1 {
+		return
+	}
+	fillRect(clip, 0, int(infoTop), rail, 1, railSel)
+	terrain, size := e.infoLines()
+	drawFace(clip, e.font, e.scale, "Terrain", 8, infoTop+4, railInk)
+	drawFace(clip, e.font, e.scale, terrain, 8, infoTop+4+rh, railInkSel)
+	drawFace(clip, e.font, e.scale, size, 8, infoTop+4+rh*2, railInkSel)
 }
 
 func (e *Editor) drawMap(screen *ebiten.Image) {

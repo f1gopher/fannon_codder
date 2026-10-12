@@ -19,6 +19,19 @@ func TestClampScroll(t *testing.T) {
 	}
 }
 
+func TestInfoTop(t *testing.T) {
+	// Three list rows at scale 1. The block is pinned to the bottom.
+	if top := InfoTop(200, 1); top != 200-InfoHeight(1) {
+		t.Fatalf("info top = %v", top)
+	}
+	if InfoHeight(1) != RowHeight(1)*InfoLines {
+		t.Fatalf("info height = %v", InfoHeight(1))
+	}
+	if InfoTop(10, 1) != 0 {
+		t.Fatal("short rail should pin the block at 0")
+	}
+}
+
 func TestRailHit(t *testing.T) {
 	row, ok := RailHit(10, 25, 220, 20, 11)
 	if !ok || row != 1 {

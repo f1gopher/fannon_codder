@@ -23,6 +23,24 @@ func RowHeight(scale float64) float64 {
 	return 14*scale/3 + 8
 }
 
+// InfoLines is the selected-map block under the phase list: a heading,
+// the terrain, and the width and height in tiles.
+const InfoLines = 3
+
+// InfoHeight is that block in offscreen pixels.
+func InfoHeight(scale float64) float64 {
+	return RowHeight(scale) * InfoLines
+}
+
+// InfoTop is the top of the block. It sits on the bottom of the rail.
+func InfoTop(offH int, scale float64) float64 {
+	top := float64(offH) - InfoHeight(scale)
+	if top < 0 {
+		return 0
+	}
+	return top
+}
+
 // RailHit reports the phase row under an offscreen point. A point in the
 // viewport, or past the last row, is not a row.
 func RailHit(x, y float64, rail int, rowH float64, n int) (int, bool) {

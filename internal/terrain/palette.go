@@ -85,7 +85,7 @@ func snowPalette() Palette {
 	p.TreeLo = color.RGBA{R: 22, G: 58, B: 48, A: 255}
 	p.TreeHi = color.RGBA{R: 78, G: 122, B: 112, A: 255}
 	p.Stone = color.RGBA{R: 70, G: 78, B: 86, A: 255}
-	p.Plank = color.RGBA{R: 132, G: 136, B: 140, A: 255}
-	p.PlankGap = color.RGBA{R: 78, G: 84, B: 90, A: 255}
+	p.Plank = color.RGBA{R: 142, G: 112, B: 74, A: 255}
+	p.PlankGap = color.RGBA{R: 86, G: 64, B: 42, A: 255}
 	return p
 }

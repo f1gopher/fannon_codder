@@ -100,4 +100,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Jungle and forest shores are a thin sand strip, then shallow water that fades into the deep. The grass side and that fade wander, and the corners are rounded. A shore and a nearby island blend those shallow bands into one pool. Desert and snow keep the wide shore lip.
 - The map editor views campaign phases with the shared ground painter. It does not save.
 - V in the map editor switches that view to a labelled tile-type grid and back. It opens on the painted terrain.
+- Bridges are a timber deck with rails and a shadow on the water, painted with the ground. Snow dusts the boards.
 

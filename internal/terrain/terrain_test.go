@@ -638,6 +638,84 @@ func TestPhasePaintFitsALoad(t *testing.T) {
 	}
 }
 
+func riverBridge(vertical bool) sim.Map {
+	const w, h = 10, 8
+	tiles := make([]sim.Tile, w*h)
+	if vertical {
+		for y := 2; y <= 5; y++ {
+			for x := 0; x < w; x++ {
+				tiles[y*w+x] = sim.TileWaterDeep
+			}
+			tiles[y*w+4] = sim.TileBridge
+			tiles[y*w+5] = sim.TileBridge
+		}
+		return mapOf(w, h, tiles)
+	}
+	for x := 2; x <= 7; x++ {
+		for y := 0; y < h; y++ {
+			tiles[y*w+x] = sim.TileWaterDeep
+		}
+		tiles[3*w+x] = sim.TileBridge
+		tiles[4*w+x] = sim.TileBridge
+	}
+	return mapOf(w, h, tiles)
+}
+
+func worldPx(wx, wy float64) (int, int) {
+	return int(wx * terrainPx), int(wy * terrainPx)
+}
+
+func lum(c color.RGBA) int {
+	return int(c.R) + int(c.G) + int(c.B)
+}
+
+func TestBridgeDeckIsTimber(t *testing.T) {
+	paint := paintMap(riverBridge(true), "jungle")
+	// Middle of the span, clear of the rail and of a board seam.
+	cx, cy := worldPx(4*sim.TileSize+8, 3*sim.TileSize+2.2)
+	deck := paint.ground.RGBAAt(cx, cy)
+	if deck.R < deck.B+18 || deck.R < deck.G+8 {
+		t.Fatalf("deck %+v, want warm timber", deck)
+	}
+	if paint.anim.RGBAAt(cx, cy).A != 0 {
+		t.Fatal("deck still shimmers")
+	}
+	// The two bridge columns share one deck, so the join is timber too.
+	jx, jy := worldPx(5*sim.TileSize+0.4, 3*sim.TileSize+2.2)
+	join := paint.ground.RGBAAt(jx, jy)
+	if join.R < join.B+12 {
+		t.Fatalf("span join %+v, want timber", join)
+	}
+	// Outer rail is darker than the boards.
+	rx, ry := worldPx(4*sim.TileSize+0.7, 3*sim.TileSize+2.2)
+	rail := paint.ground.RGBAAt(rx, ry)
+	if lum(rail)+20 > lum(deck) {
+		t.Fatalf("rail %+v is not darker than deck %+v", rail, deck)
+	}
+	// Water beside the span keeps its shimmer. The south-east side is in shadow.
+	ox, oy := worldPx(7*sim.TileSize+4, 3*sim.TileSize+8)
+	if paint.mask.RGBAAt(ox, oy).R != maskWater || paint.anim.RGBAAt(ox, oy).A == 0 {
+		t.Fatal("open water beside the bridge lost its shimmer")
+	}
+	sx, sy := worldPx(6*sim.TileSize+3.4, 3*sim.TileSize+11)
+	fx, fy := worldPx(6*sim.TileSize+12, 3*sim.TileSize+4)
+	if lum(paint.ground.RGBAAt(sx, sy))+12 > lum(paint.ground.RGBAAt(fx, fy)) {
+		t.Fatalf("shadow %+v is not darker than open water %+v", paint.ground.RGBAAt(sx, sy), paint.ground.RGBAAt(fx, fy))
+	}
+
+	side := paintMap(riverBridge(false), "jungle")
+	topX, topY := worldPx(4*sim.TileSize+8, 3*sim.TileSize+0.7)
+	midX, midY := worldPx(4*sim.TileSize+8, 3*sim.TileSize+8)
+	if lum(side.ground.RGBAAt(topX, topY))+12 > lum(side.ground.RGBAAt(midX, midY)) {
+		t.Fatalf("side rail %+v, deck %+v", side.ground.RGBAAt(topX, topY), side.ground.RGBAAt(midX, midY))
+	}
+
+	snow := paintMap(riverBridge(true), "snow")
+	if lum(snow.ground.RGBAAt(cx, cy)) < lum(deck)+25 {
+		t.Fatalf("snow deck %+v, jungle %+v, want a dusting", snow.ground.RGBAAt(cx, cy), deck)
+	}
+}
+
 func TestWaterShaderCompiles(t *testing.T) {
 	if _, err := ebiten.NewShader(waterKage); err != nil {
 		t.Fatal(err)

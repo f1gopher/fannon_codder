@@ -194,8 +194,7 @@ func paintMap(m sim.Map, terrain string) terrainPaint {
 	stampTreeShade(ground, m, surf, lk)
 	stampMines(ground, m, lk.pal)
 	anim, mask := animLayers(ground, kind)
-	stampBridges(ground, m, surf, lk.pal)
-	clearBridgeAnim(anim, mask, m, surf)
+	stampBridges(ground, anim, mask, m, surf, lk)
 	trees := paintCanopies(m, surf, ids, lk, noise, ground)
 	return terrainPaint{ground: ground, anim: anim, mask: mask, surf: surf, ids: ids, trees: trees}
 }
@@ -660,8 +659,10 @@ func cellWater(surf []surface, w, h, x, y int) (water, inside bool) {
 	if x < 0 || y < 0 || x >= w || y >= h {
 		return false, false
 	}
+	// A bridge is water for the shoreline, so the bank runs straight under
+	// the deck instead of turning a corner at each end.
 	s := surf[y*w+x]
-	return s == surfShallow || s == surfDeep, true
+	return s == surfShallow || s == surfDeep || s == surfBridge, true
 }
 
 // filletWater rounds a corner where water sticks into the land.
@@ -1046,7 +1047,7 @@ func nearWater(surf []surface, w, h, tx, ty int, wx, wy float64) (float64, bool)
 				continue
 			}
 			s := surf[yy*w+xx]
-			if s != surfShallow && s != surfDeep {
+			if s != surfShallow && s != surfDeep && s != surfBridge {
 				continue
 			}
 			hit = true
@@ -1081,68 +1082,429 @@ func stampMines(dst *image.RGBA, m sim.Map, pal Palette) {
 	}
 }
 
-func stampBridges(dst *image.RGBA, m sim.Map, surf []surface, pal Palette) {
-	for ty := 0; ty < m.H; ty++ {
-		for tx := 0; tx < m.W; tx++ {
-			if surf[ty*m.W+tx] != surfBridge {
+// A bridge deck sits a little past the walkable cells: a lip over the water
+// on the long sides, and a short landing on the bank at each end.
+const (
+	bridgeLip   = 1.35
+	bridgeEnd   = 2.4
+	bridgeRail  = 1.75
+	bridgePlank = 4.6
+	bridgeShade = 6.4
+)
+
+// stampBridges paints one timber span per bridge cell. Boards run across the
+// direction of travel, the outer edges are rails, and a soft shadow falls on
+// the water. The shimmer is cleared only where the deck covers the picture.
+func stampBridges(dst, anim, mask *image.RGBA, m sim.Map, surf []surface, lk look) {
+	w, h := m.W, m.H
+	cover := make([]bool, w*h)
+	anyBridge := false
+	for ty := 0; ty < h; ty++ {
+		for tx := 0; tx < w; tx++ {
+			if surf[ty*w+tx] != surfBridge {
 				continue
 			}
-			vertical := bridgeVertical(surf, m.W, m.H, tx, ty)
-			x0 := float64(tx * sim.TileSize)
-			y0 := float64(ty * sim.TileSize)
-			if vertical {
-				for y := 0.0; y < sim.TileSize; y += 4 {
-					fillWorldRect(dst, x0, y0+y, sim.TileSize, 3, pal.Plank)
-					fillWorldRect(dst, x0, y0+y+3, sim.TileSize, 1, pal.PlankGap)
+			anyBridge = true
+			for oy := -1; oy <= 1; oy++ {
+				for ox := -1; ox <= 1; ox++ {
+					xx, yy := tx+ox, ty+oy
+					if xx < 0 || yy < 0 || xx >= w || yy >= h {
+						continue
+					}
+					cover[yy*w+xx] = true
 				}
-			} else {
-				for x := 0.0; x < sim.TileSize; x += 4 {
-					fillWorldRect(dst, x0+x, y0, 3, sim.TileSize, pal.Plank)
-					fillWorldRect(dst, x0+x+3, y0, 1, sim.TileSize, pal.PlankGap)
+			}
+		}
+	}
+	if !anyBridge {
+		return
+	}
+	axes := bridgeAxes(surf, w, h)
+	pw := dst.Bounds().Dx()
+	ph := dst.Bounds().Dy()
+	span := sim.TileSize * terrainPx
+	for ty := 0; ty < h; ty++ {
+		for tx := 0; tx < w; tx++ {
+			if !cover[ty*w+tx] {
+				continue
+			}
+			x0 := tx * span
+			y0 := ty * span
+			for y := 0; y < span; y++ {
+				py := y0 + y
+				if py < 0 || py >= ph {
+					continue
+				}
+				wy := (float64(py) + 0.5) / terrainPx
+				for x := 0; x < span; x++ {
+					px := x0 + x
+					if px < 0 || px >= pw {
+						continue
+					}
+					wx := (float64(px) + 0.5) / terrainPx
+					applyBridgePixel(dst, anim, mask, surf, axes, w, h, lk, px, py, wx, wy)
 				}
 			}
 		}
 	}
 }
 
-func clearBridgeAnim(anim, mask *image.RGBA, m sim.Map, surf []surface) {
-	pw := anim.Bounds().Dx()
-	for ty := 0; ty < m.H; ty++ {
-		for tx := 0; tx < m.W; tx++ {
-			if surf[ty*m.W+tx] != surfBridge {
-				continue
-			}
-			x0 := tx * sim.TileSize * terrainPx
-			y0 := ty * sim.TileSize * terrainPx
-			x1 := x0 + sim.TileSize*terrainPx
-			y1 := y0 + sim.TileSize*terrainPx
-			for py := y0; py < y1; py++ {
-				for px := x0; px < x1; px++ {
-					i := (py*pw + px) * 4
-					anim.Pix[i+3] = 0
-					mask.Pix[i] = 0
-					mask.Pix[i+3] = 0
-				}
+func applyBridgePixel(dst, anim, mask *image.RGBA, surf []surface, axes []bool, w, h int, lk look, px, py int, wx, wy float64) {
+	deck, rail, sill, post, along, across := bridgeDeck(surf, axes, w, h, wx, wy)
+	i := dst.PixOffset(px, py)
+	base := color.RGBA{R: dst.Pix[i], G: dst.Pix[i+1], B: dst.Pix[i+2], A: 255}
+	ai := anim.PixOffset(px, py)
+	if deck > 0.004 {
+		wood := bridgeWood(lk, along, across, rail, sill, post)
+		cover := smooth01(clamp01(deck))
+		// Still ground (the bank) has no shimmer to fade, so the timber is
+		// painted onto it. Water keeps its picture and lets the deck cover it.
+		if anim.Pix[ai+3] == 0 {
+			setRGBA(dst, px, py, mixRGBA(base, wood, cover))
+			return
+		}
+		setRGBA(dst, px, py, wood)
+		a := uint8((1 - cover) * 255)
+		if a < 12 {
+			a = 0
+		}
+		anim.Pix[ai+3] = a
+		if a == 0 {
+			mask.Pix[ai] = 0
+			mask.Pix[ai+1] = 0
+			mask.Pix[ai+2] = 0
+			mask.Pix[ai+3] = 0
+		}
+		return
+	}
+	sh := bridgeShadow(surf, axes, w, h, wx, wy)
+	if sh < 0.02 {
+		return
+	}
+	shade := color.RGBA{R: 16, G: 28, B: 26, A: 255}
+	setRGBA(dst, px, py, mixRGBA(base, shade, sh))
+	if anim.Pix[ai+3] == 0 {
+		return
+	}
+	ac := color.RGBA{R: anim.Pix[ai], G: anim.Pix[ai+1], B: anim.Pix[ai+2], A: anim.Pix[ai+3]}
+	ac = mixRGBA(ac, shade, sh)
+	anim.Pix[ai] = ac.R
+	anim.Pix[ai+1] = ac.G
+	anim.Pix[ai+2] = ac.B
+}
+
+func bridgeAxes(surf []surface, w, h int) []bool {
+	vert := make([]bool, w*h)
+	for ty := 0; ty < h; ty++ {
+		for tx := 0; tx < w; tx++ {
+			if surf[ty*w+tx] == surfBridge {
+				vert[ty*w+tx] = bridgeVertical(surf, w, h, tx, ty)
 			}
 		}
 	}
+	return vert
 }
 
+func bridgeDeck(surf []surface, axes []bool, w, h int, wx, wy float64) (deck, rail, sill, post, along, across float64) {
+	tx := int(math.Floor(wx / sim.TileSize))
+	ty := int(math.Floor(wy / sim.TileSize))
+	best := 0.0
+	for oy := -1; oy <= 1; oy++ {
+		for ox := -1; ox <= 1; ox++ {
+			cx, cy := tx+ox, ty+oy
+			if cx < 0 || cy < 0 || cx >= w || cy >= h || surf[cy*w+cx] != surfBridge {
+				continue
+			}
+			d, r, s, p, al, ac := deckFromCell(surf, axes, w, h, cx, cy, wx, wy)
+			if d > best {
+				best = d
+				deck, rail, sill, post, along, across = d, r, s, p, al, ac
+			}
+		}
+	}
+	return deck, rail, sill, post, along, across
+}
+
+func deckFromCell(surf []surface, axes []bool, w, h, cx, cy int, wx, wy float64) (deck, rail, sill, post, along, across float64) {
+	vertical := axes[cy*w+cx]
+	left := float64(cx * sim.TileSize)
+	top := float64(cy * sim.TileSize)
+	right := left + sim.TileSize
+	bot := top + sim.TileSize
+	westB := bridgeCell(surf, w, h, cx-1, cy)
+	eastB := bridgeCell(surf, w, h, cx+1, cy)
+	northB := bridgeCell(surf, w, h, cx, cy-1)
+	southB := bridgeCell(surf, w, h, cx, cy+1)
+
+	x0, x1 := left, right
+	y0, y1 := top, bot
+	if vertical {
+		if !westB {
+			x0 -= bridgeLip
+		}
+		if !eastB {
+			x1 += bridgeLip
+		}
+		if !northB {
+			y0 -= bridgeEnd
+		}
+		if !southB {
+			y1 += bridgeEnd
+		}
+	} else {
+		if !northB {
+			y0 -= bridgeLip
+		}
+		if !southB {
+			y1 += bridgeLip
+		}
+		if !westB {
+			x0 -= bridgeEnd
+		}
+		if !eastB {
+			x1 += bridgeEnd
+		}
+	}
+	if wx < x0 || wx > x1 || wy < y0 || wy > y1 {
+		return 0, 0, 0, 0, 0, 0
+	}
+
+	inward := float64(sim.TileSize)
+	endIn := float64(sim.TileSize)
+	if vertical {
+		if !westB {
+			inward = math.Min(inward, wx-left)
+		}
+		if !eastB {
+			inward = math.Min(inward, right-wx)
+		}
+		if !northB {
+			endIn = math.Min(endIn, wy-top)
+		}
+		if !southB {
+			endIn = math.Min(endIn, bot-wy)
+		}
+		along, across = wy, wx
+	} else {
+		if !northB {
+			inward = math.Min(inward, wy-top)
+		}
+		if !southB {
+			inward = math.Min(inward, bot-wy)
+		}
+		if !westB {
+			endIn = math.Min(endIn, wx-left)
+		}
+		if !eastB {
+			endIn = math.Min(endIn, right-wx)
+		}
+		along, across = wx, wy
+	}
+	deck = bridgeCover(inward, endIn)
+	if deck <= 0 {
+		return 0, 0, 0, 0, along, across
+	}
+	if inward < bridgeRail {
+		rail = smooth01(clamp01(1 - inward/bridgeRail))
+	}
+	if endIn < 1.9 {
+		sill = smooth01(clamp01(1 - endIn/1.9))
+	}
+	if inward < 1.2 && inward > -0.45 && endIn > 3 {
+		var mid float64
+		if vertical {
+			mid = top + sim.TileSize*0.5
+			post = bridgePost(inward, wy-mid)
+		} else {
+			mid = left + sim.TileSize*0.5
+			post = bridgePost(inward, wx-mid)
+		}
+	}
+	return deck, rail, sill, post, along, across
+}
+
+// bridgeCover is solid on the walkable cell. Only the lip past the cell fades.
+func bridgeCover(inward, endIn float64) float64 {
+	side := 1.0
+	end := 1.0
+	if inward < 0 {
+		side = clamp01(1 + inward/bridgeLip)
+	}
+	if endIn < 0 {
+		end = clamp01(1 + endIn/bridgeEnd)
+	}
+	if side < end {
+		return side
+	}
+	return end
+}
+
+func bridgePost(inward, alongDelta float64) float64 {
+	pd := math.Hypot((inward-0.3)/1.05, alongDelta/1.35)
+	if pd >= 1 {
+		return 0
+	}
+	return smooth01(1 - pd)
+}
+
+func bridgeCell(surf []surface, w, h, tx, ty int) bool {
+	if tx < 0 || ty < 0 || tx >= w || ty >= h {
+		return false
+	}
+	return surf[ty*w+tx] == surfBridge
+}
+
+func bridgeShadow(surf []surface, axes []bool, w, h int, wx, wy float64) float64 {
+	tx := int(math.Floor(wx / sim.TileSize))
+	ty := int(math.Floor(wy / sim.TileSize))
+	best := 0.0
+	for oy := -1; oy <= 1; oy++ {
+		for ox := -1; ox <= 1; ox++ {
+			cx, cy := tx+ox, ty+oy
+			if cx < 0 || cy < 0 || cx >= w || cy >= h || surf[cy*w+cx] != surfBridge {
+				continue
+			}
+			x0, y0, x1, y1 := bridgeRect(surf, axes, w, h, cx, cy)
+			d, dx, dy := distOutside(wx, wy, x0, y0, x1, y1)
+			if d < 0 || d > bridgeShade {
+				continue
+			}
+			fall := smooth01(1 - d/bridgeShade)
+			light := dx*0.35 + dy*0.95
+			side := 0.14
+			if light > 0 {
+				side = 0.32 + 0.4*clamp01(light/3)
+			}
+			if sh := fall * side; sh > best {
+				best = sh
+			}
+		}
+	}
+	return best
+}
+
+func bridgeRect(surf []surface, axes []bool, w, h, cx, cy int) (x0, y0, x1, y1 float64) {
+	vertical := axes[cy*w+cx]
+	left := float64(cx * sim.TileSize)
+	top := float64(cy * sim.TileSize)
+	right := left + sim.TileSize
+	bot := top + sim.TileSize
+	x0, x1, y0, y1 = left, right, top, bot
+	if vertical {
+		if !bridgeCell(surf, w, h, cx-1, cy) {
+			x0 -= bridgeLip
+		}
+		if !bridgeCell(surf, w, h, cx+1, cy) {
+			x1 += bridgeLip
+		}
+		if !bridgeCell(surf, w, h, cx, cy-1) {
+			y0 -= bridgeEnd
+		}
+		if !bridgeCell(surf, w, h, cx, cy+1) {
+			y1 += bridgeEnd
+		}
+		return x0, y0, x1, y1
+	}
+	if !bridgeCell(surf, w, h, cx, cy-1) {
+		y0 -= bridgeLip
+	}
+	if !bridgeCell(surf, w, h, cx, cy+1) {
+		y1 += bridgeLip
+	}
+	if !bridgeCell(surf, w, h, cx-1, cy) {
+		x0 -= bridgeEnd
+	}
+	if !bridgeCell(surf, w, h, cx+1, cy) {
+		x1 += bridgeEnd
+	}
+	return x0, y0, x1, y1
+}
+
+// distOutside is the distance past a rect and the direction away from it.
+// Inside the rect the distance is negative.
+func distOutside(px, py, x0, y0, x1, y1 float64) (d, dx, dy float64) {
+	cx := math.Min(math.Max(px, x0), x1)
+	cy := math.Min(math.Max(py, y0), y1)
+	dx, dy = px-cx, py-cy
+	if px >= x0 && px <= x1 && py >= y0 && py <= y1 {
+		return -1, 0, 0
+	}
+	return math.Hypot(dx, dy), dx, dy
+}
+
+func bridgeWood(lk look, along, across, rail, sill, post float64) color.RGBA {
+	seamAlong := along + (valueNoise(across, along, 7, 11)-0.5)*1.15
+	span := bridgePlank
+	plank := int(math.Floor(seamAlong / span))
+	u := seamAlong/span - float64(plank)
+	grain := valueNoise(across*0.85, float64(plank)*span, 5.5, 19)
+	streak := valueNoise(across*0.25+float64(plank)*3, along*1.4, 2.2, 29)
+	tone := hash01(plank, 7, 13)
+	t := clamp01(0.34 + 0.4*grain + 0.16*(streak-0.5) + 0.22*(tone-0.5))
+	gap := lk.pal.PlankGap
+	face := lk.pal.Plank
+	hi := color.RGBA{
+		R: clampByte(int(face.R) + 38),
+		G: clampByte(int(face.G) + 28),
+		B: clampByte(int(face.B) + 14),
+		A: 255,
+	}
+	c := mixRGBA(gap, face, t)
+	crown := smooth01(clamp01((u-0.08)/0.22)) * (1 - smooth01(clamp01((u-0.62)/0.28)))
+	c = mixRGBA(c, hi, crown*0.62)
+	seamU := math.Min(u/0.13, (1-u)/0.07)
+	seam := 1 - smooth01(clamp01(seamU))
+	dark := color.RGBA{R: gap.R * 2 / 3, G: gap.G * 2 / 3, B: gap.B * 2 / 3, A: 255}
+	c = mixRGBA(c, dark, seam*0.9)
+	if lk.snowCaps {
+		dust := crown * (0.58 + 0.22*grain) * (1 - seam*0.8) * (1 - rail*0.65)
+		c = mixRGBA(c, color.RGBA{R: 234, G: 240, B: 244, A: 255}, dust)
+	}
+	if sill > 0 {
+		c = mixRGBA(c, gap, sill*0.7)
+	}
+	if rail > 0 {
+		curb := mixRGBA(gap, color.RGBA{R: 46, G: 30, B: 16, A: 255}, 0.5)
+		if lk.snowCaps {
+			curb = mixRGBA(curb, color.RGBA{R: 206, G: 214, B: 220, A: 255}, 0.4)
+		}
+		c = mixRGBA(c, curb, smooth01(rail))
+		if rail > 0.22 && rail < 0.72 {
+			catch := 1 - math.Abs(rail-0.45)/0.28
+			c = mixRGBA(c, hi, 0.32*clamp01(catch))
+		}
+	}
+	if post > 0 {
+		bolt := color.RGBA{R: 40, G: 28, B: 16, A: 255}
+		if lk.snowCaps {
+			bolt = mixRGBA(bolt, color.RGBA{R: 238, G: 244, B: 248, A: 255}, 0.62)
+		}
+		c = mixRGBA(c, bolt, smooth01(post))
+	}
+	return c
+}
+
+// bridgeVertical is true when the span runs north-south, so the boards run
+// east-west. A tie follows the longer run. A lone cell stands north-south.
 func bridgeVertical(surf []surface, w, h, tx, ty int) bool {
-	v, hz := 0, 0
-	if s, ok := neighbor(surf, w, h, tx, ty, 0, -1); ok && s == surfBridge {
-		v++
-	}
-	if s, ok := neighbor(surf, w, h, tx, ty, 0, 1); ok && s == surfBridge {
-		v++
-	}
-	if s, ok := neighbor(surf, w, h, tx, ty, -1, 0); ok && s == surfBridge {
-		hz++
-	}
-	if s, ok := neighbor(surf, w, h, tx, ty, 1, 0); ok && s == surfBridge {
-		hz++
+	v := bridgeReach(surf, w, h, tx, ty, 0, -1) + bridgeReach(surf, w, h, tx, ty, 0, 1)
+	hz := bridgeReach(surf, w, h, tx, ty, -1, 0) + bridgeReach(surf, w, h, tx, ty, 1, 0)
+	if v == 0 && hz == 0 {
+		return true
 	}
 	return v >= hz
+}
+
+func bridgeReach(surf []surface, w, h, tx, ty, ox, oy int) int {
+	n := 0
+	for n < 64 {
+		s, ok := neighbor(surf, w, h, tx, ty, ox*(n+1), oy*(n+1))
+		if !ok || s != surfBridge {
+			return n
+		}
+		n++
+	}
+	return n
 }
 
 func fillWorldRect(dst *image.RGBA, x, y, w, h float64, c color.RGBA) {

@@ -34,7 +34,9 @@
     {"x": 16, "y": 10, "kind": "grunt"}
   ],
   "buildings": [],
-  "pickups": [],
+  "pickups": [
+    {"x": 8, "y": 13, "kind": "grenades"}
+  ],
   "vehicles": [],
   "objectives": ["kill_all_enemy"]
 }

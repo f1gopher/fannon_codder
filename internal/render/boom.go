@@ -99,6 +99,7 @@ func noteGrenadeBooms(w *sim.World) {
 		if e.Scale > 1 || e.Life > 0 {
 			continue
 		}
+		noteScorch(w.Map, e.X, e.Y)
 		if boomAlready(e.X, e.Y, e.Age) {
 			continue
 		}

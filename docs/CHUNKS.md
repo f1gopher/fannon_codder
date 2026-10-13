@@ -103,4 +103,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Bridges are a timber deck with rails and a shadow on the water, painted with the ground. Snow dusts the boards.
 - The MG round that kills an enemy or a player throws him about one tile along the shot. He lands, then lies dead. A civilian stays put. Later shots still leave a dead player where he fell.
 - A grenade, rocket, or other blast throws a soldier about six tiles when he is on the centre, and less the farther he stands from it. A civilian stays put.
+- A grenade, rocket, mine, or crate blast leaves a soft stain on soil, sand, or snow. It darkens the paint already there. Water and a shed fireball do not. The mark stays until the next battle.
 

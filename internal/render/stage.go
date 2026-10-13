@@ -442,6 +442,7 @@ var (
 func ResetAnim() {
 	animTime = 0
 	deathAge = map[int]float64{}
+	clearScorches()
 }
 
 // Advance moves the animation clock and the death timers. The frame a unit
@@ -485,6 +486,7 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 		controlledSquad = s.ID
 	}
 	drawTerrain(dst, w.Map, w.Camera, terrain)
+	drawScorches(dst, w.Camera)
 	bodies := collectBodies(w, terrain)
 	sort.SliceStable(bodies, func(i, j int) bool { return bodies[i].y < bodies[j].y })
 	for i := range bodies {

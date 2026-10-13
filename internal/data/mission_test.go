@@ -45,8 +45,8 @@ func TestLoadMission1(t *testing.T) {
 	if nP != 2 || nE != 3 {
 		t.Fatalf("units player=%d enemy=%d, want 2 and 3", nP, nE)
 	}
-	if len(w.Pickups) != 0 {
-		t.Fatalf("pickups=%d, want none", len(w.Pickups))
+	if len(w.Pickups) != 1 || w.Pickups[0].Kind != sim.PickupGrenades || w.Pickups[0].Amount != sim.CrateAmount {
+		t.Fatalf("pickups=%+v, want one grenade crate", w.Pickups)
 	}
 }
 

@@ -1,6 +1,9 @@
 package sim
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestMGDoesNotHurtLivingFriendly(t *testing.T) {
 	w := gunWorld(
@@ -82,6 +85,14 @@ func TestPlayerMGKillsInsteadOfWounding(t *testing.T) {
 	if !body.Dead() {
 		t.Fatalf("HP=%v, want dead", body.HP)
 	}
+	for i := 0; i < 90 && (body.Hop != 0 || body.VX != 0 || body.VY != 0 || body.VZ != 0); i++ {
+		w.Step(1.0 / 60)
+		body = w.Unit(vid)
+	}
+	dx := body.X - 40
+	if dx < 10 || dx > 22 || body.Y != 0 || body.Hop != 0 {
+		t.Fatalf("killing shot left him at (%v,%v) hop=%v", body.X, body.Y, body.Hop)
+	}
 	x, y := body.X, body.Y
 	shot()
 	for i := 0; i < 20; i++ {
@@ -89,7 +100,7 @@ func TestPlayerMGKillsInsteadOfWounding(t *testing.T) {
 	}
 	body = w.Unit(vid)
 	if body.X != x || body.Y != y || body.Hop != 0 || body.VX != 0 || body.VY != 0 || body.VZ != 0 {
-		t.Fatalf("dead player moved: x=%v y=%v hop=%v v=(%v,%v,%v)", body.X, body.Y, body.Hop, body.VX, body.VY, body.VZ)
+		t.Fatalf("later round moved a dead player: x=%v y=%v hop=%v v=(%v,%v,%v)", body.X, body.Y, body.Hop, body.VX, body.VY, body.VZ)
 	}
 }
 
@@ -137,6 +148,43 @@ func TestBlastFinishesWounded(t *testing.T) {
 	w.explode(10, 10, 0)
 	if !w.Unit(u.ID).Dead() {
 		t.Fatal("a blast should finish a wounded man")
+	}
+}
+
+func TestEnemyFliesBackWhenShot(t *testing.T) {
+	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 40, Y: 0})
+	id := enemyOf(w).ID
+	w.Projectiles = append(w.Projectiles, Projectile{
+		X: 20, Y: 0, VX: MGSpeed, VY: 0, Left: 80,
+		Alive: true, OwnerSide: SidePlayer,
+	})
+	for i := 0; i < 6; i++ {
+		w.Step(1.0 / 60)
+	}
+	body := w.Unit(id)
+	if !body.Dead() {
+		t.Fatal("setup should leave a corpse")
+	}
+	var hopped bool
+	for i := 0; i < 90; i++ {
+		if body.Hop > 1 {
+			hopped = true
+		}
+		if body.VX == 0 && body.VY == 0 && body.VZ == 0 && body.Hop == 0 && hopped {
+			break
+		}
+		w.Step(1.0 / 60)
+		body = w.Unit(id)
+	}
+	if !hopped {
+		t.Fatal("the killing shot should lift him off the ground")
+	}
+	dx := body.X - 40
+	if dx < 10 || dx > 22 || math.Abs(body.Y) > 1 {
+		t.Fatalf("flew to (%v,%v), want about one tile along the shot", body.X, body.Y)
+	}
+	if body.Hop != 0 || body.VX != 0 || body.VY != 0 || body.VZ != 0 {
+		t.Fatalf("still moving hop=%v v=(%v,%v,%v)", body.Hop, body.VX, body.VY, body.VZ)
 	}
 }
 
@@ -195,8 +243,8 @@ func TestCorpseStaysOnMap(t *testing.T) {
 	if !u.Dead() {
 		t.Fatal("dummy should be a corpse")
 	}
-	if u.X != 40 || u.Y != 0 {
-		t.Fatalf("corpse moved to (%v,%v)", u.X, u.Y)
+	if u.X < 40 || u.X > 40+22 || u.Y != 0 {
+		t.Fatalf("corpse left the map at (%v,%v)", u.X, u.Y)
 	}
 }
 

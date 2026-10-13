@@ -101,4 +101,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - The map editor views campaign phases with the shared ground painter. It does not save.
 - V in the map editor switches that view to a labelled tile-type grid and back. It opens on the painted terrain.
 - Bridges are a timber deck with rails and a shadow on the water, painted with the ground. Snow dusts the boards.
+- The MG round that kills an enemy or a player throws him about one tile along the shot. He lands, then lies dead. A civilian stays put. Later shots still leave a dead player where he fell.
 

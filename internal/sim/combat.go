@@ -16,6 +16,10 @@ const (
 
 	juggleKick    = 36.0 // px/s along the shot; extra rounds do not stack past this
 	juggleHop     = 64.0 // px/s upward
+	// The killing MG round throws an enemy about one tile along the shot.
+	// killSlide * (2*killHop/juggleGravity) is the airborne travel; the bounce adds a little more.
+	killSlide = 32.0
+	killHop   = 70.0
 	juggleGravity = 420.0
 	juggleBounce  = 0.28
 	juggleDrag    = 200.0 // px/s^2 once the body is on the ground
@@ -356,6 +360,9 @@ func (w *World) mgStrike(p *Projectile, u *Unit) {
 	if u.Side == SidePlayer || u.Wounded() || u.Sinking || !w.rollWound() {
 		w.kill(u)
 		w.creditKill(p.OwnerID, u)
+		if u.Side != SideCivilian {
+			w.knockDead(u, p)
+		}
 		return
 	}
 	w.wound(u)
@@ -385,6 +392,18 @@ func (w *World) wound(u *Unit) {
 	u.RocketWind = 0
 	u.WindHeld = false
 	w.dropFromFile(u.ID)
+}
+
+// knockDead throws a soldier just killed by MG a short way along the shot.
+// He hops, lands, and lies on the ground. A civilian stays where he fell.
+func (w *World) knockDead(u *Unit, p *Projectile) {
+	sp := hypot(p.VX, p.VY)
+	if sp < 1 {
+		return
+	}
+	u.VX = p.VX / sp * killSlide
+	u.VY = p.VY / sp * killSlide
+	u.VZ = killHop
 }
 
 // juggle is the corpse easter egg: an MG round kicks the body along the shot

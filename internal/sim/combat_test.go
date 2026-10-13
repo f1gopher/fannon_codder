@@ -261,6 +261,15 @@ func TestCorpseStopsReacting(t *testing.T) {
 	if body.Hop != 0 || body.VX != 0 || body.VY != 0 || body.VZ != 0 || body.X != x || body.Y != y {
 		t.Fatalf("settled corpse still moved: x=%v y=%v hop=%v v=(%v,%v,%v)", body.X, body.Y, body.Hop, body.VX, body.VY, body.VZ)
 	}
+	behindID := w.SpawnUnit(SideEnemy, Vec2{X: 70, Y: 0}).ID
+	fireAt(w, 200, 0, 30)
+	if !w.Unit(behindID).Dead() {
+		t.Fatal("a settled corpse should let the round through to the man behind")
+	}
+	body = w.Unit(id)
+	if body.X != x || body.Y != y || body.Hop != 0 {
+		t.Fatalf("pass-through still shoved the corpse to (%v,%v) hop=%v", body.X, body.Y, body.Hop)
+	}
 }
 
 func TestCorpseStaysOnMap(t *testing.T) {

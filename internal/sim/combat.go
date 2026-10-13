@@ -338,7 +338,7 @@ func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 		if u.ID == p.OwnerID || u.VehicleID != 0 {
 			continue
 		}
-		if !w.mgCanHurt(p, u) {
+		if !w.mgCanHurt(p, u) || !roundStopsOn(u) {
 			continue
 		}
 		if !segmentHitsCircle(x0, y0, x1, y1, u.X, u.Y, MGHitR) {
@@ -520,6 +520,19 @@ func (w *World) mgCanHurt(p *Projectile, u *Unit) bool {
 		return false
 	}
 	return true
+}
+
+// A corpse stops a round only while a hit would still juggle it. A dead
+// player never juggles, and an enemy or civilian past juggleLife does not
+// either, so the round keeps going.
+func roundStopsOn(u *Unit) bool {
+	if !u.Dead() {
+		return true
+	}
+	if u.Side == SidePlayer {
+		return false
+	}
+	return u.DeadFor <= juggleLife
 }
 
 // creditKill gives the owner one point when the victim is an enemy.

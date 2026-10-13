@@ -145,13 +145,18 @@ func drawScorches(dst *ebiten.Image, cam sim.Camera) {
 		if s.img == nil {
 			continue
 		}
+		// Linear filtering reads one texel past the frame. That sample is
+		// clear black, and the multiply blend turns it into a dark box
+		// around the stain. The bled copy keeps the white rim in range.
+		img := bled(s.img)
 		op := &ebiten.DrawImageOptions{}
 		op.Blend = scorchBlend
 		op.Filter = ebiten.FilterLinear
 		op.DisableMipmaps = true
 		drawn := scorchSpan * ps
-		op.GeoM.Scale(drawn/scorchTex, drawn/scorchTex)
+		fw := float64(img.Bounds().Dx())
+		op.GeoM.Scale(drawn/fw, drawn/fw)
 		op.GeoM.Translate(cam.ScreenX(s.x)*ps-drawn/2, cam.ScreenY(s.y)*ps-drawn/2)
-		dst.DrawImage(s.img, op)
+		dst.DrawImage(img, op)
 	}
 }

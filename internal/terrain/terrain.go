@@ -3,6 +3,7 @@ package terrain
 import (
 	_ "embed"
 	"image"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -125,7 +126,66 @@ func (v *View) Canopies() []Canopy {
 
 // Draw paints this canopy sprite. origin and scale match DrawGround.
 func (c Canopy) Draw(dst *ebiten.Image, originX, originY, scale float64) {
-	drawScaled(dst, c.img, originX+c.WorldX, originY+c.NorthY, scale)
+	// Each cell is its own image. A linear sample past that frame is clear
+	// black, which reads as a line where two crowns meet. The bled frame
+	// keeps the leaf colour in range, and one extra device pixel closes
+	// the crack the vertex snap can open between the slices.
+	img := bledTerrain(c.img)
+	if scale <= 0 {
+		scale = 1
+	}
+	sc := scale / float64(terrainPx)
+	fw := float64(img.Bounds().Dx())
+	fh := float64(img.Bounds().Dy())
+	sx, sy := sc, sc
+	if fw > 0 {
+		sx = (fw*sc + 1) / fw
+	}
+	if fh > 0 {
+		sy = (fh*sc + 1) / fh
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterLinear
+	op.DisableMipmaps = true
+	op.GeoM.Scale(sx, sy)
+	op.GeoM.Translate((originX+c.WorldX)*scale, (originY+c.NorthY)*scale)
+	dst.DrawImage(img, op)
+}
+
+// bledTerrain is the frame plus a one-pixel copy of each edge. Draw the
+// returned subimage so a linear sample stays on the crown.
+var bledTerrainCache sync.Map
+
+func bledTerrain(img *ebiten.Image) *ebiten.Image {
+	if img == nil {
+		return nil
+	}
+	if v, ok := bledTerrainCache.Load(img); ok {
+		return v.(*ebiten.Image)
+	}
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return img
+	}
+	pad := ebiten.NewImage(w+2, h+2)
+	put := func(src *ebiten.Image, x, y float64) {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(x, y)
+		pad.DrawImage(src, op)
+	}
+	put(img, 1, 1)
+	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Min.X+1, b.Max.Y)).(*ebiten.Image), 0, 1)
+	put(img.SubImage(image.Rect(b.Max.X-1, b.Min.Y, b.Max.X, b.Max.Y)).(*ebiten.Image), float64(w+1), 1)
+	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Max.X, b.Min.Y+1)).(*ebiten.Image), 1, 0)
+	put(img.SubImage(image.Rect(b.Min.X, b.Max.Y-1, b.Max.X, b.Max.Y)).(*ebiten.Image), 1, float64(h+1))
+	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Min.X+1, b.Min.Y+1)).(*ebiten.Image), 0, 0)
+	put(img.SubImage(image.Rect(b.Max.X-1, b.Min.Y, b.Max.X, b.Min.Y+1)).(*ebiten.Image), float64(w+1), 0)
+	put(img.SubImage(image.Rect(b.Min.X, b.Max.Y-1, b.Min.X+1, b.Max.Y)).(*ebiten.Image), 0, float64(h+1))
+	put(img.SubImage(image.Rect(b.Max.X-1, b.Max.Y-1, b.Max.X, b.Max.Y)).(*ebiten.Image), float64(w+1), float64(h+1))
+	inner := pad.SubImage(image.Rect(1, 1, w+1, h+1)).(*ebiten.Image)
+	bledTerrainCache.Store(img, inner)
+	return inner
 }
 
 func drawScaled(dst, img *ebiten.Image, x, y, scale float64) {

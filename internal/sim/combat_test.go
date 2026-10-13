@@ -188,6 +188,42 @@ func TestEnemyFliesBackWhenShot(t *testing.T) {
 	}
 }
 
+func TestBlastThrowsMuchFarther(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	const bx, by = 160.0, 128.0
+	on := w.SpawnUnit(SideEnemy, Vec2{X: bx, Y: by}).ID
+	w.Unit(on).Facing = 0 // thrown west, back from the way he faced
+	mid := w.SpawnUnit(SidePlayer, Vec2{X: bx + GrenadeRadius/2, Y: by}).ID
+	edge := w.SpawnUnit(SideEnemy, Vec2{X: bx + GrenadeRadius*0.75, Y: by}).ID
+	civil := w.SpawnUnit(SideCivilian, Vec2{X: bx + 8, Y: by}).ID
+	w.explode(bx, by, 0)
+	for i := 0; i < 180; i++ {
+		w.Step(1.0 / 60)
+	}
+	flew := func(id int, x0, y0 float64) float64 {
+		u := w.Unit(id)
+		if u.Hop != 0 || u.VX != 0 || u.VY != 0 || u.VZ != 0 {
+			t.Fatalf("id %d still moving at (%v,%v)", id, u.X, u.Y)
+		}
+		return hypot(u.X-x0, u.Y-y0)
+	}
+	full := flew(on, bx, by)
+	if full < 80 || full > 130 || w.Unit(on).X >= bx {
+		t.Fatalf("on the blast he landed at (%v,%v), travel %v", w.Unit(on).X, w.Unit(on).Y, full)
+	}
+	half := flew(mid, bx+GrenadeRadius/2, by)
+	rim := flew(edge, bx+GrenadeRadius*0.75, by)
+	if half >= full || rim >= half || rim < 1 {
+		t.Fatalf("travel on=%v half=%v rim=%v", full, half, rim)
+	}
+	c := w.Unit(civil)
+	if !c.Dead() || c.X != bx+8 || c.Y != by {
+		t.Fatalf("civilian moved to (%v,%v)", c.X, c.Y)
+	}
+}
+
 func TestCorpseJuggle(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 0, Y: 0}}, Vec2{X: 40, Y: 0})
 	id := enemyOf(w).ID

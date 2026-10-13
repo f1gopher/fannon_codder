@@ -14,12 +14,16 @@ const (
 	// A burst still finishes him. Tests leave WoundChance at 0.
 	WoundOdds = 0.34
 
-	juggleKick    = 36.0 // px/s along the shot; extra rounds do not stack past this
-	juggleHop     = 64.0 // px/s upward
+	juggleKick = 36.0 // px/s along the shot; extra rounds do not stack past this
+	juggleHop  = 64.0 // px/s upward
 	// The killing MG round throws an enemy about one tile along the shot.
 	// killSlide * (2*killHop/juggleGravity) is the airborne travel; the bounce adds a little more.
 	killSlide = 32.0
 	killHop   = 70.0
+	// A blast throws a soldier several tiles from the centre.
+	// The launch scales down to nothing at the edge of GrenadeRadius.
+	blastSlide    = 120.0
+	blastHop      = 110.0
 	juggleGravity = 420.0
 	juggleBounce  = 0.28
 	juggleDrag    = 200.0 // px/s^2 once the body is on the ground
@@ -404,6 +408,32 @@ func (w *World) knockDead(u *Unit, p *Projectile) {
 	u.VX = p.VX / sp * killSlide
 	u.VY = p.VY / sp * killSlide
 	u.VZ = killHop
+}
+
+// blastThrow throws a soldier killed by a grenade, rocket, or other blast
+// much farther than a rifle round, away from the blast. A civilian stays put.
+// Standing on the centre, he goes backward from the way he faced.
+func (w *World) blastThrow(u *Unit, x, y float64) {
+	if u == nil || u.Side == SideCivilian {
+		return
+	}
+	dx, dy := u.X-x, u.Y-y
+	sp := hypot(dx, dy)
+	reach := 1 - sp/GrenadeRadius
+	if reach <= 0 {
+		return
+	}
+	if sp < 1 {
+		dx = -math.Cos(u.Facing)
+		dy = -math.Sin(u.Facing)
+		sp = hypot(dx, dy)
+		if sp < 1e-6 {
+			dx, dy, sp = 1, 0, 1
+		}
+	}
+	u.VX = dx / sp * blastSlide * reach
+	u.VY = dy / sp * blastSlide * reach
+	u.VZ = blastHop * reach
 }
 
 // juggle is the corpse easter egg: an MG round kicks the body along the shot

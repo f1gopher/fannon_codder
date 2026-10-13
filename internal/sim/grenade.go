@@ -246,6 +246,7 @@ func (w *World) explode(x, y float64, ownerID int) {
 		}
 		w.kill(u)
 		w.creditKill(ownerID, u)
+		w.blastThrow(u, x, y)
 	}
 	for i := range w.Vehicles {
 		v := &w.Vehicles[i]

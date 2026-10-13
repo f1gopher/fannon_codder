@@ -73,7 +73,7 @@ Player MG range, rate, and spread come from `GunStatsFor`. Private is 80 px, 8/s
 
 `NewEmpty` sets `WoundChance` to `WoundOdds` (0.34). A `World` literal in a test leaves it at 0, so those shots still kill. `rollWound` treats 0 as always kill and 1 as always wound.
 
-An MG hit on a standing enemy or civilian kills him, or wounds him. A player is never wounded: the round kills him. The round that kills an enemy or a player throws him about one tile along the shot (`killSlide` 32 px/s, `killHop` 70 px/s). He lands and lies on the ground. A civilian stays where he fell. A wounded man leaves the file, cannot shoot, and squirms on the corpse frame until another MG round, a blast, or a ram finishes him. The yell and the kill point happen on the finish. That finishing round throws an enemy the same short way.
+An MG hit on a standing enemy or civilian kills him, or wounds him. A player is never wounded: the round kills him. The round that kills an enemy or a player throws him about one tile along the shot (`killSlide` 32 px/s, `killHop` 70 px/s). A grenade, rocket, or other blast throws him away from the centre. On the centre that is about six tiles (`blastSlide` 120 px/s, `blastHop` 110 px/s). The throw shrinks in a straight line with distance and is nothing at the edge of the blast. He lands and lies on the ground. A civilian stays where he fell. A wounded man leaves the file, cannot shoot, and squirms on the corpse frame until another MG round, a blast, or a ram finishes him. The yell and the kill point happen on the finish. That finishing round throws an enemy the same short way.
 
 Player MG passes through a standing friendly and finishes a wounded friendly. Explosives and rams kill anyone who is not already dead, including the owner.
 

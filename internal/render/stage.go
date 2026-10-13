@@ -452,6 +452,7 @@ func Advance(dt float64, w *sim.World) {
 		dt = 0
 	}
 	animTime += dt
+	stepBooms(dt)
 	if w == nil {
 		return
 	}
@@ -477,6 +478,7 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
 		return
 	}
+	boomTerrain = terrain
 	victorySalute = w.Status == sim.Won
 	controlledSquad = sim.SquadSnake
 	if s := w.ActiveSquad(); s != nil {

@@ -125,6 +125,12 @@ func controls() []binding {
 		},
 		{
 			section: "Battle — firing",
+			input:   "G",
+			action:  "The leader throws a grenade at the pointer, even when the bazooka is selected. This is not a move order. It does nothing on the status strip or while the map overlay is open.",
+			tokens:  []string{"KeyG"},
+		},
+		{
+			section: "Battle — firing",
 			input:   "Space, or hold the right button and left-click",
 			action:  "Uses the selected special weapon at the pointer. The leader throws a grenade or fires a rocket. This is not a move order. It does nothing on the status strip or while the map overlay is open.",
 			tokens:  []string{"KeySpace", "MouseButtonRight", "MouseButtonLeft"},

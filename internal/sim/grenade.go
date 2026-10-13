@@ -106,13 +106,18 @@ func (w *World) ToggleSpecial() {
 	w.Special = SpecialRocket
 }
 
-// ThrowGrenade sends the active leader's grenade toward (x, y).
-// Right-held + left click, or Space. Deep water cannot throw. Leader only.
-// A selected bazooka does not spend grenades.
+// ThrowGrenade sends the active leader's grenade toward (x, y)
+// when grenades are the selected special. Deep water cannot throw. Leader only.
 func (w *World) ThrowGrenade(x, y float64) bool {
 	if w.Special != SpecialGrenade {
 		return false
 	}
+	return w.ThrowGrenadeNow(x, y)
+}
+
+// ThrowGrenadeNow spends one grenade toward (x, y) even when the bazooka is selected.
+// The G key uses this. Deep water cannot throw. Leader only.
+func (w *World) ThrowGrenadeNow(x, y float64) bool {
 	s := w.ActiveSquad()
 	if s == nil || s.Grenades <= 0 {
 		return false

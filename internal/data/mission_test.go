@@ -45,6 +45,9 @@ func TestLoadMission1(t *testing.T) {
 	if nP != 2 || nE != 3 {
 		t.Fatalf("units player=%d enemy=%d, want 2 and 3", nP, nE)
 	}
+	if len(w.Pickups) != 0 {
+		t.Fatalf("pickups=%d, want none", len(w.Pickups))
+	}
 }
 
 func TestMission1GruntsHoldAtSpawn(t *testing.T) {

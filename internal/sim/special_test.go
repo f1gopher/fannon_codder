@@ -40,3 +40,18 @@ func TestBazookaSelectionDoesNotThrowGrenade(t *testing.T) {
 		t.Fatal("grenade selected: the leader should throw")
 	}
 }
+
+func TestGThrowsAGrenadeWhileTheBazookaIsSelected(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 8, Y: 8}})
+	w.ActiveSquad().Grenades = 2
+	w.Special = SpecialRocket
+	if !w.ThrowGrenadeNow(40, 8) {
+		t.Fatal("G should throw a grenade with the bazooka selected")
+	}
+	if w.ActiveSquad().Grenades != 1 || len(w.Grenades) != 1 {
+		t.Fatalf("grenades=%d in flight=%d", w.ActiveSquad().Grenades, len(w.Grenades))
+	}
+}

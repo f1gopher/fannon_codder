@@ -90,6 +90,8 @@ func Blasts(dst *ebiten.Image, w *sim.World) {
 		return
 	}
 	cam := w.Camera
+	noteGrenadeBooms(w)
+	drawBoomLayer(dst, cam, true)
 	sh := activeSheets().Get("fx/blast")
 	sheetDur := 0.0
 	if sh != nil && sh.FPS > 0 {
@@ -142,6 +144,7 @@ func Blasts(dst *ebiten.Image, w *sim.World) {
 		fillRectF(dst, x, y, 1, s, blastFill)
 		fillRectF(dst, x+s, y, 1, s, blastFill)
 	}
+	drawBoomLayer(dst, cam, false)
 }
 
 // drawBlast paints one explosion frame. scale is 1 for a grenade.

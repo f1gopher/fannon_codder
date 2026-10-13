@@ -337,6 +337,10 @@ func (b *Battle) Update(h Host) error {
 	hover, veh := b.world.VehicleHover(wx, wy)
 	inVeh := b.world.LeaderInVehicle()
 	// Right-held + left click, or Space: leader's selected special. Not a move order.
+	// G always throws a grenade, even when the bazooka is selected.
+	if !onHUD && !b.mapOpen && inpututil.IsKeyJustPressed(ebiten.KeyG) {
+		b.world.ThrowGrenadeNow(wx, wy)
+	}
 	if !onHUD && !b.mapOpen && (p.ChordGrenade || inpututil.IsKeyJustPressed(ebiten.KeySpace)) {
 		b.world.UseSpecial(wx, wy)
 	}

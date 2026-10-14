@@ -65,6 +65,7 @@ func New(skipTitle bool) *Game {
 		g.scene = NewTitle()
 	}
 	g.scene.Enter()
+	g.startSceneMusic()
 	return g
 }
 
@@ -154,6 +155,23 @@ func (g *Game) PlayKind(kind sim.CueKind) {
 	g.sound.PlayKind(kind)
 }
 
+// startSceneMusic starts the Boot Hill or briefing loop. Any other scene
+// fades a march or a menu loop that is still playing. The title stays
+// silent apart from its click. The new loop is started after the fade is
+// armed, and PlayKind takes that loop back out of the fade.
+func (g *Game) startSceneMusic() {
+	if g.sound == nil {
+		return
+	}
+	g.sound.FadeMarches(audio.MarchFade)
+	switch g.scene.(type) {
+	case *BootHill:
+		g.sound.PlayKind(sim.CueHill)
+	case *Briefing:
+		g.sound.PlayKind(sim.CueBrief)
+	}
+}
+
 // hearPoint is the active leader, including the vehicle he is driving.
 // With no leader, volume is measured from the middle of the playfield.
 func hearPoint(w *sim.World) (x, y float64) {
@@ -180,11 +198,8 @@ func (g *Game) Update() error {
 
 	if g.next != nil {
 		// The hum belongs to the battle. A new scene starts it again if it
-		// still has a skidoo to hear. A result march fades instead of
-		// following the player onto the next screen.
-		if _, battle := g.scene.(*Battle); battle && g.sound != nil {
-			g.sound.FadeMarches(audio.MarchFade)
-		}
+		// still has a skidoo to hear. A march or a menu loop fades unless
+		// the screen being entered starts its own bed.
 		g.SetEngine(false, 0)
 		if g.scene != nil {
 			g.scene.Leave()
@@ -192,6 +207,7 @@ func (g *Game) Update() error {
 		g.scene = g.next
 		g.next = nil
 		g.scene.Enter()
+		g.startSceneMusic()
 		g.prepareLayout(g.dipW, g.dipH)
 	}
 	if b, ok := g.scene.(*Battle); ok {

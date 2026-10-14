@@ -17,11 +17,13 @@ const (
 	CuePickup
 	CueBoard
 	CueExit
-	// CueClick, CueWin, and CueFail are menu stings. Nothing in the world
-	// emits them. Scenes play them with PlayKind.
+	// CueClick, CueWin, CueFail, CueBrief, and CueHill are menu stings.
+	// Nothing in the world emits them. Scenes play them with PlayKind.
 	CueClick
 	CueWin
 	CueFail
+	CueBrief
+	CueHill
 )
 
 // maxCues bounds the queue when a frame is not drained. The newest shots

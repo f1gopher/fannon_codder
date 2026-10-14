@@ -58,13 +58,25 @@ func Win() []byte {
 }
 
 func renderBand(notes []bandNote, beat float64, n int, drums drumPlan) []byte {
-	left := make([]float64, n)
-	right := make([]float64, n)
+	return renderBandN(notes, beat, n, 0, drums)
+}
+
+// renderLoop folds a short tail back onto the start so a menu bed can repeat
+// without a click where the reverb would have been cut.
+func renderLoop(notes []bandNote, beat float64, n int, drums drumPlan) []byte {
+	tail := int(math.Round(0.08 * float64(SampleRate)))
+	return renderBandN(notes, beat, n, tail, drums)
+}
+
+func renderBandN(notes []bandNote, beat float64, n, tail int, drums drumPlan) []byte {
+	span := n + tail
+	left := make([]float64, span)
+	right := make([]float64, span)
 	ph := make([][2]float64, len(notes))
 	noise := lcg(drums.seed)
 	noiseR := lcg(drums.seedR)
 	var kickP, hatZ, hatZR float64
-	for i := 0; i < n; i++ {
+	for i := 0; i < span; i++ {
 		t := float64(i) / SampleRate
 		var l, r float64
 		for k, note := range notes {
@@ -80,6 +92,15 @@ func renderBand(notes []bandNote, beat float64, n int, drums drumPlan) []byte {
 		left[i], right[i] = l, r
 	}
 	room(left, right)
+	if tail > 0 {
+		for i := 0; i < tail; i++ {
+			w := 1 - float64(i)/float64(tail)
+			left[i] += left[n+i] * w
+			right[i] += right[n+i] * w
+		}
+		left = left[:n]
+		right = right[:n]
+	}
 	peak := 1e-6
 	for i := 0; i < n; i++ {
 		if a := math.Abs(left[i]); a > peak {
@@ -178,6 +199,8 @@ func bandVoice(t, beat float64, n bandNote, ph *[2]float64) float64 {
 	rel := 0.09
 	if n.kind == 2 {
 		rel = 0.04
+	} else if n.kind == 3 {
+		rel = 0.14
 	}
 	if u < 0 || u >= dur+rel {
 		return 0
@@ -190,11 +213,14 @@ func bandVoice(t, beat float64, n bandNote, ph *[2]float64) float64 {
 			p = 1
 		}
 		hz *= math.Pow(2, n.slide*p/12)
-	} else if n.kind != 2 && u < 0.035 {
+	} else if n.kind != 2 && n.kind != 3 && u < 0.035 {
 		hz *= math.Pow(2, -0.03*(1-u/0.035))
 	}
 	if n.kind == 0 && n.slide == 0 && u > 0.07 {
 		hz *= 1 + 0.0045*math.Sin(2*math.Pi*5.1*(u-0.07))
+	}
+	if n.kind == 3 && n.slide == 0 && u > 0.14 {
+		hz *= 1 + 0.0032*math.Sin(2*math.Pi*4.4*(u-0.14))
 	}
 	open := 1 - math.Exp(-u*22)
 	cut := 1.8 + 6.5*open
@@ -207,6 +233,11 @@ func bandVoice(t, beat float64, n bandNote, ph *[2]float64) float64 {
 		ph[0] += hz / SampleRate
 		ph[1] += hz * 2 / SampleRate
 		s = math.Sin(2*math.Pi*ph[0])*0.85 + math.Sin(2*math.Pi*ph[1])*0.15
+	case 3:
+		// Flugelhorn: a sine with a little warmth. The hill lead uses it
+		// so the memorial is not another parade trumpet.
+		ph[0] += hz / SampleRate
+		s = math.Sin(2*math.Pi*ph[0])*0.82 + sawRoll(ph[0], 2.4)*0.18
 	default:
 		ph[0] += hz / SampleRate
 		ph[1] += hz * 1.004 / SampleRate
@@ -219,12 +250,17 @@ func bandVoice(t, beat float64, n bandNote, ph *[2]float64) float64 {
 }
 
 func bandEnv(u, dur, rel float64, kind int) float64 {
-	const attack = 0.014
+	attack := 0.014
+	if kind == 3 {
+		attack = 0.09
+	}
 	e := 1.0
 	if u < attack {
 		e = u / attack
 	} else if kind == 2 {
 		e = math.Exp(-(u - attack) * 5.5)
+	} else if kind == 3 {
+		e = 0.88 + 0.12*math.Exp(-(u-attack)*0.8)
 	} else {
 		e = 0.62 + 0.38*math.Exp(-(u-attack)*2.4)
 	}

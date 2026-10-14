@@ -7,9 +7,12 @@ const (
 )
 
 // winSamples and failSamples are the march lengths. victory.go and defeat.go set them.
+// briefSamples and hillSamples are the looping menu beds.
 var (
-	winSamples  int
-	failSamples int
+	winSamples   int
+	failSamples  int
+	briefSamples int
+	hillSamples  int
 )
 
 // Click is a short UI tick. The title and the briefing play it.

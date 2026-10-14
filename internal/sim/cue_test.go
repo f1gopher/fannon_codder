@@ -3,11 +3,12 @@ package sim
 import "testing"
 
 func TestSceneStingsAreNotWorldCues(t *testing.T) {
-	if CueClick == CueGun || CueWin == CueGun || CueFail == CueGun {
+	if CueClick == CueGun || CueWin == CueGun || CueFail == CueGun || CueBrief == CueGun || CueHill == CueGun {
 		t.Fatal("a scene sting shares the gun kind")
 	}
-	if CueClick == CueWin || CueWin == CueFail || CueClick == CueFail || CueClick == CueNone {
-		t.Fatal("click, win, and fail should be three kinds")
+	if CueClick == CueWin || CueWin == CueFail || CueClick == CueFail || CueClick == CueNone ||
+		CueBrief == CueHill || CueBrief == CueWin || CueHill == CueFail || CueBrief == CueClick {
+		t.Fatal("click, win, fail, briefing, and Boot Hill should be different kinds")
 	}
 	w := NewEmpty()
 	w.AI = false
@@ -23,7 +24,7 @@ func TestSceneStingsAreNotWorldCues(t *testing.T) {
 	}
 	for _, c := range w.TakeCues() {
 		switch c.Kind {
-		case CueClick, CueWin, CueFail:
+		case CueClick, CueWin, CueFail, CueBrief, CueHill:
 			t.Fatalf("world emitted %v", c.Kind)
 		}
 	}

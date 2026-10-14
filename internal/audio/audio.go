@@ -6,6 +6,7 @@
 package audio
 
 import (
+	"bytes"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -34,6 +35,8 @@ const (
 	clickVolume  = 0.5
 	winVolume    = 0.8
 	failVolume   = 0.8
+	briefVolume  = 0.75
+	hillVolume   = 0.7
 )
 
 // Mixer is the clip registry and the voice pool.
@@ -70,7 +73,7 @@ func NewMixer() *Mixer {
 	}
 	m.Load(sim.CueGun, Gunshot(), gunVoices, gunVolume)
 	m.Load(sim.CueBoom, Boom(), boomVoices, boomVolume)
-	m.load(sim.CueDeath, [][]byte{DeathPCM(0), DeathPCM(1), DeathPCM(2)}, deathVoices, deathVolume)
+	m.load(sim.CueDeath, [][]byte{DeathPCM(0), DeathPCM(1), DeathPCM(2)}, deathVoices, deathVolume, false)
 	m.Load(sim.CueThrow, Throw(), throwVoices, throwVolume)
 	m.Load(sim.CueRocket, Rocket(), rocketVoices, rocketVolume)
 	m.Load(sim.CueSplash, Splash(), 1, splashVolume)
@@ -81,6 +84,8 @@ func NewMixer() *Mixer {
 	m.Load(sim.CueClick, Click(), 1, clickVolume)
 	m.Load(sim.CueWin, Win(), 1, winVolume)
 	m.Load(sim.CueFail, Fail(), 1, failVolume)
+	m.loadLoop(sim.CueBrief, Brief(), briefVolume)
+	m.loadLoop(sim.CueHill, Hill(), hillVolume)
 	m.initEngine()
 	return m
 }
@@ -89,11 +94,17 @@ func NewMixer() *Mixer {
 // voices is how many copies may overlap; the oldest restarts when all are busy.
 // volume is the clip's full-loudness level in [0, 1]. Loading a kind again replaces its voices.
 func (m *Mixer) Load(kind sim.CueKind, pcm []byte, voices int, volume float64) {
-	m.load(kind, [][]byte{pcm}, voices, volume)
+	m.load(kind, [][]byte{pcm}, voices, volume, false)
+}
+
+// loadLoop registers one clip that repeats until it is faded or paused.
+func (m *Mixer) loadLoop(kind sim.CueKind, pcm []byte, volume float64) {
+	m.load(kind, [][]byte{pcm}, 1, volume, true)
 }
 
 // load registers one clip. Each entry of pcms is a pitch variant with its own voices.
-func (m *Mixer) load(kind sim.CueKind, pcms [][]byte, voices int, volume float64) {
+// loop keeps a menu bed playing for as long as that screen is up.
+func (m *Mixer) load(kind sim.CueKind, pcms [][]byte, voices int, volume float64, loop bool) {
 	if m == nil || kind == sim.CueNone || len(pcms) == 0 || voices < 1 {
 		return
 	}
@@ -105,11 +116,24 @@ func (m *Mixer) load(kind sim.CueKind, pcms [][]byte, voices int, volume float64
 		if len(pcm) == 0 {
 			continue
 		}
-		players := make([]*audio.Player, voices)
-		for i := range players {
-			p := m.ctx.NewPlayerFromBytes(pcm)
+		players := make([]*audio.Player, 0, voices)
+		for i := 0; i < voices; i++ {
+			var p *audio.Player
+			if loop {
+				src := audio.NewInfiniteLoop(bytes.NewReader(pcm), int64(len(pcm)))
+				var err error
+				p, err = m.ctx.NewPlayer(src)
+				if err != nil {
+					continue
+				}
+			} else {
+				p = m.ctx.NewPlayerFromBytes(pcm)
+			}
 			p.SetVolume(volume)
-			players[i] = p
+			players = append(players, p)
+		}
+		if len(players) == 0 {
+			continue
 		}
 		banks = append(banks, voiceBank{players: players})
 	}
@@ -174,6 +198,17 @@ func (m *Mixer) play(c sim.Cue, positional bool) {
 	if b.next >= len(b.players) {
 		b.next = 0
 	}
+	// A new march or menu bed leaves any fade that was easing this same
+	// player out, or the new screen would go quiet with it.
+	if bedKind(c.Kind) {
+		m.dropFromFade(p)
+	}
+	switch c.Kind {
+	case sim.CueBrief:
+		m.pauseUnlessFading(sim.CueHill)
+	case sim.CueHill:
+		m.pauseUnlessFading(sim.CueBrief)
+	}
 	if err := p.Rewind(); err != nil {
 		return
 	}
@@ -181,8 +216,8 @@ func (m *Mixer) play(c sim.Cue, positional bool) {
 	p.Play()
 }
 
-// MarchFade is how long a victory or defeat march takes to die once the
-// player leaves the result screen.
+// MarchFade is how long a march or a menu loop takes to die once the
+// player leaves the screen that started it.
 const MarchFade = 1.0
 
 type stingFade struct {
@@ -192,15 +227,16 @@ type stingFade struct {
 	dur     float64
 }
 
-// FadeMarches eases out a victory or defeat march that is still playing.
-// A click or a gunshot is left alone. Calling it with nothing playing does nothing.
+// FadeMarches eases out a victory march, a defeat march, the briefing, or
+// Boot Hill, whichever of those is still playing. A click or a gunshot is
+// left alone. Calling it with nothing playing does nothing.
 func (m *Mixer) FadeMarches(seconds float64) {
 	if m == nil || seconds <= 0 {
 		return
 	}
 	var ps []*audio.Player
 	var from []float64
-	for _, kind := range []sim.CueKind{sim.CueWin, sim.CueFail} {
+	for _, kind := range []sim.CueKind{sim.CueWin, sim.CueFail, sim.CueBrief, sim.CueHill} {
 		cl := m.slots[kind]
 		if cl == nil {
 			continue
@@ -235,6 +271,68 @@ func (m *Mixer) Tick(dt float64) {
 	}
 	if level == 0 {
 		m.fade = nil
+	}
+}
+
+func bedKind(kind sim.CueKind) bool {
+	switch kind {
+	case sim.CueWin, sim.CueFail, sim.CueBrief, sim.CueHill:
+		return true
+	default:
+		return false
+	}
+}
+
+// dropFromFade forgets p so a restart is not turned down by the old fade.
+func (m *Mixer) dropFromFade(p *audio.Player) {
+	if m == nil || m.fade == nil || p == nil {
+		return
+	}
+	n := 0
+	for i, q := range m.fade.players {
+		if q == p {
+			continue
+		}
+		m.fade.players[n] = q
+		m.fade.from[n] = m.fade.from[i]
+		n++
+	}
+	m.fade.players = m.fade.players[:n]
+	m.fade.from = m.fade.from[:n]
+	if n == 0 {
+		m.fade = nil
+	}
+}
+
+func (m *Mixer) inFade(p *audio.Player) bool {
+	if m == nil || m.fade == nil || p == nil {
+		return false
+	}
+	for _, q := range m.fade.players {
+		if q == p {
+			return true
+		}
+	}
+	return false
+}
+
+// pauseUnlessFading stops a menu loop that would otherwise keep playing
+// under the one that just started. A loop already fading is left to finish.
+func (m *Mixer) pauseUnlessFading(kind sim.CueKind) {
+	if m == nil {
+		return
+	}
+	cl := m.slots[kind]
+	if cl == nil {
+		return
+	}
+	for bi := range cl.banks {
+		for _, p := range cl.banks[bi].players {
+			if p == nil || m.inFade(p) {
+				continue
+			}
+			p.Pause()
+		}
 	}
 }
 

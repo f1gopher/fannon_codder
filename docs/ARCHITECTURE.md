@@ -65,6 +65,8 @@ A crate holds 4 grenades or 4 rockets (`CrateAmount`). A player shot, grenade, o
 
 The only vehicle is the skidoo. A jeep would be the same struct with another skin.
 
+A battle opens with the player squad still aboard a helicopter. It flies in from the north-west along the nose of `chopper/fly`, pays a rope out to each man's mark, and they slide down onto the spots `SpawnPlayerSquad` already gave them. Orders, guns, and `World.Step` wait until the last boot is down. The ropes reel in and the aircraft leaves to the south-east while the phase plays. Pause holds the arrival. The rotor is a mixer loop until the aircraft is gone, and a scene change stops it. The helicopter is not a vehicle: nothing boards it, and it does not fight.
+
 Objectives in use are `kill_all_enemy` and `destroy_enemy_buildings`. `protect_civilians` parses and does not change the phase.
 
 ## Combat
@@ -184,6 +186,8 @@ PCM is 16-bit stereo at 44100 Hz. One mixer per process. A second `NewMixer` pan
 `CueClick`, `CueWin`, `CueFail`, `CueBrief`, and `CueHill` are `PlayKind` only. The title and the briefing click. A clear starts the victory march when Victory! appears. A wipe starts a slow minor-key march when PHASE FAILED appears. Boot Hill starts a slow A-minor lament and loops it. The briefing starts an E-minor march and loops it. Leaving either screen, or leaving a result, fades that bed out over a second. The lament does not play under the briefing, and the briefing does not play under the battle. A result march fades under the next screen instead of being cut. The title has no tune. Strip icons are silent. The world never emits those five. The skidoo hum stops when the phase is no longer playing, so it does not sit under a march or a menu loop.
 
 The skidoo hum is one looping voice on the mixer. It plays while the listener is in a living occupied skidoo, or the nearest other occupied skidoo is inside `HearFar`. His own vehicle wins. Empty, destroyed, or out of range is silent. Pause stops it. Pitch runs from `EngineIdlePitch` (0.75) to `EngineTopPitch` (1.45) at `VehicleMaxSpeed`. A `loopReader` resamples a synthesised cycle. Scene changes call `SetEngine(false, 0)` before `Leave`.
+
+The arrival helicopter has its own loop, `SetRotor`. It plays from the first moment of a battle until the aircraft has flown off. Pause and a scene change stop it. It does not use the skidoo pitch.
 
 Clips are original synthesis. The victory march, the defeat march, the briefing, and Boot Hill are new music for the same small band: two trumpets, horn stabs, a walking bass, and drums. Boot Hill leads with a flugelhorn. The defeat is in D minor, slower, and the lead falls an octave at the end. There is no title tune.
 

@@ -501,6 +501,9 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	Bombs(dst, w)
 	Projectiles(dst, w)
 	Blasts(dst, w)
+	if activeDrop != nil {
+		activeDrop.Draw(dst, w.Camera)
+	}
 }
 
 type body struct {
@@ -537,7 +540,7 @@ func collectBodies(w *sim.World, terrain string) []body {
 	}
 	for i := range w.Units {
 		u := w.Units[i]
-		if u.VehicleID != 0 {
+		if u.VehicleID != 0 || dropHides(u.ID) {
 			continue
 		}
 		bodies = append(bodies, unitBody(cam, u, u.ID == leadID))

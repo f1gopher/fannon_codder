@@ -147,6 +147,15 @@ func (g *Game) SetEngine(run bool, pitch float64) {
 	g.sound.SetEngine(run, pitch)
 }
 
+// SetRotor starts or stops the helicopter rotor. The arrival plays it
+// until the aircraft has left.
+func (g *Game) SetRotor(run bool) {
+	if g.sound == nil {
+		return
+	}
+	g.sound.SetRotor(run)
+}
+
 // PlayKind plays a sting that has no world position. Menus use it.
 func (g *Game) PlayKind(kind sim.CueKind) {
 	if g.sound == nil {
@@ -201,6 +210,7 @@ func (g *Game) Update() error {
 		// still has a skidoo to hear. A march or a menu loop fades unless
 		// the screen being entered starts its own bed.
 		g.SetEngine(false, 0)
+		g.SetRotor(false)
 		if g.scene != nil {
 			g.scene.Leave()
 		}

@@ -49,6 +49,9 @@ type Mixer struct {
 	engine       *loopReader
 	enginePlayer *audio.Player
 	engineOn     bool
+	rotor        *loopReader
+	rotorPlayer  *audio.Player
+	rotorOn      bool
 	fade         *stingFade
 }
 
@@ -87,6 +90,7 @@ func NewMixer() *Mixer {
 	m.loadLoop(sim.CueBrief, Brief(), briefVolume)
 	m.loadLoop(sim.CueHill, Hill(), hillVolume)
 	m.initEngine()
+	m.initRotor()
 	return m
 }
 

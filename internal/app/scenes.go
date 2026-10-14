@@ -33,6 +33,7 @@ type Host interface {
 	PlayCues([]sim.Cue)
 	SetListener(x, y float64)
 	SetEngine(run bool, pitch float64)
+	SetRotor(run bool)
 	PlayKind(sim.CueKind)
 	// Frame is the logical picture size. Menus and the battle both use it
 	// once the window is wider than 320×256.
@@ -97,6 +98,7 @@ type Battle struct {
 	paused    bool
 	menu      battleMenu
 	again     func(*Progress) *Battle
+	insert    *render.Insert
 }
 
 func NewBattle(prog *Progress) *Battle {
@@ -188,12 +190,12 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	}
 	if sandbox {
 		nameCoverSquad(w)
-		return &Battle{
+		return finishBattle(&Battle{
 			prog:    prog,
 			world:   w,
 			unitIDs: ids,
 			sandbox: true,
-		}
+		})
 	}
 	n := prog.DeployCount()
 	if s := w.ActiveSquad(); s != nil && len(s.MemberIDs) < n {
@@ -201,12 +203,17 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	}
 	men := prog.Pool.Deploy(n)
 	nameSquad(w, men)
-	return &Battle{
+	return finishBattle(&Battle{
 		prog:     prog,
 		world:    w,
 		deployed: men,
 		unitIDs:  ids,
-	}
+	})
+}
+
+func finishBattle(b *Battle) *Battle {
+	b.insert = render.NewInsert(b.world)
+	return b
 }
 
 func nameCoverSquad(w *sim.World) {
@@ -268,6 +275,7 @@ func (b *Battle) Update(h Host) error {
 	defer func() {
 		if b.paused || b.world == nil {
 			h.SetEngine(false, 0)
+			h.SetRotor(false)
 			return
 		}
 		render.Advance(1.0/TPS, b.world)
@@ -275,9 +283,11 @@ func (b *Battle) Update(h Host) error {
 		h.SetListener(x, y)
 		if b.world.Status != sim.Playing {
 			h.SetEngine(false, 0)
+			h.SetRotor(false)
 		} else {
 			hum := b.world.EngineHumAt(x, y, audio.HearFar)
 			h.SetEngine(hum.Run, hum.Pitch)
+			h.SetRotor(b.insert != nil && !b.insert.Gone())
 		}
 		h.PlayCues(b.world.TakeCues())
 	}()
@@ -329,6 +339,12 @@ func (b *Battle) Update(h Host) error {
 		return nil
 	}
 	if b.paused {
+		return nil
+	}
+	if b.insert != nil && !b.insert.Gone() {
+		b.insert.Step(1.0 / TPS)
+	}
+	if b.insert != nil && !b.insert.Landed() {
 		return nil
 	}
 	if inpututil.IsKeyJustPressed(ebiten.Key1) {
@@ -517,6 +533,8 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	left := int(math.Floor(float64(render.HUDWidth) * s))
 	play := screen.SubImage(image.Rect(left, 0, screen.Bounds().Dx(), screen.Bounds().Dy())).(*ebiten.Image)
 	kind := b.terrainName()
+	render.UseDrop(b.insert)
+	defer render.UseDrop(nil)
 	render.Field(play, b.world, kind)
 	if b.mapOpen {
 		render.Overview(screen, b.world, kind)

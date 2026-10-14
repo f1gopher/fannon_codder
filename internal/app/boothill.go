@@ -37,7 +37,6 @@ func saveX(frameW float64) float64 {
 // BootHill is the between-mission hill: queue, graves, mission number.
 type BootHill struct {
 	prog   *Progress
-	t      float64
 	heroes bool
 }
 
@@ -47,7 +46,6 @@ func (b *BootHill) Enter() {}
 func (b *BootHill) Leave() {}
 
 func (b *BootHill) Update(h Host) error {
-	b.t += 1.0 / 60
 	p := h.Pointer()
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
 		b.heroes = !b.heroes
@@ -115,10 +113,10 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 	if n > 24 {
 		n = 24
 	}
-	frame := render.FrameAt(b.t, 8, 4, true)
 	for i := 0; i < n; i++ {
 		x := 48 + float64(i)*9
-		if !render.DrawSheet(screen, "snake/idle", "SE", frame, x+3, 176) {
+		// Frame 0 only. The idle cycle bobs the head and changes the body size.
+		if !render.DrawSheet(screen, "snake/idle", "SE", 0, x+3, 176) {
 			render.Rect(screen, int(x), 160, 6, 8, manFill)
 		}
 	}

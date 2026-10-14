@@ -89,6 +89,7 @@ type Battle struct {
 	deployed  []campaign.Soldier
 	unitIDs   []int
 	settled   bool
+	fanfare   bool
 	survivors []campaign.Soldier
 	fallen    []campaign.Soldier
 	sandbox   bool
@@ -265,18 +266,20 @@ func (b *Battle) CursorKind(p input.Pointer) int {
 
 func (b *Battle) Update(h Host) error {
 	defer func() {
-		if b.paused {
+		if b.paused || b.world == nil {
 			h.SetEngine(false, 0)
 			return
 		}
 		render.Advance(1.0/TPS, b.world)
-		if b.world != nil {
-			x, y := hearPoint(b.world)
-			h.SetListener(x, y)
+		x, y := hearPoint(b.world)
+		h.SetListener(x, y)
+		if b.world.Status != sim.Playing {
+			h.SetEngine(false, 0)
+		} else {
 			hum := b.world.EngineHumAt(x, y, audio.HearFar)
 			h.SetEngine(hum.Run, hum.Pitch)
-			h.PlayCues(b.world.TakeCues())
 		}
+		h.PlayCues(b.world.TakeCues())
 	}()
 	p := h.Pointer()
 	held, err := b.stepMenu(h,
@@ -306,7 +309,16 @@ func (b *Battle) Update(h Host) error {
 			}
 		}
 		if !b.world.Pending() {
-			b.settleOnce(b.world.Status == sim.Won)
+			won := b.world.Status == sim.Won
+			if !b.fanfare {
+				b.fanfare = true
+				if won {
+					h.PlayKind(sim.CueWin)
+				} else {
+					h.PlayKind(sim.CueFail)
+				}
+			}
+			b.settleOnce(won)
 		}
 		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			b.leaveBattle(h, b.world.Status == sim.Won)
@@ -466,11 +478,6 @@ func (b *Battle) tally() (graves int, survivors, fallen []campaign.Soldier) {
 }
 
 func (b *Battle) leaveBattle(h Host, won bool) {
-	if won {
-		h.PlayKind(sim.CueWin)
-	} else {
-		h.PlayKind(sim.CueFail)
-	}
 	if b.sandbox {
 		h.Switch(NewTitle())
 		return

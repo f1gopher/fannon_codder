@@ -32,8 +32,8 @@ const (
 	boardVolume  = 0.4
 	exitVolume   = 0.4
 	clickVolume  = 0.5
-	winVolume    = 0.55
-	failVolume   = 0.5
+	winVolume    = 0.8
+	failVolume   = 0.8
 )
 
 // Mixer is the clip registry and the voice pool.
@@ -46,6 +46,7 @@ type Mixer struct {
 	engine       *loopReader
 	enginePlayer *audio.Player
 	engineOn     bool
+	fade         *stingFade
 }
 
 type clip struct {
@@ -178,4 +179,73 @@ func (m *Mixer) play(c sim.Cue, positional bool) {
 	}
 	p.SetVolume(vol)
 	p.Play()
+}
+
+// MarchFade is how long a victory or defeat march takes to die once the
+// player leaves the result screen.
+const MarchFade = 1.0
+
+type stingFade struct {
+	players []*audio.Player
+	from    []float64
+	left    float64
+	dur     float64
+}
+
+// FadeMarches eases out a victory or defeat march that is still playing.
+// A click or a gunshot is left alone. Calling it with nothing playing does nothing.
+func (m *Mixer) FadeMarches(seconds float64) {
+	if m == nil || seconds <= 0 {
+		return
+	}
+	var ps []*audio.Player
+	var from []float64
+	for _, kind := range []sim.CueKind{sim.CueWin, sim.CueFail} {
+		cl := m.slots[kind]
+		if cl == nil {
+			continue
+		}
+		for bi := range cl.banks {
+			for _, p := range cl.banks[bi].players {
+				if p != nil && p.IsPlaying() {
+					ps = append(ps, p)
+					from = append(from, cl.volume)
+				}
+			}
+		}
+	}
+	if len(ps) == 0 {
+		return
+	}
+	m.fade = &stingFade{players: ps, from: from, left: seconds, dur: seconds}
+}
+
+// Tick advances the march fade. The game calls it once a frame.
+func (m *Mixer) Tick(dt float64) {
+	if m == nil || m.fade == nil {
+		return
+	}
+	m.fade.left -= dt
+	level := stingLevel(m.fade.left, m.fade.dur)
+	for i, p := range m.fade.players {
+		p.SetVolume(m.fade.from[i] * level)
+		if level == 0 {
+			p.Pause()
+		}
+	}
+	if level == 0 {
+		m.fade = nil
+	}
+}
+
+// stingLevel is 1 at the start of a fade and 0 at the end, with a soft curve.
+func stingLevel(left, dur float64) float64 {
+	if dur <= 0 || left <= 0 {
+		return 0
+	}
+	u := left / dur
+	if u > 1 {
+		u = 1
+	}
+	return u * u * (3 - 2*u)
 }

@@ -46,8 +46,8 @@ func newShell() *Game {
 	ebiten.SetCursorMode(ebiten.CursorModeHidden)
 	s, w, h := PictureSize(DefaultWindowWidth, DefaultWindowHeight, 1)
 	return &Game{
-		prog:  NewProgress(),
-		sound: audio.NewMixer(),
+		prog:   NewProgress(),
+		sound:  audio.NewMixer(),
 		scale:  s,
 		offW:   w,
 		offH:   h,
@@ -165,6 +165,9 @@ func hearPoint(w *sim.World) (x, y float64) {
 }
 
 func (g *Game) Update() error {
+	if g.sound != nil {
+		g.sound.Tick(1.0 / TPS)
+	}
 	x, y, inside := g.frameCursor()
 	left := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	right := ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
@@ -177,7 +180,11 @@ func (g *Game) Update() error {
 
 	if g.next != nil {
 		// The hum belongs to the battle. A new scene starts it again if it
-		// still has a skidoo to hear.
+		// still has a skidoo to hear. A result march fades instead of
+		// following the player onto the next screen.
+		if _, battle := g.scene.(*Battle); battle && g.sound != nil {
+			g.sound.FadeMarches(audio.MarchFade)
+		}
 		g.SetEngine(false, 0)
 		if g.scene != nil {
 			g.scene.Leave()

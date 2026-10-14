@@ -181,11 +181,11 @@ PCM is 16-bit stereo at 44100 Hz. One mixer per process. A second `NewMixer` pan
 | `CuePickup` | a player takes a crate |
 | `CueBoard`, `CueExit` | `enterVehicle`, `dismount`, once for the squad |
 
-`CueClick`, `CueWin`, and `CueFail` are `PlayKind` only. The title and the briefing click. A clear plays the win sting. A wipe plays the fail sting. Boot Hill and the strip icons are silent. The world never emits those three.
+`CueClick`, `CueWin`, and `CueFail` are `PlayKind` only. The title and the briefing click. A clear starts the victory march when Victory! appears. A wipe starts a slow minor-key march when PHASE FAILED appears. Leaving that screen fades the march out over a second. It does not follow into the debrief or Boot Hill. Boot Hill and the strip icons are silent. The world never emits those three. The skidoo hum stops when the phase is no longer playing, so it does not sit under that march.
 
 The skidoo hum is one looping voice on the mixer. It plays while the listener is in a living occupied skidoo, or the nearest other occupied skidoo is inside `HearFar`. His own vehicle wins. Empty, destroyed, or out of range is silent. Pause stops it. Pitch runs from `EngineIdlePitch` (0.75) to `EngineTopPitch` (1.45) at `VehicleMaxSpeed`. A `loopReader` resamples a synthesised cycle. Scene changes call `SetEngine(false, 0)` before `Leave`.
 
-Clips are original synthesis. There is no title tune.
+Clips are original synthesis. The victory march and the defeat march are new music for that same small parade band: two trumpets, horn stabs, a walking bass, and drums. The defeat is in D minor, slower, and the lead falls an octave at the end. There is no title tune.
 
 ## Sprites
 

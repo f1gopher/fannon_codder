@@ -71,7 +71,7 @@ Objectives in use are `kill_all_enemy` and `destroy_enemy_buildings`. `protect_c
 
 ## Combat
 
-Player MG range, rate, and spread come from `GunStatsFor`. Private is 80 px, 8/s, 0.12 rad. General is 150 px, 14/s, 0.02 rad. The steps between are linear. Enemies use the grunt table in `internal/sim/ai.go`, not this curve. Movement, grenades, rockets, and specials do not scale with rank.
+Player MG range and spread come from `GunStatsFor`. Private is 80 px and 0.12 rad. General is 150 px and 0.02 rad. Those two steps are linear. The squad shares one gun, in the Cannon Fodder rotation: the leader shoots between the others. Ranks 0–3 fire every 0.36 s. Rank 4 and up, including a General, fire every 0.30 s. The clock uses the leader's rank. Each round still uses that man's own range and spread. A parked squad keeps the grunt burst and pause, at that same rank rate. Enemies use the grunt table in `internal/sim/ai.go`. Movement, grenades, rockets, and specials do not scale with rank.
 
 `NewEmpty` sets `WoundChance` to `WoundOdds` (0.34). A `World` literal in a test leaves it at 0, so those shots still kill. `rollWound` treats 0 as always kill and 1 as always wound.
 
@@ -105,7 +105,7 @@ A grenadier carries `GrenadierBombs` (2), winds up for `GrenadierWindup` (0.8 s)
 
 During a windup he turns at the grunt rate and releases on the first frame inside `EnemyFaceTol`. The opening frame sets the clock and does not snap `Facing`. If the clock ends while he is still turning, `WindHeld` finishes the turn and releases. The windup does not restart.
 
-A player squad you are not controlling uses that same turn, reaction, burst, and pause once it has no move order. Selecting another squad leaves a click-move running until the leader arrives. Range, rate, and spread stay `GunStatsFor`. He does not hear and does not throw. The active squad fires on the first frame fire is held. `World.Spread == 0` still zeros the parked cone.
+A player squad you are not controlling uses that same turn, reaction, burst, and pause once it has no move order. Selecting another squad leaves a click-move running until the leader arrives. Range, rate, and spread stay `GunStatsFor`. He does not hear and does not throw. The active squad fires one round on the first frame fire is held, then waits out the shared clock. `World.Spread == 0` still zeros the parked cone.
 
 Mission 1 grunts are at tiles (17, 3), (1, 5), and (14, 10). The south man starts about 80 px from the squad. The other two are about 193 px out. None of that is inside `EnemyHear`, and mission 1 does not close, so the opener is three duels.
 

@@ -32,11 +32,17 @@ const (
 
 	privateRange  = 80.0
 	generalRange  = 150.0
-	privateRoF    = 8.0
-	generalRoF    = 14.0
 	privateSpread = 0.12 // radians, wide
 	generalSpread = 0.02 // tight
-	rankMax       = 15   // General
+	rankMax       = 15 // General
+
+	// Cannon Fodder waits 3 frames at 50 Hz, then counts a squad cooldown.
+	// Ranks 0–3 use cooldown 5, so a shot every 6 ticks (0.36 s).
+	// Rank 4 and up use cooldown 4, every 5 ticks (0.30 s). The original
+	// table stops at rank 7, so a General is no faster than that.
+	cfEngineTick = 0.06
+	privateRoF   = 1.0 / (6 * cfEngineTick)
+	generalRoF   = 1.0 / (5 * cfEngineTick)
 )
 
 // GunStats is MG performance for a player rank (0=Private … 15=General).
@@ -46,7 +52,8 @@ type GunStats struct {
 	Spread float64
 }
 
-// GunStatsFor interpolates the Amiga-ish curve by rank index.
+// GunStatsFor interpolates range and spread by rank.
+// Rate of fire is the squad clock: one shared shot, not a gun per man.
 func GunStatsFor(rank int) GunStats {
 	if rank < 0 {
 		rank = 0
@@ -55,9 +62,13 @@ func GunStatsFor(rank int) GunStats {
 		rank = rankMax
 	}
 	t := float64(rank) / float64(rankMax)
+	rof := privateRoF
+	if rank >= 4 {
+		rof = generalRoF
+	}
 	return GunStats{
 		Range:  privateRange + (generalRange-privateRange)*t,
-		RoF:    privateRoF + (generalRoF-privateRoF)*t,
+		RoF:    rof,
 		Spread: privateSpread + (generalSpread-privateSpread)*t,
 	}
 }
@@ -74,19 +85,79 @@ func (w *World) stepFire(dt float64) {
 	if s == nil || !w.Firing {
 		return
 	}
+	var live []*Unit
 	for _, id := range s.MemberIDs {
 		u := w.Unit(id)
 		if !w.CanShoot(u) {
 			continue
 		}
-		st := GunStatsFor(u.Rank)
 		dx := w.AimX - u.X
 		dy := w.AimY - u.Y
 		if dx == 0 && dy == 0 {
 			dx = 1
 		}
-		w.shootAt(u, dx, dy, st, dt)
+		u.Facing = math.Atan2(dy, dx)
+		live = append(live, u)
 	}
+	if len(live) == 0 {
+		return
+	}
+	s.FireCD -= dt
+	if s.FireCD > 0 {
+		return
+	}
+	order := squadFireOrder(len(live))
+	if s.FireAt < 0 || s.FireAt >= len(order) {
+		s.FireAt = 0
+	}
+	u := live[order[s.FireAt]]
+	s.FireAt++
+	if s.FireAt >= len(order) {
+		s.FireAt = 0
+	}
+	leader := w.Unit(s.LeaderID)
+	rank := u.Rank
+	if leader != nil {
+		rank = leader.Rank
+	}
+	clock := GunStatsFor(rank)
+	s.FireCD = 1.0 / clock.RoF
+	st := GunStatsFor(u.Rank)
+	ang := u.Facing
+	spread := st.Spread
+	if w.Spread == 0 {
+		spread = 0
+	}
+	if spread > 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		ang += (w.rng.Float64()*2 - 1) * spread
+	}
+	w.spawnMG(u, ang, st.Range)
+}
+
+// squadFireOrder is the Cannon Fodder rotation. The leader (slot 0) shoots
+// between the others, and the walk back down the file skips the last man
+// so he is not doubled.
+func squadFireOrder(n int) []int {
+	if n <= 0 {
+		return nil
+	}
+	if n == 1 {
+		return []int{0}
+	}
+	if n == 2 {
+		return []int{0, 1}
+	}
+	order := make([]int, 0, n*2)
+	for i := 1; i < n; i++ {
+		order = append(order, 0, i)
+	}
+	for i := n - 2; i >= 2; i-- {
+		order = append(order, 0, i)
+	}
+	return order
 }
 
 // stepInactiveFire: a squad you are not controlling, and that has no
@@ -226,27 +297,6 @@ func (w *World) nearestEnemy(u *Unit, maxRange float64) (tx, ty float64, ok bool
 		ok = true
 	}
 	return tx, ty, ok
-}
-
-func (w *World) shootAt(u *Unit, dx, dy float64, st GunStats, dt float64) {
-	if dx == 0 && dy == 0 {
-		dx = 1
-	}
-	u.Facing = math.Atan2(dy, dx)
-	u.FireCD -= dt
-	if u.FireCD > 0 {
-		return
-	}
-	u.FireCD = 1.0 / st.RoF
-	ang := u.Facing
-	spread := st.Spread
-	if w.Spread == 0 {
-		spread = 0
-	}
-	if spread > 0 {
-		ang += (w.rng.Float64()*2 - 1) * spread
-	}
-	w.spawnMG(u, ang, st.Range)
 }
 
 func (w *World) spawnMG(u *Unit, ang float64, maxRange float64) {

@@ -6,8 +6,8 @@ import (
 )
 
 // gunCrack is the muzzle event, about 40 ms. gunSamples is the whole report,
-// crack plus the slaps coming back off a street. A Private fires every 125 ms,
-// so the tail of one shot still overlaps the next.
+// crack plus the slaps coming back off a street. A Private's squad fires
+// about every 360 ms, so the tail of one shot still overlaps the next.
 const (
 	gunCrack   = SampleRate * 40 / 1000
 	gunSamples = SampleRate * 240 / 1000

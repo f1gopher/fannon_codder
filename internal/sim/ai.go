@@ -3,7 +3,7 @@ package sim
 import "math"
 
 const (
-	EnemyMGRoF       = 4.0   // slower than player 8/s
+	EnemyMGRoF       = 4.0   // rounds per second inside a burst of three
 	EnemyMGRange     = 70.0  // shorter than a Private's 80
 	EnemyReact       = 0.55  // seconds of contact before the first round
 	EnemyReactJitter = 0.15  // added once per contact, in [-j, +j]

@@ -74,6 +74,10 @@ type Squad struct {
 	// enemy do not spin the other men's sectors.
 	WatchBase float64
 	WatchSet  bool
+	// FireCD is the shared squad gun. FireAt is the next slot in the
+	// Cannon Fodder rotation. One man shoots, then the file waits.
+	FireCD float64
+	FireAt int
 	// Kneel holds the arrival wedge. The men stay put and face north
 	// until this squad is given a move.
 	Kneel bool

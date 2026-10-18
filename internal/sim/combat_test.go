@@ -57,7 +57,7 @@ func TestMGCanWoundThenFinish(t *testing.T) {
 	if yelled {
 		t.Fatal("a wound played the death yell")
 	}
-	fireAt(w, 80, 0, 12)
+	fireAt(w, 80, 0, 24)
 	d = w.Unit(id)
 	if !d.Dead() {
 		t.Fatalf("finish left HP=%v", d.HP)
@@ -311,8 +311,22 @@ func TestAllLivingSquadMembersFire(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 0, Y: 0}, {X: 0, Y: 12}}, Vec2{X: 200, Y: 200})
 	w.SetFire(80, 0, true)
 	w.Step(1.0 / 60)
-	if len(w.Projectiles) != 2 {
-		t.Fatalf("got %d projectiles, want 2 (both troopers)", len(w.Projectiles))
+	if len(w.Projectiles) != 1 {
+		t.Fatalf("got %d projectiles, want the leader's one round", len(w.Projectiles))
+	}
+	first := w.Projectiles[0].OwnerID
+	var second int
+	var saw bool
+	for i := 0; i < 30; i++ {
+		w.Step(1.0 / 60)
+		if len(w.Projectiles) == 1 && w.Projectiles[0].OwnerID != first {
+			second = w.Projectiles[0].OwnerID
+			saw = true
+			break
+		}
+	}
+	if !saw || second == first {
+		t.Fatal("the squad gun should rotate to the other trooper")
 	}
 }
 
@@ -322,8 +336,11 @@ func TestCorporalOutrangesPrivate(t *testing.T) {
 	if cpl.Range <= pvt.Range {
 		t.Fatalf("corporal range %v should exceed private %v", cpl.Range, pvt.Range)
 	}
-	if cpl.RoF <= pvt.RoF {
-		t.Fatalf("corporal RoF %v should exceed private %v", cpl.RoF, pvt.RoF)
+	if cpl.RoF != pvt.RoF {
+		t.Fatalf("corporal RoF %v, private %v; ranks 0–3 share the squad clock", cpl.RoF, pvt.RoF)
+	}
+	if sgt := GunStatsFor(4); sgt.RoF <= pvt.RoF {
+		t.Fatalf("rank 4 RoF %v should exceed private %v", sgt.RoF, pvt.RoF)
 	}
 	if cpl.Spread >= pvt.Spread {
 		t.Fatalf("corporal spread %v should be tighter than private %v", cpl.Spread, pvt.Spread)
@@ -340,12 +357,22 @@ func TestCorporalProjectileOutrangesPrivate(t *testing.T) {
 	w.Unit(w.ActiveSquad().MemberIDs[1]).Rank = 1
 	w.SetFire(80, 0, true)
 	w.Step(1.0 / 60)
-	if len(w.Projectiles) != 2 {
+	if len(w.Projectiles) != 1 {
 		t.Fatalf("shots=%d", len(w.Projectiles))
 	}
-	a, b := w.Projectiles[0].Left, w.Projectiles[1].Left
-	if a < b {
-		a, b = b, a
+	a := w.Projectiles[0].Left
+	var b float64
+	var saw bool
+	for i := 0; i < 30; i++ {
+		w.Step(1.0 / 60)
+		if len(w.Projectiles) == 1 && w.Projectiles[0].Left != a {
+			b = w.Projectiles[0].Left
+			saw = true
+			break
+		}
+	}
+	if !saw {
+		t.Fatal("the second trooper did not fire")
 	}
 	if a <= b {
 		t.Fatalf("remaining travel %v and %v; corporal shot should have more range left", a, b)

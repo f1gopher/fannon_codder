@@ -55,8 +55,19 @@ func TestEachLivingTrooperEmitsAGunCue(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 0, Y: 0}, {X: 0, Y: 12}}, Vec2{X: 200, Y: 200})
 	w.SetFire(80, 0, true)
 	w.Step(1.0 / 60)
-	if len(w.TakeCues()) != 2 {
-		t.Fatal("each living trooper should emit one gun cue")
+	if len(w.TakeCues()) != 1 {
+		t.Fatal("the squad gun emits one cue per shot")
+	}
+	var second bool
+	for i := 0; i < 30; i++ {
+		w.Step(1.0 / 60)
+		if len(w.TakeCues()) == 1 {
+			second = true
+			break
+		}
+	}
+	if !second {
+		t.Fatal("the other trooper should get the next shot")
 	}
 }
 

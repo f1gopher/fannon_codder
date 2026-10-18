@@ -129,12 +129,14 @@ func TestBeachIsSandThenShallow(t *testing.T) {
 		tx, ty := shoreWorld(tpx, tpy)
 		wantShallow, _ := lk.plateColor(surfShallow, hx, hy)
 		wantDeep, _ := lk.plateColor(surfDeep, dx, dy)
+		wantGrass, _ := lk.plateColor(surfGrass, gx, gy)
+		wantGround, _ := lk.plateColor(surfGrass, sx, sy)
 		// The grass line wanders, so a pixel in the strip is sand-coloured,
 		// not a perfect plate sample.
-		if sand.R <= sand.G+15 || colorDist(sand, sandPlate.at(sx, sy)) >= colorDist(sand, lk.ground.at(sx, sy)) {
+		if sand.R <= sand.G+15 || colorDist(sand, sandPlate.at(sx, sy)) >= colorDist(sand, wantGround) {
 			t.Fatalf("%s sand %+v, want sand rather than ground", name, sand)
 		}
-		if colorDist(grass, lk.ground.at(gx, gy)) > 2 {
+		if colorDist(grass, wantGrass) > 2 {
 			t.Fatalf("%s inland %+v, want grass past the sand", name, grass)
 		}
 		if colorDist(shallow, wantShallow) > 2 {
@@ -144,7 +146,7 @@ func TestBeachIsSandThenShallow(t *testing.T) {
 			t.Fatalf("%s pond centre %+v, want deep %+v", name, deep, wantDeep)
 		}
 		// The canopy shadow falls on the bank, so the sand is darker than the plate.
-		treeGround := lk.ground.at(tx, ty)
+		treeGround, _ := lk.plateColor(surfGrass, tx, ty)
 		if treeSand.R <= treeSand.G+15 || colorDist(treeSand, sandPlate.at(tx, ty)) >= colorDist(treeSand, treeGround) {
 			t.Fatalf("%s tree bank %+v, want sand rather than %+v", name, treeSand, treeGround)
 		}

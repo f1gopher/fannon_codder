@@ -48,8 +48,9 @@ func TestChartWaterReplacesGround(t *testing.T) {
 	if water[2] <= grass[2] {
 		t.Fatalf("water %v grass %v", water, grass)
 	}
-	if sand[0] <= grass[0] {
-		t.Fatalf("shore %v grass %v", sand, grass)
+	// Sunlit grass is as red as sand, so the shore is told by its own channels.
+	if sand[0] <= sand[1]+15 {
+		t.Fatalf("shore %v grass %v, want sand", sand, grass)
 	}
 }
 

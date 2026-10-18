@@ -10,23 +10,27 @@ import (
 	"fannon-codder/internal/sim"
 )
 
-// The opening drop. A helicopter flies in along the nose of chopper/fly,
-// the squad slides down ropes onto the spots they spawned on, and the
-// aircraft leaves along that same nose. The world does not step until
-// the last man is down. This is a picture, not a vehicle.
+// The opening drop. A helicopter flies in along the nose of chopper/fly.
+// One rope hangs straight down, or two when more than one soldier is
+// aboard. They slide down, walk out to the file they spawned on, and
+// kneel. The world does not step until that kneel is done. The aircraft
+// then leaves along the same nose. This is a picture, not a vehicle.
 
 const (
 	dropApproach = 1.4
 	dropRope     = 0.35
 	dropSlide    = 0.95
 	dropStagger  = 0.18
+	dropSpread   = 0.7
+	dropKneel    = 0.75
 	dropRopeUp   = 0.22
 	dropDepart   = 1.35
 	dropInbound  = 240.0
 	dropOutbound = 300.0
 	dropAltHigh  = 92.0
 	dropAltLow   = 64.0
-	dropSlot     = 6.0
+	// Two ropes sit side by side under the door, in world pixels.
+	dropRopeGap = 7.0
 
 	// Anchor and hubs measured on chopper/fly.png. The anchor is the
 	// bottom of the open door, where the ropes leave. Source +y is down.
@@ -132,12 +136,86 @@ func (in *Insert) landAt() float64 {
 	if n == 0 {
 		return 0
 	}
-	return dropApproach + dropRope + dropSlide + dropStagger*float64(n-1)
+	return in.ropeExit(n-1) + dropSlide + dropSpread + dropKneel
+}
+
+// ropeExit is when man i leaves the cabin.
+func (in *Insert) ropeExit(i int) float64 {
+	return dropApproach + dropRope + dropStagger*float64(i)
+}
+
+// ropes is one line for a single soldier and two otherwise.
+func (in *Insert) ropes() int {
+	n := len(in.men)
+	if n <= 1 {
+		return n
+	}
+	return 2
+}
+
+func (in *Insert) ropeIndex(i int) int {
+	r := in.ropes()
+	if r <= 1 {
+		return 0
+	}
+	return i % r
+}
+
+// ropeFoot is the ground point under man i's rope. X matches the door
+// slot so the line is vertical. Y is the ground under the aircraft.
+func (in *Insert) ropeFoot(i int) (x, y float64) {
+	hx, hy := in.hover()
+	r := in.ropes()
+	if r == 0 {
+		return hx, hy
+	}
+	mid := float64(r-1) / 2
+	slot := (float64(in.ropeIndex(i)) - mid) * dropRopeGap
+	return hx + slot, hy
+}
+
+type dropBeat int
+
+const (
+	beatCabin dropBeat = iota
+	beatRope
+	beatSpread
+	beatKneel
+	beatDown
+)
+
+func (in *Insert) beat(i int) (dropBeat, float64) {
+	t0 := in.ropeExit(i)
+	if in.t < t0 {
+		return beatCabin, 0
+	}
+	if in.t < t0+dropSlide {
+		return beatRope, (in.t - t0) / dropSlide
+	}
+	t0 += dropSlide
+	if in.t < t0+dropSpread {
+		return beatSpread, (in.t - t0) / dropSpread
+	}
+	t0 += dropSpread
+	if in.t < t0+dropKneel {
+		return beatKneel, (in.t - t0) / dropKneel
+	}
+	return beatDown, 1
 }
 
 func (in *Insert) progress(i int) float64 {
-	start := dropApproach + dropRope + dropStagger*float64(i)
-	return (in.t - start) / dropSlide
+	b, u := in.beat(i)
+	switch b {
+	case beatCabin:
+		return -1
+	case beatDown:
+		return 1
+	case beatRope:
+		return u * 0.5
+	default:
+		// Spread and kneel are both "out of the cabin" and not yet done.
+		return 0.5 + u*0.49
+	}
 }
 
 func (in *Insert) hover() (x, y float64) {
@@ -188,27 +266,24 @@ func (in *Insert) pose() (x, y, alt float64) {
 }
 
 // feet is where a man is drawn, and whether he has left the cabin.
+// On the rope he moves only downward. On the ground he walks to his mark.
 func (in *Insert) feet(i int) (x, y float64, out bool) {
-	p := in.progress(i)
-	if p < 0 {
+	b, u := in.beat(i)
+	if b == beatCabin {
 		return 0, 0, false
 	}
-	if p > 1 {
-		p = 1
+	fx, fy := in.ropeFoot(i)
+	_, _, alt := in.pose()
+	switch b {
+	case beatRope:
+		s := smooth01(u)
+		return fx, (fy - alt) + alt*s, true
+	case beatSpread:
+		s := smooth01(u)
+		return fx + (in.men[i].x-fx)*s, fy + (in.men[i].y-fy)*s, true
+	default:
+		return in.men[i].x, in.men[i].y, true
 	}
-	gx, gy, alt := in.pose()
-	rx, ry := dropRight()
-	mid := float64(len(in.men)-1) / 2
-	slot := (float64(i) - mid) * dropSlot
-	ox := gx + rx*slot
-	oy := gy - alt + ry*slot
-	u := smooth01(p)
-	x = ox + (in.men[i].x-ox)*u
-	y = oy + (in.men[i].y-oy)*u
-	sway := math.Sin(in.t*7+float64(i)*1.7) * 1.5 * (1 - u)
-	x += rx * sway
-	y += ry * sway
-	return x, y, true
 }
 
 // Draw paints the shadow, the ropes, the men, then the aircraft.
@@ -219,7 +294,6 @@ func (in *Insert) Draw(dst *ebiten.Image, cam sim.Camera) {
 	gx, gy, alt := in.pose()
 	doorX := cam.ScreenX(gx)
 	doorY := cam.ScreenY(gy) - alt
-	rx, ry := dropRight()
 
 	sh := activeSheets().Get("chopper/fly")
 	var body *ebiten.Image
@@ -244,43 +318,66 @@ func (in *Insert) Draw(dst *ebiten.Image, cam sim.Camera) {
 	}
 	rope := color.RGBA{R: 0x2a, G: 0x22, B: 0x18, A: 0xff}
 	if ropeU > 0 {
-		for i := range in.men {
-			x0, y0 := ropeStart(in, i, doorX, doorY, rx, ry)
-			x1, y1 := ropeEnds(in, i, doorX, doorY, rx, ry, ropeU, cam)
-			strokeLine(dst, x0, y0, x1, y1, 1.1, rope)
+		groundY := cam.ScreenY(gy)
+		for k := 0; k < in.ropes(); k++ {
+			x0, y0 := ropeTop(in, k, doorX, doorY)
+			y1 := y0 + (groundY-y0)*ropeU
+			strokeLine(dst, x0, y0, x0, y1, 1.1, rope)
 		}
 	}
 	for i := range in.men {
-		x, y, out := in.feet(i)
-		if !out || in.progress(i) >= 1 {
+		b, _ := in.beat(i)
+		if b == beatCabin || b == beatDown {
 			continue
 		}
-		drawDropSoldier(dst, cam, &in.men[i], x, y)
+		x, y, out := in.feet(i)
+		if !out {
+			continue
+		}
+		drawDropSoldier(dst, cam, in, i, x, y)
 	}
 	drawChopper(dst, doorX, doorY, body)
 }
 
-func ropeStart(in *Insert, i int, doorX, doorY, rx, ry float64) (x, y float64) {
-	mid := float64(len(in.men)-1) / 2
-	slot := (float64(i) - mid) * dropSlot
-	return doorX + rx*slot, doorY + ry*slot
+// ropeTop is the door end of rope k. The offset is horizontal, so the
+// rope falls straight down the screen.
+func ropeTop(in *Insert, k int, doorX, doorY float64) (x, y float64) {
+	r := in.ropes()
+	if r <= 1 {
+		return doorX, doorY
+	}
+	mid := float64(r-1) / 2
+	return doorX + (float64(k)-mid)*dropRopeGap, doorY
 }
 
-func ropeEnds(in *Insert, i int, doorX, doorY, rx, ry, ropeU float64, cam sim.Camera) (x, y float64) {
-	ox, oy := ropeStart(in, i, doorX, doorY, rx, ry)
-	fx := cam.ScreenX(in.men[i].x)
-	fy := cam.ScreenY(in.men[i].y)
-	return ox + (fx-ox)*ropeU, oy + (fy-oy)*ropeU
-}
-
-func drawDropSoldier(dst *ebiten.Image, cam sim.Camera, m *dropMan, x, y float64) {
-	u := sim.Unit{ID: m.id, Side: sim.SidePlayer, HP: sim.Alive, SquadID: m.squad, Facing: math.Pi / 2}
-	sh := sheetForPose(&u, poseIdle)
+func drawDropSoldier(dst *ebiten.Image, cam sim.Camera, in *Insert, i int, x, y float64) {
+	m := &in.men[i]
+	b, _ := in.beat(i)
+	facing := math.Pi / 2
+	p := poseIdle
+	switch b {
+	case beatSpread:
+		p = poseWalk
+		dx := m.x - x
+		dy := m.y - y
+		if math.Hypot(dx, dy) > 0.5 {
+			facing = math.Atan2(dy, dx)
+		}
+	case beatKneel:
+		p = poseKneel
+		facing = -math.Pi / 2
+	}
+	u := sim.Unit{ID: m.id, Side: sim.SidePlayer, HP: sim.Alive, SquadID: m.squad, Facing: facing}
+	sh := sheetForPose(&u, p)
 	if sh == nil {
 		fillRectF(dst, cam.ScreenX(x)-2, cam.ScreenY(y)-8, 4, 8, color.RGBA{R: 0x6a, G: 0x70, B: 0x38, A: 0xff})
 		return
 	}
-	img, mirror, ok := sh.image(Direction(math.Pi/2), 0)
+	frame := 0
+	if p == poseWalk && sh.Frames > 1 {
+		frame = int(in.t*8) % sh.Frames
+	}
+	img, mirror, ok := sh.image(Direction(facing), frame)
 	if !ok {
 		return
 	}

@@ -64,7 +64,12 @@ func (p pose) name() string {
 
 // controlledSquad is the player squad the pointer is ordering. Field sets it.
 // Other living player squads kneel while they stand still.
-var controlledSquad sim.SquadID
+// kneelHold is a squad still in the arrival wedge. Field sets it.
+// Those men kneel even when they are the squad under the pointer.
+var (
+	controlledSquad sim.SquadID
+	kneelHold       map[sim.SquadID]bool
+)
 
 // victorySalute is set for the draw of a won phase. Living player soldiers
 // on foot then use the salute sheet.
@@ -90,7 +95,9 @@ func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
 	if u.GrenadeWind > 0 || u.RocketWind > 0 || u.SinceThrow < throwWindow {
 		return poseThrow
 	}
-	if u.SinceShot < shotWindow {
+	// A kneeling player fires from the kneel. The standing shoot sheet
+	// would pop him up.
+	if u.SinceShot < shotWindow && !playerKneeling(u) {
 		return poseShoot
 	}
 	if math.Hypot(u.VX, u.VY) > walkMin {
@@ -99,10 +106,19 @@ func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
 	if victorySalute && u.Side == sim.SidePlayer && !u.InWater {
 		return poseSalute
 	}
-	if u.Side == sim.SidePlayer && u.SquadID != controlledSquad {
+	if playerKneeling(u) {
 		return poseKneel
 	}
 	return poseIdle
+}
+
+// playerKneeling is a player squad that is parked, or still holding the
+// arrival wedge. A shot does not stand them up.
+func playerKneeling(u *sim.Unit) bool {
+	if u.Side != sim.SidePlayer {
+		return false
+	}
+	return u.SquadID != controlledSquad || kneelHold[u.SquadID]
 }
 
 // throwFrac scrubs the throw across the windup, or across the 0.25s flourish
@@ -482,8 +498,14 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	boomTerrain = terrain
 	victorySalute = w.Status == sim.Won
 	controlledSquad = sim.SquadSnake
+	kneelHold = map[sim.SquadID]bool{}
 	if s := w.ActiveSquad(); s != nil {
 		controlledSquad = s.ID
+	}
+	for i := range w.Squads {
+		if w.Squads[i].Kneel {
+			kneelHold[w.Squads[i].ID] = true
+		}
 	}
 	drawTerrain(dst, w.Map, w.Camera, terrain)
 	drawScorches(dst, w.Camera)
@@ -543,7 +565,8 @@ func collectBodies(w *sim.World, terrain string) []body {
 		if u.VehicleID != 0 || dropHides(u.ID) {
 			continue
 		}
-		bodies = append(bodies, unitBody(cam, u, u.ID == leadID))
+		aimLock := u.ID == leadID && !kneelHold[u.SquadID]
+		bodies = append(bodies, unitBody(cam, u, aimLock))
 	}
 	for i := range w.Vehicles {
 		v := w.Vehicles[i]

@@ -106,5 +106,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A grenade, rocket, mine, or crate blast leaves a soft stain on soil, sand, or snow. It darkens the paint already there. Water and a shed fireball do not. The mark stays until the next battle.
 - A cleared phase plays an original victory march when Victory! appears. A wipe plays an original minor-key march when PHASE FAILED appears. Either march fades out when you leave that screen.
 - Boot Hill loops an original slow lament. The briefing loops an original E-minor march. Each fades out on leaving that screen. The title is still silent.
-- A helicopter flies the squad in at the start of a battle. They abseil onto their marks, then it leaves. It is not a vehicle.
+- A helicopter flies the squad in at the start of a battle. At most two ropes hang straight down. The squad walks out into a wedge and stays kneeling until it is ordered to move. The aircraft is not a vehicle.
 

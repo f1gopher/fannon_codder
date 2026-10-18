@@ -320,6 +320,7 @@ func (w *World) CommandMove(x, y float64, newOrder bool) {
 	if s == nil {
 		return
 	}
+	s.Kneel = false
 	s.HasDest = true
 	s.DestX = x
 	s.DestY = y
@@ -404,6 +405,17 @@ func (w *World) stepSquad(s *Squad, dt float64) {
 	if leader.VehicleID != 0 {
 		leader.VX = 0
 		leader.VY = 0
+		return
+	}
+	if s.Kneel {
+		for _, id := range s.MemberIDs {
+			u := w.Unit(id)
+			if u == nil {
+				continue
+			}
+			u.VX = 0
+			u.VY = 0
+		}
 		return
 	}
 	if s.HasDest {

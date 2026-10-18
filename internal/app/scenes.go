@@ -212,6 +212,7 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 }
 
 func finishBattle(b *Battle) *Battle {
+	b.world.FormDrop()
 	b.insert = render.NewInsert(b.world)
 	return b
 }

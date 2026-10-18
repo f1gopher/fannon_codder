@@ -74,6 +74,9 @@ type Squad struct {
 	// enemy do not spin the other men's sectors.
 	WatchBase float64
 	WatchSet  bool
+	// Kneel holds the arrival wedge. The men stay put and face north
+	// until this squad is given a move.
+	Kneel bool
 }
 
 // Vec2 is a world-space point (trail crumbs, destinations).

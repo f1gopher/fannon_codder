@@ -123,12 +123,31 @@ func TestParkedSquadKneels(t *testing.T) {
 	if got := unitPose(u, 0, 0); got != poseIdle {
 		t.Fatalf("controlled snake = %s", got.name())
 	}
+	kneelHold = map[sim.SquadID]bool{sim.SquadSnake: true}
+	t.Cleanup(func() { kneelHold = nil })
+	if got := unitPose(u, 0, 0); got != poseKneel {
+		t.Fatalf("arrival wedge = %s, want kneel", got.name())
+	}
+	u.SinceShot = 0
+	if got := unitPose(u, 0, 0); got != poseKneel {
+		t.Fatalf("firing from the wedge = %s, want kneel", got.name())
+	}
+	kneelHold = nil
+	u.SquadID = sim.SquadEagle
+	if got := unitPose(u, 0, 0); got != poseKneel {
+		t.Fatalf("parked shot = %s, want kneel", got.name())
+	}
+	u.SquadID = sim.SquadSnake
+	if got := unitPose(u, 0, 0); got != poseShoot {
+		t.Fatalf("standing shot = %s", got.name())
+	}
 	u.SquadID = sim.SquadEagle
 	u.VX = walkMin + 1
 	if got := unitPose(u, 0, 0); got != poseWalk {
 		t.Fatalf("walking eagle = %s", got.name())
 	}
 	u.VX = 0
+	u.SinceShot = 1
 	u.Side = sim.SideEnemy
 	if got := unitPose(u, 0, 0); got != poseIdle {
 		t.Fatalf("enemy = %s", got.name())

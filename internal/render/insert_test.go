@@ -83,6 +83,75 @@ func TestSoldiersAbseilThenTheHelicopterLeaves(t *testing.T) {
 	}
 }
 
+func TestTwoStraightRopesThenAKneel(t *testing.T) {
+	w := sim.NewEmpty()
+	w.SpawnPlayerSquad(sim.SquadSnake, []sim.Vec2{
+		{X: 80, Y: 120},
+		{X: 70, Y: 120},
+		{X: 60, Y: 120},
+		{X: 50, Y: 120},
+		{X: 40, Y: 120},
+	})
+	in := NewInsert(w)
+	if in.ropes() != 2 {
+		t.Fatalf("ropes %d, want 2", in.ropes())
+	}
+	seen := map[int]bool{}
+	for i := range in.men {
+		seen[in.ropeIndex(i)] = true
+		fx, fy := in.ropeFoot(i)
+		if math.Abs(fy-120) > 0.01 {
+			t.Fatalf("rope %d foot y %v", i, fy)
+		}
+		// Every man on a rope shares that rope's x, so the line is vertical.
+		for j := range in.men {
+			if in.ropeIndex(j) != in.ropeIndex(i) {
+				continue
+			}
+			ox, _ := in.ropeFoot(j)
+			if math.Abs(ox-fx) > 0.01 {
+				t.Fatalf("rope %d x differs: %v vs %v", in.ropeIndex(i), ox, fx)
+			}
+		}
+	}
+	if len(seen) != 2 {
+		t.Fatalf("rope ids %v", seen)
+	}
+
+	in.t = in.ropeExit(0) + dropSlide
+	x, y, out := in.feet(0)
+	fx, fy := in.ropeFoot(0)
+	if !out || math.Abs(x-fx) > 0.05 || math.Abs(y-fy) > 0.05 {
+		t.Fatalf("first boot should be under the rope at %v,%v, got %v,%v", fx, fy, x, y)
+	}
+	if b, _ := in.beat(0); b != beatSpread {
+		t.Fatalf("beat %v, want spread", b)
+	}
+
+	in.t = in.ropeExit(0) + dropSlide + dropSpread
+	if b, _ := in.beat(0); b != beatKneel {
+		t.Fatalf("beat %v, want kneel", b)
+	}
+	x, y, _ = in.feet(0)
+	if math.Hypot(x-in.men[0].x, y-in.men[0].y) > 0.05 {
+		t.Fatalf("kneel should be on the mark, got %v,%v", x, y)
+	}
+
+	// Halfway through the walk he has left the rope toward his mark.
+	in.t = in.ropeExit(4) + dropSlide + dropSpread*0.5
+	x, _, _ = in.feet(4)
+	fx, _ = in.ropeFoot(4)
+	if math.Abs(x-fx) < 1 || math.Abs(x-in.men[4].x) < 1 {
+		t.Fatalf("man 4 should be between the rope (%v) and his mark (%v), at %v", fx, in.men[4].x, x)
+	}
+
+	alone := NewInsert(sim.NewEmpty())
+	alone.men = []dropMan{{id: 1, x: 10, y: 10}}
+	if alone.ropes() != 1 {
+		t.Fatalf("one soldier should get one rope, got %d", alone.ropes())
+	}
+}
+
 func TestChopperSheet(t *testing.T) {
 	lib, err := Load(art.Files)
 	if err != nil {

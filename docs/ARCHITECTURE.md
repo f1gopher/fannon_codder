@@ -65,7 +65,7 @@ A crate holds 4 grenades or 4 rockets (`CrateAmount`). A player shot, grenade, o
 
 The only vehicle is the skidoo. A jeep would be the same struct with another skin.
 
-A battle opens with the player squad still aboard a helicopter. It flies in from the north-west along the nose of `chopper/fly`, pays a rope out to each man's mark, and they slide down onto the spots `SpawnPlayerSquad` already gave them. Orders, guns, and `World.Step` wait until the last boot is down. The ropes reel in and the aircraft leaves to the south-east while the phase plays. Pause holds the arrival. The rotor is a mixer loop until the aircraft is gone, and a scene change stops it. The helicopter is not a vehicle: nothing boards it, and it does not fight.
+A battle opens with the player squad still aboard a helicopter. It flies in from the north-west along the nose of `chopper/fly`. One rope hangs straight down from the door, or two side by side when more than one soldier is aboard. They slide down those ropes, walk out into a wedge north of the leader, and kneel facing north. The leader stays on the player start. A spot in water, a tree, or a cliff keeps that man's spawn instead. They stay kneeling in that wedge until the squad is given a move. A shot, from that wedge or from any other kneeling squad, keeps the kneel. Orders, guns, and `World.Step` wait until the arrival kneel is done. The ropes reel in and the aircraft leaves to the south-east while the phase plays. Pause holds the arrival. The rotor is a mixer loop until the aircraft is gone, and a scene change stops it. The helicopter is not a vehicle: nothing boards it, and it does not fight.
 
 Objectives in use are `kill_all_enemy` and `destroy_enemy_buildings`. `protect_civilians` parses and does not change the phase.
 

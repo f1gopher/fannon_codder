@@ -108,6 +108,7 @@ func (w *World) Split() bool {
 		MemberIDs: moving,
 		Grenades:  gGo,
 		Rockets:   rGo,
+		Kneel:     active.Kneel,
 	}
 	if l := w.Unit(ns.LeaderID); l != nil {
 		ns.Trail = []Vec2{{X: l.X, Y: l.Y}}

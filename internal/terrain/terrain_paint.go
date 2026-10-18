@@ -167,6 +167,7 @@ func labelRegions(surf []surface, w, h int) []int {
 func paintMap(m sim.Map, terrain string) terrainPaint {
 	lk := lookOf(terrain)
 	prepareGrass(m.W*sim.TileSize, m.H*sim.TileSize, lk.kind)
+	prepareSnow(m.W*sim.TileSize, m.H*sim.TileSize, lk.kind)
 	surf := surfacesOf(m, lk.open)
 	ids := labelRegions(surf, m.W, m.H)
 	pw := m.W * sim.TileSize * terrainPx
@@ -322,8 +323,8 @@ func colorOf(lk look, surf []surface, w, h int, s surface, tx, ty int, wx, wy fl
 }
 
 // plateColor reads this terrain's ground, water, and nothing of another
-// terrain's. Jungle open ground is grassColor. Ice, quicksand, rock, and
-// ramps stay the shared materials.
+// terrain's. Jungle open ground is grassColor. Snow open ground is
+// snowColor. Ice, quicksand, rock, and ramps stay the shared materials.
 func (lk look) plateColor(s surface, wx, wy float64) (color.RGBA, uint8) {
 	switch s {
 	case surfShallow:
@@ -345,6 +346,9 @@ func (lk look) plateColor(s surface, wx, wy float64) (color.RGBA, uint8) {
 	default:
 		if lk.kind == Jungle {
 			return grassSample(wx, wy), maskNone
+		}
+		if lk.kind == Snow {
+			return snowSample(wx, wy), maskNone
 		}
 		return lk.ground.at(wx, wy), maskNone
 	}

@@ -108,6 +108,7 @@ func paintChart(c Chart) terrainPaint {
 	lk := lookOf(c.Terrain)
 	ww, wh := c.W, c.H
 	prepareGrass(ww, wh, lk.kind)
+	prepareSnow(ww, wh, lk.kind)
 	grid := rasterChart(c, lk.open)
 	clearSpentMines(grid, c, lk.open)
 	toWater, toLand := chartWaterDist(grid, ww, wh)

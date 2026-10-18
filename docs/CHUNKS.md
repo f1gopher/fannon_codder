@@ -113,5 +113,6 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - In the map editor's regions view, a left drag adds a tree region. Releasing closes it with a straight line. The file is not written.
 - Every campaign phase is stored as freeform regions. The battle still receives the same cells.
 - The battle paints those region rings. Movement, fire, and mines still use the cells. A spent mine drops its mark. Sandboxes stay tile grids.
-- Jungle open ground is computed in world space. Forest, desert, and snow still use their ground plates. The jungle ground plate stays on disk and is not sampled.
+- Jungle open ground is computed in world space. Forest and desert still use their ground plates. The jungle ground plate stays on disk and is not sampled.
+- Snow open ground is computed in world space. The snow ground plate stays on disk and is not sampled. Ice, the snow shore, and the snow canopy stay on their plates.
 

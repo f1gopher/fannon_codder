@@ -110,6 +110,7 @@ func paintChart(c Chart) terrainPaint {
 	prepareGrass(ww, wh, lk.kind)
 	prepareSnow(ww, wh, lk.kind)
 	prepareSand(ww, wh, lk.kind)
+	prepareForest(ww, wh, lk.kind)
 	grid := rasterChart(c, lk.open)
 	clearSpentMines(grid, c, lk.open)
 	toWater, toLand := chartWaterDist(grid, ww, wh)

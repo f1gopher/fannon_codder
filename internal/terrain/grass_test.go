@@ -70,14 +70,3 @@ func TestJungleOpenGroundIsProcedural(t *testing.T) {
 		t.Fatalf("chart pixel %+v, want %+v", got, grassSample(wx, wy))
 	}
 }
-
-func TestForestGroundStaysOnThePlate(t *testing.T) {
-	paint := paintMap(mapOf(6, 6, nil), "forest")
-	lk := lookOf("forest")
-	px, py := 40*terrainPx+2, 28*terrainPx+1
-	wx := (float64(px) + 0.5) / float64(terrainPx)
-	wy := (float64(py) + 0.5) / float64(terrainPx)
-	if colorDist(paint.ground.RGBAAt(px, py), lk.ground.at(wx, wy)) > 2 {
-		t.Fatalf("forest %+v, plate %+v", paint.ground.RGBAAt(px, py), lk.ground.at(wx, wy))
-	}
-}

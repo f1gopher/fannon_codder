@@ -48,6 +48,7 @@ const (
 	surfCliff
 	surfRamp
 	surfBridge
+	surfMine
 )
 
 type surface uint8

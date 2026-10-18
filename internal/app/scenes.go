@@ -99,6 +99,8 @@ type Battle struct {
 	menu      battleMenu
 	again     func(*Progress) *Battle
 	insert    *render.Insert
+	chart     terrain.Chart
+	chartOn   bool
 }
 
 func NewBattle(prog *Progress) *Battle {
@@ -197,18 +199,52 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 			sandbox: true,
 		})
 	}
+	b := &Battle{
+		prog:     prog,
+		world:    w,
+		deployed: nil,
+		unitIDs:  ids,
+	}
+	if prog != nil {
+		if ch, ok := phaseChart(prog.Phase); ok {
+			b.chart = ch
+			b.chartOn = true
+		}
+	}
 	n := prog.DeployCount()
 	if s := w.ActiveSquad(); s != nil && len(s.MemberIDs) < n {
 		n = len(s.MemberIDs)
 	}
 	men := prog.Pool.Deploy(n)
 	nameSquad(w, men)
-	return finishBattle(&Battle{
-		prog:     prog,
-		world:    w,
-		deployed: men,
-		unitIDs:  ids,
-	})
+	b.deployed = men
+	return finishBattle(b)
+}
+
+func phaseChart(p *data.Phase) (terrain.Chart, bool) {
+	if p == nil || !p.Map.Freeform() || p.Map.W < 1 || p.Map.H < 1 {
+		return terrain.Chart{}, false
+	}
+	ch := terrain.Chart{
+		W:       p.Map.W * sim.TileSize,
+		H:       p.Map.H * sim.TileSize,
+		Terrain: p.Terrain,
+	}
+	for _, r := range p.Map.Regions {
+		tile, err := data.RegionTile(r.Type)
+		if err != nil || len(r.Points) < 3 {
+			return terrain.Chart{}, false
+		}
+		cr := terrain.ChartRegion{Tile: tile, Name: r.Type}
+		for _, pt := range r.Points {
+			if len(pt) != 2 {
+				return terrain.Chart{}, false
+			}
+			cr.Points = append(cr.Points, [2]float64{pt[0], pt[1]})
+		}
+		ch.Regions = append(ch.Regions, cr)
+	}
+	return ch, true
 }
 
 func finishBattle(b *Battle) *Battle {
@@ -536,6 +572,10 @@ func (b *Battle) Draw(screen *ebiten.Image) {
 	kind := b.terrainName()
 	render.UseDrop(b.insert)
 	defer render.UseDrop(nil)
+	if b.chartOn {
+		render.UseChart(b.chart)
+		defer render.ClearChart()
+	}
 	render.Field(play, b.world, kind)
 	if b.mapOpen {
 		render.Overview(screen, b.world, kind)

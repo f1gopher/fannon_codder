@@ -109,4 +109,8 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - The active squad shares one gun, Cannon Fodder style: one round every 0.36 s for ranks 0–3, every 0.30 s from rank 4 up, rotating through the file.
 - The gunshot is a street report: a muzzle crack, a low thump, and three returning slaps.
 - A helicopter flies the squad in at the start of a battle. At most two ropes hang straight down. The squad walks out into a wedge and stays kneeling until it is ordered to move. The aircraft is not a vehicle.
+- The map editor paints freeform regions. Mission 1 is jungle ground plus four tree regions. The other phases stay tile grids. The battle still walks a tile grid.
+- In the map editor's regions view, a left drag adds a tree region. Releasing closes it with a straight line. The file is not written.
+- Every campaign phase is stored as freeform regions. The battle still receives the same cells.
+- The battle paints those region rings. Movement, fire, and mines still use the cells. A spent mine drops its mark. Sandboxes stay tile grids.
 

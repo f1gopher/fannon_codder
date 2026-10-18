@@ -7,17 +7,41 @@ import (
 	ground "fannon-codder/internal/terrain"
 )
 
+// UseChart paints the battle from a freeform region map. ClearChart
+// returns the next draw to the tile grid. Sandboxes leave this unset.
+func UseChart(c ground.Chart) {
+	battleChart.on = true
+	battleChart.c = c
+}
+
+// ClearChart drops the region map. The next draw uses the tile grid.
+func ClearChart() {
+	battleChart.on = false
+}
+
+var battleChart struct {
+	on bool
+	c  ground.Chart
+}
+
+func groundView(m sim.Map, terrain string) *ground.View {
+	if battleChart.on {
+		return ground.PrepareChartLive(battleChart.c, m)
+	}
+	return ground.Prepare(m, terrain)
+}
+
 func drawTerrain(dst *ebiten.Image, m sim.Map, cam sim.Camera, terrain string) {
 	ox := cam.ScreenX(0)
 	oy := cam.ScreenY(0)
-	ground.Prepare(m, terrain).DrawGround(dst, ox, oy, pictureScale, animTime)
+	groundView(m, terrain).DrawGround(dst, ox, oy, pictureScale, animTime)
 }
 
 func terrainTreeBodies(m sim.Map, cam sim.Camera, terrain string) []body {
 	if m.W == 0 {
 		return nil
 	}
-	cans := ground.Prepare(m, terrain).Canopies()
+	cans := groundView(m, terrain).Canopies()
 	ox := cam.ScreenX(0)
 	oy := cam.ScreenY(0)
 	bodies := make([]body, 0, len(cans))

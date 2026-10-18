@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"fannon-codder/internal/sim"
 	ground "fannon-codder/internal/terrain"
@@ -78,13 +79,18 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	drawH := scale * mh
 	ox := HUDWidth + pad + (availW-drawW)/2
 	oy := pad + (availH-drawH)/2
-	for ty := 0; ty < mh; ty++ {
-		for tx := 0; tx < mw; tx++ {
-			tile := sim.TileGrass
-			if w.Map.W > 0 {
-				tile = w.Map.At(tx, ty)
+	if battleChart.on && battleChart.c.W > 0 && battleChart.c.H > 0 {
+		fillRect(dst, ox, oy, drawW, drawH, overviewTile(sim.TileGrass, terrain))
+		drawOverviewRegions(dst, ox, oy, drawW, drawH, w.Map)
+	} else {
+		for ty := 0; ty < mh; ty++ {
+			for tx := 0; tx < mw; tx++ {
+				tile := sim.TileGrass
+				if w.Map.W > 0 {
+					tile = w.Map.At(tx, ty)
+				}
+				fillRect(dst, ox+tx*scale, oy+ty*scale, scale, scale, overviewTile(tile, terrain))
 			}
-			fillRect(dst, ox+tx*scale, oy+ty*scale, scale, scale, overviewTile(tile, terrain))
 		}
 	}
 	for i := range w.Buildings {
@@ -205,6 +211,53 @@ func overviewTile(t sim.Tile, terrain string) color.RGBA {
 			return overviewGrass
 		}
 	}
+}
+
+func drawOverviewRegions(dst *ebiten.Image, ox, oy, drawW, drawH int, m sim.Map) {
+	ch := battleChart.c
+	s := PictureScale()
+	if s <= 0 {
+		s = 1
+	}
+	sx := float64(drawW) / float64(ch.W) * s
+	sy := float64(drawH) / float64(ch.H) * s
+	oxp := float64(ox) * s
+	oyp := float64(oy) * s
+	for _, r := range ch.Regions {
+		if len(r.Points) < 3 {
+			continue
+		}
+		if r.Tile == sim.TileMine && !ringHoldsMine(r, m) {
+			continue
+		}
+		var path vector.Path
+		path.MoveTo(float32(oxp+r.Points[0][0]*sx), float32(oyp+r.Points[0][1]*sy))
+		for _, p := range r.Points[1:] {
+			path.LineTo(float32(oxp+p[0]*sx), float32(oyp+p[1]*sy))
+		}
+		path.Close()
+		op := &vector.DrawPathOptions{AntiAlias: true}
+		op.ColorScale.ScaleWithColor(overviewTile(r.Tile, ch.Terrain))
+		vector.FillPath(dst, &path, nil, op)
+	}
+}
+
+func ringHoldsMine(r ground.ChartRegion, m sim.Map) bool {
+	if m.W < 1 || m.H < 1 || len(m.Tiles) < m.W*m.H {
+		return true
+	}
+	for ty := 0; ty < m.H; ty++ {
+		for tx := 0; tx < m.W; tx++ {
+			if m.At(tx, ty) != sim.TileMine {
+				continue
+			}
+			c := sim.TileCenter(tx, ty)
+			if r.Contains(c.X, c.Y) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func overviewUnit(u *sim.Unit) color.RGBA {

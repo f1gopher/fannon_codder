@@ -28,26 +28,36 @@ func TestOpensTheFirstPhase(t *testing.T) {
 		t.Fatalf("terrain = %q", ed.biome)
 	}
 	terrain, size := ed.infoLines()
-	if terrain != "jungle" || size != "24 × 16 tiles" {
+	if terrain != "jungle" || size != "384 × 256" {
 		t.Fatalf("info = %q %q", terrain, size)
 	}
-	ed.load(3)
-	if ed.phases[3].name != "m03p01" || ed.biome != "snow" {
-		t.Fatalf("phase 4 = %s %q", ed.phases[3].name, ed.biome)
-	}
-	terrain, size = ed.infoLines()
-	if terrain != "snow" || size != fmt.Sprintf("%d × %d tiles", ed.grid.W, ed.grid.H) {
-		t.Fatalf("info = %q %q", terrain, size)
-	}
-	if ed.scrollX != 0 || ed.scrollY != 0 {
-		t.Fatalf("scroll = %v,%v", ed.scrollX, ed.scrollY)
+	if !ed.freeform || len(ed.chart.Regions) != 4 {
+		t.Fatalf("regions = %v %d", ed.freeform, len(ed.chart.Regions))
 	}
 	if ed.gridView || ed.viewName() != "terrain" {
 		t.Fatalf("view = %v %q", ed.gridView, ed.viewName())
 	}
 	ed.gridView = true
-	if ed.viewName() != "tile grid" {
+	if ed.viewName() != "regions" {
 		t.Fatalf("view = %q", ed.viewName())
+	}
+	ed.load(3)
+	if !ed.freeform {
+		t.Fatal("m03p01 should be regions")
+	}
+	if ed.phases[3].name != "m03p01" || ed.biome != "snow" {
+		t.Fatalf("phase 4 = %s %q", ed.phases[3].name, ed.biome)
+	}
+	terrain, size = ed.infoLines()
+	want := fmt.Sprintf("%d × %d", ed.grid.W*sim.TileSize, ed.grid.H*sim.TileSize)
+	if terrain != "snow" || size != want {
+		t.Fatalf("info = %q %q", terrain, size)
+	}
+	if ed.scrollX != 0 || ed.scrollY != 0 {
+		t.Fatalf("scroll = %v,%v", ed.scrollX, ed.scrollY)
+	}
+	if !ed.gridView || ed.viewName() != "regions" {
+		t.Fatalf("view = %v %q", ed.gridView, ed.viewName())
 	}
 }
 

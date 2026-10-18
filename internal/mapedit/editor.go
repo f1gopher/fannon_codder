@@ -13,6 +13,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 	"golang.org/x/image/font/gofont/goregular"
 
 	"fannon-codder/internal/data"
@@ -25,18 +26,23 @@ const (
 	tps       = 60
 )
 
-// Editor shows one campaign phase. It reads the phase JSON and paints with
-// the battle ground. It does not write files or change cells.
+// Editor shows one campaign phase. A region map is painted from its
+// polygons. A tile map still uses the battle ground. In the regions
+// view a left drag adds a tree region for this session. Nothing is written.
 type Editor struct {
-	phases []phaseRow
-	index  int
-	grid   sim.Map
-	biome  string
-	err    error
+	phases   []phaseRow
+	index    int
+	grid     sim.Map
+	biome    string
+	freeform bool
+	chart    terrain.Chart
+	err      error
 
 	scrollX, scrollY float64
 	time             float64
 	gridView         bool
+	stroke           [][2]float64
+	added            map[int][]terrain.ChartRegion
 
 	scale      float64
 	offW, offH int
@@ -82,6 +88,7 @@ func New() (*Editor, error) {
 
 func (e *Editor) load(i int) {
 	e.drag = false
+	e.stroke = nil
 	if len(e.phases) == 0 {
 		e.err = fmt.Errorf("campaign has no phases")
 		return
@@ -94,6 +101,8 @@ func (e *Editor) load(i int) {
 	}
 	e.index = i
 	e.scrollX, e.scrollY = 0, 0
+	e.freeform = false
+	e.chart = terrain.Chart{}
 	p, err := data.LoadPhase(e.phases[i].file)
 	if err != nil {
 		e.err = err
@@ -109,9 +118,21 @@ func (e *Editor) load(i int) {
 		e.biome = p.Terrain
 		return
 	}
+	e.biome = p.Terrain
+	e.freeform = p.Map.Freeform()
+	e.chart = terrain.Chart{}
+	if e.freeform {
+		ch, err := chartFrom(p)
+		if err != nil {
+			e.err = err
+			e.grid = sim.Map{}
+			return
+		}
+		e.chart = ch
+		e.chart.Regions = append(e.chart.Regions, e.added[i]...)
+	}
 	e.err = nil
 	e.grid = g
-	e.biome = p.Terrain
 }
 
 func (e *Editor) label() string {
@@ -132,6 +153,7 @@ func (e *Editor) Update() error {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyV) {
 		e.gridView = !e.gridView
+		e.stroke = nil
 	}
 	ebiten.SetWindowTitle(e.label())
 
@@ -148,32 +170,7 @@ func (e *Editor) Update() error {
 		e.scrollX += sim.TileSize
 	}
 
-	cx, cy := e.cursor()
-	rail := RailWidth(e.offW)
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		if cy < InfoTop(e.offH, e.scale) {
-			if row, ok := RailHit(cx, cy, rail, RowHeight(e.scale), len(e.phases)); ok {
-				e.drag = false
-				e.load(row)
-			}
-		} else if cx >= float64(rail) {
-			e.drag = true
-			e.dragX, e.dragY = cx, cy
-			e.dragScrollX, e.dragScrollY = e.scrollX, e.scrollY
-		}
-	}
-	if e.drag {
-		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			s := e.scale
-			if s <= 0 {
-				s = 1
-			}
-			e.scrollX = e.dragScrollX - (cx-e.dragX)/s
-			e.scrollY = e.dragScrollY - (cy-e.dragY)/s
-		} else {
-			e.drag = false
-		}
-	}
+	e.pointer()
 
 	wx, wy := ebiten.Wheel()
 	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight) {
@@ -184,6 +181,52 @@ func (e *Editor) Update() error {
 	e.scrollY -= wy * wheelStep
 	e.clampScroll()
 	return nil
+}
+
+// pointer selects a phase on the rail. On the map, a left drag draws a
+// tree region in the regions view and scrolls in the other views.
+func (e *Editor) pointer() {
+	cx, cy := e.cursor()
+	rail := RailWidth(e.offW)
+	down := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		if cx < float64(rail) {
+			if cy < InfoTop(e.offH, e.scale) {
+				if row, ok := RailHit(cx, cy, rail, RowHeight(e.scale), len(e.phases)); ok {
+					e.drag = false
+					e.stroke = nil
+					e.load(row)
+				}
+			}
+		} else {
+			x, y := e.worldCursor(cx, cy)
+			if !e.beginStroke(x, y) {
+				e.drag = true
+				e.dragX, e.dragY = cx, cy
+				e.dragScrollX, e.dragScrollY = e.scrollX, e.scrollY
+			}
+		}
+	}
+	if len(e.stroke) > 0 {
+		x, y := e.worldCursor(cx, cy)
+		if down {
+			e.extendStroke(x, y)
+		} else {
+			e.finishStroke(x, y)
+		}
+	}
+	if e.drag {
+		if down {
+			s := e.scale
+			if s <= 0 {
+				s = 1
+			}
+			e.scrollX = e.dragScrollX - (cx-e.dragX)/s
+			e.scrollY = e.dragScrollY - (cy-e.dragY)/s
+		} else {
+			e.drag = false
+		}
+	}
 }
 
 func (e *Editor) clampScroll() {
@@ -271,6 +314,9 @@ func (e *Editor) infoLines() (terrain, size string) {
 	if e.err != nil || e.grid.W <= 0 || e.grid.H <= 0 {
 		return terrain, "—"
 	}
+	if e.freeform {
+		return terrain, fmt.Sprintf("%d × %d", e.grid.W*sim.TileSize, e.grid.H*sim.TileSize)
+	}
 	return terrain, fmt.Sprintf("%d × %d tiles", e.grid.W, e.grid.H)
 }
 
@@ -289,6 +335,9 @@ func (e *Editor) drawInfo(clip *ebiten.Image, rail int, infoTop, rh float64) {
 
 func (e *Editor) viewName() string {
 	if e.gridView {
+		if e.freeform {
+			return "regions"
+		}
 		return "tile grid"
 	}
 	return "terrain"
@@ -304,21 +353,14 @@ func (e *Editor) drawMap(screen *ebiten.Image) {
 	e.view.Fill(color.Black)
 	if e.err != nil {
 		drawFace(e.view, e.font, e.scale, e.err.Error(), 8, 8, railInkSel)
+	} else if e.gridView && e.freeform {
+		e.drawRegions(e.view)
 	} else if e.gridView {
 		e.drawTileGrid(e.view)
+	} else if e.freeform {
+		e.paint(e.view, terrain.PrepareChart(e.chart))
 	} else {
-		pic := terrain.Prepare(e.grid, e.biome)
-		pic.DrawGround(e.view, -e.scrollX, -e.scrollY, e.scale, e.time)
-		src := pic.Canopies()
-		cans := make([]terrain.Canopy, len(src))
-		copy(cans, src)
-		sort.SliceStable(cans, func(i, j int) bool { return cans[i].FootY < cans[j].FootY })
-		for i := range cans {
-			cans[i].DrawShadow(e.view, -e.scrollX, -e.scrollY, e.scale)
-		}
-		for i := range cans {
-			cans[i].Draw(e.view, -e.scrollX, -e.scrollY, e.scale)
-		}
+		e.paint(e.view, terrain.Prepare(e.grid, e.biome))
 	}
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(rail), 0)
@@ -393,6 +435,105 @@ func drawFace(dst *ebiten.Image, src *text.GoTextFaceSource, scale float64, str 
 var whiteOnce struct {
 	img  *ebiten.Image
 	once sync.Once
+}
+
+func (e *Editor) paint(dst *ebiten.Image, pic *terrain.View) {
+	if pic == nil {
+		return
+	}
+	pic.DrawGround(dst, -e.scrollX, -e.scrollY, e.scale, e.time)
+	src := pic.Canopies()
+	cans := make([]terrain.Canopy, len(src))
+	copy(cans, src)
+	sort.SliceStable(cans, func(i, j int) bool { return cans[i].FootY < cans[j].FootY })
+	for i := range cans {
+		cans[i].DrawShadow(dst, -e.scrollX, -e.scrollY, e.scale)
+	}
+	for i := range cans {
+		cans[i].Draw(dst, -e.scrollX, -e.scrollY, e.scale)
+	}
+}
+
+func chartFrom(p *data.Phase) (terrain.Chart, error) {
+	ch := terrain.Chart{
+		W:       p.Map.W * sim.TileSize,
+		H:       p.Map.H * sim.TileSize,
+		Terrain: p.Terrain,
+	}
+	for i, r := range p.Map.Regions {
+		tile, err := data.RegionTile(r.Type)
+		if err != nil {
+			return terrain.Chart{}, fmt.Errorf("region %d: %w", i, err)
+		}
+		if len(r.Points) < 3 {
+			return terrain.Chart{}, fmt.Errorf("region %d needs at least 3 points", i)
+		}
+		cr := terrain.ChartRegion{Tile: tile, Name: r.Type}
+		for _, pt := range r.Points {
+			if len(pt) != 2 {
+				return terrain.Chart{}, fmt.Errorf("region %d point", i)
+			}
+			cr.Points = append(cr.Points, [2]float64{pt[0], pt[1]})
+		}
+		ch.Regions = append(ch.Regions, cr)
+	}
+	return ch, nil
+}
+
+func (e *Editor) drawRegions(dst *ebiten.Image) {
+	if dst == nil || e.chart.W < 1 || e.chart.H < 1 {
+		return
+	}
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	ox := -e.scrollX * s
+	oy := -e.scrollY * s
+	fillRect(dst, int(math.Floor(ox)), int(math.Floor(oy)), int(math.Ceil(float64(e.chart.W)*s)), int(math.Ceil(float64(e.chart.H)*s)), groundFill(e.biome))
+	for _, r := range e.chart.Regions {
+		if len(r.Points) < 3 {
+			continue
+		}
+		path := regionPath(r.Points, ox, oy, s)
+		fill := &vector.DrawPathOptions{AntiAlias: true}
+		fill.ColorScale.ScaleWithColor(tileFill(r.Tile))
+		vector.FillPath(dst, path, nil, fill)
+		stroke := &vector.DrawPathOptions{AntiAlias: true}
+		stroke.ColorScale.ScaleWithColor(gridLine)
+		vector.StrokePath(dst, path, &vector.StrokeOptions{Width: float32(math.Max(1, s)), LineJoin: vector.LineJoinRound}, stroke)
+		cx, cy := 0.0, 0.0
+		for _, p := range r.Points {
+			cx += p[0]
+			cy += p[1]
+		}
+		n := float64(len(r.Points))
+		drawFace(dst, e.font, s, r.Name, ox+cx/n*s, oy+cy/n*s, gridInk)
+	}
+	e.drawStroke(dst)
+}
+
+func regionPath(pts [][2]float64, ox, oy, scale float64) *vector.Path {
+	p := &vector.Path{}
+	p.MoveTo(float32(ox+pts[0][0]*scale), float32(oy+pts[0][1]*scale))
+	for _, pt := range pts[1:] {
+		p.LineTo(float32(ox+pt[0]*scale), float32(oy+pt[1]*scale))
+	}
+	p.Close()
+	return p
+}
+
+func groundFill(biome string) color.RGBA {
+	switch terrain.KindOf(biome) {
+	case terrain.Desert:
+		return color.RGBA{R: 196, G: 168, B: 96, A: 255}
+	case terrain.Snow:
+		return color.RGBA{R: 220, G: 228, B: 232, A: 255}
+	case terrain.Forest:
+		return color.RGBA{R: 48, G: 92, B: 52, A: 255}
+	default:
+		return tileFill(sim.TileGrass)
+	}
 }
 
 func (e *Editor) drawTileGrid(dst *ebiten.Image) {

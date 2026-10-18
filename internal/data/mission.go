@@ -63,10 +63,20 @@ type PickupSpec struct {
 	Kind string `json:"kind"`
 }
 
+// Tilemap is either a tile grid or a freeform region list.
+// A non-nil Regions slice, including an empty one, is the region format:
+// the phase terrain fills the map, and each region paints over that.
+// Tiles is the older grid. A region map ignores Tiles.
 type Tilemap struct {
-	W     int      `json:"w"`
-	H     int      `json:"h"`
-	Tiles []string `json:"tiles"`
+	W       int      `json:"w"`
+	H       int      `json:"h"`
+	Tiles   []string `json:"tiles,omitempty"`
+	Regions []Region `json:"regions,omitempty"`
+}
+
+// Freeform reports whether this map is the region format.
+func (tm Tilemap) Freeform() bool {
+	return tm.Regions != nil
 }
 
 type Enemy struct {
@@ -239,6 +249,9 @@ func (p *Phase) Grid() (sim.Map, error) {
 }
 
 func (tm Tilemap) toSim() (sim.Map, error) {
+	if tm.Regions != nil {
+		return tm.regionsToSim()
+	}
 	if tm.W <= 0 || tm.H <= 0 {
 		return sim.Map{}, fmt.Errorf("invalid map size %dx%d", tm.W, tm.H)
 	}

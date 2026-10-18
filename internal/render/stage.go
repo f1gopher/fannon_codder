@@ -490,7 +490,8 @@ func Advance(dt float64, w *sim.World) {
 // flavour props, men, and vehicles by foot Y, then birds, grenades,
 // tracers, and blasts.
 // terrain is jungle, forest, desert, or snow. Snow paints open ground as
-// snow. The joined-cell painter fills the ground. Trees are canopy runs.
+// snow. A region phase paints those rings. A tile phase paints joined
+// cells. Trees are canopy runs.
 func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	if dst == nil || w == nil {
 		return

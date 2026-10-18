@@ -1,5 +1,7 @@
 // Package terrain paints a mission map: ground, water, bridges, ramps,
-// mines, and tree canopies. The battle and the map editor both call Prepare.
+// mines, and tree canopies. A region phase is PrepareChart. The battle
+// calls PrepareChartLive so a spent mine drops its mark. A tile phase,
+// including the sandboxes, calls Prepare.
 //
 // Read this file first. Paint is terrain_paint.go. Each terrain has its own
 // ground, canopy, shallow, and deep plates under plates/<kind>/. Rock, ice,

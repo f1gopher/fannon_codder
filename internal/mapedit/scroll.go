@@ -24,7 +24,8 @@ func RowHeight(scale float64) float64 {
 }
 
 // InfoLines is the selected-map block under the phase list: a heading,
-// the terrain, the width and height in tiles, and the view name.
+// the terrain, the map size, and the view name. A tile map's size is in
+// tiles. A region map's size is world pixels.
 const InfoLines = 5
 
 // InfoHeight is that block in offscreen pixels.

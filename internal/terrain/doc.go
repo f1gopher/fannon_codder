@@ -6,7 +6,8 @@
 // Read this file first. Paint is terrain_paint.go. Each terrain has its own
 // canopy, shallow, and deep plates under plates/<kind>/. Jungle open ground
 // is grassColor, not plates/jungle/ground.png. Snow open ground is
-// snowColor, not plates/snow/ground.png. Rock, ice,
+// snowColor, not plates/snow/ground.png. Desert open ground is
+// sandColor, not plates/desert/ground.png. Rock, ice,
 // dirt, and quicksand stay in plates/. water.kage shimmers water, sand, and ice.
 //
 // Scale is offscreen pixels per world pixel. Time is seconds. The caller

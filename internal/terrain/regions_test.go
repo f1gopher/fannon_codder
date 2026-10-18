@@ -44,13 +44,20 @@ func TestChartWaterReplacesGround(t *testing.T) {
 	paint := paintChart(ch)
 	grass := pixAt(paint, 10, 10)
 	water := pixAt(paint, 60, 60)
-	sand := pixAt(paint, 38, 60)
 	if water[2] <= grass[2] {
 		t.Fatalf("water %v grass %v", water, grass)
 	}
-	// Sunlit grass is as red as sand, so the shore is told by its own channels.
-	if sand[0] <= sand[1]+15 {
-		t.Fatalf("shore %v grass %v, want sand", sand, grass)
+	// The shore waves, so the sand is somewhere on the bank, not on one pixel.
+	found := false
+	for x := 20; x < 48; x++ {
+		c := pixAt(paint, float64(x), 60)
+		if c[0] > c[1]+12 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("no sand on the west bank, grass %v", grass)
 	}
 }
 

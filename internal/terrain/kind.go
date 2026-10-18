@@ -53,8 +53,8 @@ type look struct {
 	shore    *painted
 	open     surface
 	shoreMix float64
-	// beach is a thin sand strip, then shallow water, where land meets water.
-	// Desert and snow keep the wide shore lip instead.
+	// beach paints a soft shore: sand or a frozen lip, then water that
+	// lightens at the line and deepens offshore.
 	beach    bool
 	bank     color.RGBA
 	bankMix  float64
@@ -112,6 +112,7 @@ var (
 		pal:      desertPalette(),
 		open:     surfGrass,
 		shoreMix: 0.55,
+		beach:    true,
 		bank:     color.RGBA{R: 40, G: 96, B: 110, A: 255},
 		bankMix:  0.36,
 		leaf:     color.RGBA{R: 140, G: 120, B: 64, A: 255},
@@ -126,6 +127,7 @@ var (
 		pal:      snowPalette(),
 		open:     surfSnow,
 		shoreMix: 0.40,
+		beach:    true,
 		bank:     color.RGBA{R: 70, G: 110, B: 130, A: 255},
 		bankMix:  0.34,
 		leaf:     color.RGBA{R: 120, G: 150, B: 130, A: 255},

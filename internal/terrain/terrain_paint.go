@@ -16,15 +16,15 @@ const terrainPx = 4
 // shoreWobble is how far a drawn edge may leave its cell, in world pixels.
 const shoreWobble = 3.0
 
-// A beach is paint where jungle or forest land meets water: sand on the land,
-// then that terrain's shallow plate on the water. Widths are world pixels.
-// beachCorner rounds both the land's corners and the water's. beachSandWander
-// is how far the grass side of the sand moves in and out.
+// A beach is paint where land meets water. Widths are world pixels.
+// beachSandWander is how far the grass side of the sand moves in and out.
+// The water line waves by shoreWave. Corners are rounded by the blurred
+// distance in water.go, and the colour fades with the distance offshore.
 const (
 	beachSand       = 4.0
-	beachSandFade   = 1.25
+	beachSandFade   = 3.2
 	beachSandWander = 2.8
-	beachCorner     = 10.0
+	beachCorner     = 14.0
 	// Shallow stays solid for a few pixels, then fades into deep. The fade
 	// wanders so the light-to-dark join is not a ruled line.
 	beachShallowHold = 3.5
@@ -171,6 +171,7 @@ func paintMap(m sim.Map, terrain string) terrainPaint {
 	prepareSand(m.W*sim.TileSize, m.H*sim.TileSize, lk.kind)
 	prepareForest(m.W*sim.TileSize, m.H*sim.TileSize, lk.kind)
 	surf := surfacesOf(m, lk.open)
+	prepareShoreTiles(surf, m.W, m.H)
 	ids := labelRegions(surf, m.W, m.H)
 	pw := m.W * sim.TileSize * terrainPx
 	ph := m.H * sim.TileSize * terrainPx
@@ -228,7 +229,31 @@ func edgeCells(surf []surface, w, h int) []bool {
 			}
 		}
 	}
-	return edge
+	// The shore wave reaches about two cells inland. Mark that band so the
+	// curve is painted, not clipped to the first grass cell.
+	wide := make([]bool, w*h)
+	copy(wide, edge)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if edge[y*w+x] {
+				continue
+			}
+			for oy := -2; oy <= 2 && !wide[y*w+x]; oy++ {
+				for ox := -2; ox <= 2; ox++ {
+					xx, yy := x+ox, y+oy
+					if xx < 0 || yy < 0 || xx >= w || yy >= h {
+						continue
+					}
+					n := surf[yy*w+xx]
+					if n == surfShallow || n == surfDeep {
+						wide[y*w+x] = true
+						break
+					}
+				}
+			}
+		}
+	}
+	return wide
 }
 
 func fillCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk look, tx, ty int) {
@@ -330,10 +355,15 @@ func colorOf(lk look, surf []surface, w, h int, s surface, tx, ty int, wx, wy fl
 // forestColor. Ice, quicksand, rock, and ramps stay the shared materials.
 func (lk look) plateColor(s surface, wx, wy float64) (color.RGBA, uint8) {
 	switch s {
-	case surfShallow:
-		return lk.shallow.at(wx, wy), maskWater
-	case surfDeep:
-		return lk.deep.at(wx, wy), maskWater
+	case surfShallow, surfDeep:
+		into := waterReach
+		if sd, ok := shoreSigned(wx, wy); ok {
+			into = -sd
+			if into < 0 {
+				into = 0
+			}
+		}
+		return waterColor(lk, wx, wy, into, into), maskWater
 	case surfIce:
 		return icePlate.at(wx, wy), maskIce
 	case surfSand:
@@ -408,7 +438,7 @@ func bridgeUnder(surf []surface, w, h, tx, ty int, open surface) surface {
 func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx, wy float64, c color.RGBA, corners []shoreCorner, vw int, joins []*shoreJoin, round bool) (color.RGBA, uint8, bool) {
 	localX := wx - float64(tx*sim.TileSize)
 	localY := wy - float64(ty*sim.TileSize)
-	onBeach := trueS == surfGrass || trueS == surfTree || trueS == surfShallow || trueS == surfDeep
+	onBeach := trueS == surfGrass || trueS == surfSnow || trueS == surfTree || trueS == surfShallow || trueS == surfDeep
 	graded := false
 	var mk uint8
 	var over bool
@@ -448,12 +478,12 @@ func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx
 	return c, mk, over
 }
 
-// paintBeach lays sand, then shallow water, along a rounded shore.
-// took is true when this pixel's water or beach colour is finished,
-// so the straight water grade does not run again.
+// paintBeach lays the shore, then water that pales at the line and deepens
+// offshore. took is true when this pixel's colour is finished, so the old
+// tile-edge grade does not run again.
 func paintBeach(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx, wy float64, c color.RGBA, corners []shoreCorner, vw int, joins []*shoreJoin, round bool) (color.RGBA, uint8, bool, bool) {
 	onWater := trueS == surfShallow || trueS == surfDeep
-	sd, dLand, ok := beachSD(surf, m.W, m.H, tx, ty, wx, wy, onWater, corners, vw, round)
+	sd, _, ok := beachSD(surf, m.W, m.H, tx, ty, wx, wy, onWater, corners, vw, round)
 	if !ok {
 		if onWater {
 			c = blendWaterDepth(lk, c, surf, m.W, m.H, tx, ty, trueS, wx, wy, valueNoise(wx, wy, 18, 31))
@@ -462,49 +492,43 @@ func paintBeach(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, w
 		return c, 0, false, false
 	}
 	if sd > 0 {
+		if onWater {
+			return wetSand(lk, wx, wy, sd), maskNone, true, true
+		}
+		if trueS != surfGrass && trueS != surfSnow && trueS != surfTree {
+			return c, 0, false, false
+		}
 		reach := sandReach(wx, wy)
 		if sd >= reach {
 			return c, 0, false, false
 		}
-		t := 1.0
-		if sd > reach-beachSandFade {
-			t = (reach - sd) / beachSandFade
-		}
-		c = mixRGBA(c, sandPlate.at(wx, wy), t)
-		return beachFoam(c, lk.pal, wx, wy, sd), maskNone, true, true
+		return featherLand(lk, c, wx, wy, sd, reach), maskNone, true, true
 	}
-	d := -sd
+	into := -sd
+	fade := into
 	if onWater {
-		n := valueNoise(wx, wy, 18, 31)
-		c = blendWaterDepth(lk, c, surf, m.W, m.H, tx, ty, trueS, wx, wy, n)
-		if dLand < 16 {
-			c = mixRGBA(c, lk.bank, (1-dLand/16)*lk.bankMix)
-		}
-		fadeD := d
-		var join *shoreJoin
-		lx, ly := 0, 0
-		if j := shoreAt(joins, m.W, tx, ty); j != nil && d < beachFadeReach+beachJoin*0.25 {
-			lx = int(wx) - tx*sim.TileSize
-			ly = int(wy) - ty*sim.TileSize
+		if j := shoreAt(joins, m.W, tx, ty); j != nil && into < beachFadeReach+beachJoin*0.25 {
+			lx := int(wx) - tx*sim.TileSize
+			ly := int(wy) - ty*sim.TileSize
+			if lx < 0 {
+				lx = 0
+			}
+			if ly < 0 {
+				ly = 0
+			}
+			if lx >= sim.TileSize {
+				lx = sim.TileSize - 1
+			}
+			if ly >= sim.TileSize {
+				ly = sim.TileSize - 1
+			}
 			d2 := float64(j.far[ly*sim.TileSize+lx])
-			if d2 < d+beachJoin {
-				fadeD = smoothMin(d, d2, beachJoin)
-				join = j
+			if d2 < into+beachJoin {
+				fade = smoothMin(into, d2, beachJoin)
 			}
 		}
-		if shallowFade(fadeD, n) < 1 {
-			if join != nil {
-				sh := join.shallow(lk, ly*sim.TileSize+lx, wx, wy)
-				return mixShallow(c, sh, d, fadeD, wx, wy, n), maskWater, true, true
-			}
-			return beachShallowBand(lk, c, d, fadeD, wx, wy, n), maskWater, true, true
-		}
-		return c, 0, false, true
 	}
-	if d >= beachFadeReach {
-		return c, 0, false, false
-	}
-	return beachShallowBand(lk, c, d, d, wx, wy, valueNoise(wx, wy, 18, 31)), maskWater, true, true
+	return waterColor(lk, wx, wy, into, fade), waterMask(into), true, true
 }
 
 // sandReach is the inland width of the sand at this point. Noise keeps the
@@ -631,15 +655,16 @@ func cellRounded(corners []shoreCorner, vw, tx, ty int) bool {
 // the bank shade past the shallow band. Corners use a quarter-circle of
 // beachCorner instead of the tile's right angle.
 func beachSD(surf []surface, w, h, tx, ty int, wx, wy float64, onWater bool, corners []shoreCorner, vw int, round bool) (float64, float64, bool) {
-	var sd, dLand float64
-	if onWater {
-		d, hit := distToMatch(surf, w, h, tx, ty, wx, wy, landBesideWater)
-		if !hit {
-			return 0, 0, false
+	sd, ok := shoreField(wx, wy)
+	if !ok {
+		// No shore field: fall back to the neighbouring cells.
+		if onWater {
+			d, hit := distToMatch(surf, w, h, tx, ty, wx, wy, landBesideWater)
+			if !hit {
+				return 0, 0, false
+			}
+			return -d, d, true
 		}
-		dLand = d
-		sd = -d
-	} else {
 		d, hit := nearWater(surf, w, h, tx, ty, wx, wy)
 		if !hit {
 			return 0, 0, false
@@ -647,10 +672,14 @@ func beachSD(surf []surface, w, h, tx, ty int, wx, wy float64, onWater bool, cor
 		if d < 0 {
 			d = 0
 		}
-		sd = d
+		return d, 0, true
 	}
-	if round {
-		sd = roundShore(corners, vw, tx, ty, wx, wy, sd)
+	// The distance is already blurred, so a tile corner is a slope.
+	// A fillet here would pull that slope back onto the cell corner.
+	sd += shoreFlow(wx, wy)
+	dLand := 0.0
+	if sd < 0 {
+		dLand = -sd
 	}
 	return sd, dLand, true
 }
@@ -723,20 +752,6 @@ func filletLand(vx, vy float64, dx, dy int, wx, wy, sd float64) float64 {
 	return sd
 }
 
-// beachFoam is a broken line on the wet edge of the sand, narrower than the
-// strip so the sand stays visible.
-func beachFoam(c color.RGBA, pal Palette, wx, wy, d float64) color.RGBA {
-	const reach = 1.15
-	if d >= reach {
-		return c
-	}
-	n := fineNoise(wx, wy)
-	if n < 0.45 {
-		return c
-	}
-	return mixRGBA(c, pal.Foam, (1-d/reach)*0.55*n)
-}
-
 // beadFoam breaks the shoreline into soft clumps instead of one ruled stroke.
 func beadFoam(c color.RGBA, pal Palette, wx, wy, d float64) color.RGBA {
 	n := fineNoise(wx, wy)
@@ -788,10 +803,6 @@ type shoreJoin struct {
 	off            [17]int
 	x0, y0, x1, y1 [49]int16
 	far            [sim.TileSize * sim.TileSize]float32
-	// Shallow plate samples shared by the four source pixels of one world
-	// pixel. The joined pool is the only caller, and the plate is smooth.
-	have [sim.TileSize * sim.TileSize]uint8
-	col  [sim.TileSize * sim.TileSize]color.RGBA
 }
 
 // shoreJoins records, once per cell, every landmass inside the blend
@@ -967,14 +978,6 @@ func fillShoreFar(j *shoreJoin, tx, ty int) {
 	}
 }
 
-func (j *shoreJoin) shallow(lk look, i int, wx, wy float64) color.RGBA {
-	if j.have[i] == 0 {
-		j.col[i], _ = lk.plateColor(surfShallow, wx, wy)
-		j.have[i] = 1
-	}
-	return j.col[i]
-}
-
 func shoreAt(joins []*shoreJoin, w, tx, ty int) *shoreJoin {
 	if ty*w+tx >= len(joins) {
 		return nil
@@ -995,34 +998,6 @@ func smoothMin(a, b, k float64) float64 {
 		a = b
 	}
 	return a - h*h*k*0.25
-}
-
-// shallowFade is 0 in the shallow water and 1 once the deep colour has taken
-// over. n moves that fade so it is not a straight contour.
-func shallowFade(d, n float64) float64 {
-	if d <= 2.6 {
-		return 0
-	}
-	if d >= beachFadeReach {
-		return 1
-	}
-	shift := (n - 0.5) * beachFadeWander
-	return smooth01((d - beachShallowHold - shift) / beachWaterFade)
-}
-
-// beachShallowBand paints shallow water just off the sand, then fades into
-// the cell's own water. shoreD is the real shoreline, so only that edge
-// picks up sand. fadeD may be nearer when a second shore joins the pool.
-func beachShallowBand(lk look, graded color.RGBA, shoreD, fadeD, wx, wy, n float64) color.RGBA {
-	sh, _ := lk.plateColor(surfShallow, wx, wy)
-	return mixShallow(graded, sh, shoreD, fadeD, wx, wy, n)
-}
-
-func mixShallow(graded, sh color.RGBA, shoreD, fadeD, wx, wy, n float64) color.RGBA {
-	if shoreD < 1 {
-		sh = mixRGBA(sandPlate.at(wx, wy), sh, shoreD)
-	}
-	return mixRGBA(sh, graded, shallowFade(fadeD, n))
 }
 
 func landBesideWater(s surface) bool {

@@ -39,8 +39,8 @@ func init() {
 	loadKind(&forestLook, "forest")
 	loadKind(&desertLook, "desert")
 	loadKind(&snowLook, "snow")
-	// Jungle and forest beaches use this sand. Desert and snow keep the shore
-	// file loaded for their wide lip. A forest shore edit does not move the beach.
+	// Quicksand uses this sand. Shores are computed, so a shore plate is
+	// not the beach. The files stay loaded with the other kind plates.
 	jungleLook.shore = sandPlate
 	forestLook.shore = sandPlate
 }

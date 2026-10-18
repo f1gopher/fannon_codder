@@ -114,6 +114,7 @@ func paintChart(c Chart) terrainPaint {
 	grid := rasterChart(c, lk.open)
 	clearSpentMines(grid, c, lk.open)
 	toWater, toLand := chartWaterDist(grid, ww, wh)
+	bindShore(toWater, toLand, ww, wh)
 	pw := ww * terrainPx
 	ph := wh * terrainPx
 	ground := image.NewRGBA(image.Rect(0, 0, pw, ph))
@@ -128,7 +129,7 @@ func paintChart(c Chart) terrainPaint {
 			wx := (float64(px) + 0.5) / float64(terrainPx)
 			ix := clampi(int(wx), 0, ww-1)
 			gi := gy + ix
-			col, k := chartPixel(lk, grid[gi], wx, wy, toWater, toLand, gi, noise)
+			col, k := chartPixel(lk, grid[gi], wx, wy)
 			setRGBA(ground, px, py, col)
 			kind[row+px] = k
 		}
@@ -249,7 +250,7 @@ func pointInRing(x, y float64, p [][2]float64) bool {
 	return in
 }
 
-func chartPixel(lk look, s surface, wx, wy float64, toWater, toLand []float32, gi int, noise *noiseGrid) (color.RGBA, uint8) {
+func chartPixel(lk look, s surface, wx, wy float64) (color.RGBA, uint8) {
 	if s == surfBridge {
 		c := lk.pal.PlankGap
 		if int(math.Floor(wy/bridgePlank))%2 == 0 {
@@ -265,44 +266,36 @@ func chartPixel(lk look, s surface, wx, wy float64, toWater, toLand []float32, g
 		base = lk.open
 	}
 	c, k := lk.plateColor(base, wx, wy)
-	if toWater == nil {
+	if shoreToWater == nil {
 		return c, k
 	}
-	dw := float64(toWater[gi])
-	dl := float64(toLand[gi])
 	water := s == surfShallow || s == surfDeep
-	if lk.beach {
-		if !water && s != surfIce && s != surfCliff && s != surfRamp {
-			reach := beachSand + (sampleNoise(noise, wx, wy)-0.5)*beachSandWander
-			if reach < 2.2 {
-				reach = 2.2
-			}
-			if dw > 0 && dw < reach {
-				return sandPlate.at(wx, wy), maskNone
-			}
-		}
-		if s == surfDeep {
-			wob := (sampleNoise(noise, wx*0.7, wy*0.7) - 0.5) * beachFadeWander
-			d := dl + wob
-			span := beachShallowHold + beachWaterFade
-			if d < span {
-				t := 0.0
-				if d > beachShallowHold {
-					t = smooth01((d - beachShallowHold) / beachWaterFade)
-				}
-				return mixRGBA(lk.shallow.at(wx, wy), c, t), maskWater
-			}
-		}
+	sd, ok := shoreField(wx, wy)
+	if !ok {
 		return c, k
 	}
-	if !water && (base == surfGrass || base == surfSnow) && dw > 0 && dw < float64(sim.TileSize) {
-		t := 1 - dw/float64(sim.TileSize)
-		if lk.shore != nil && lk.shoreMix > 0 {
-			c = mixRGBA(c, lk.shore.at(wx, wy), t*lk.shoreMix)
-		}
-		c = beadFoam(c, lk.pal, wx, wy, dw)
+	// Far inland the wave cannot reach, so the ground colour stands.
+	if !water && sd > 36 {
+		return c, k
 	}
-	return c, k
+	sd += shoreFlow(wx, wy)
+	if water {
+		if sd > 0 {
+			return wetSand(lk, wx, wy, sd), maskNone
+		}
+		return waterColor(lk, wx, wy, -sd, -sd), waterMask(-sd)
+	}
+	if s == surfIce || s == surfCliff || s == surfRamp || s == surfSand || s == surfBridge {
+		return c, k
+	}
+	if sd < 0 {
+		return waterColor(lk, wx, wy, -sd, -sd), waterMask(-sd)
+	}
+	reach := sandReach(wx, wy)
+	if sd >= reach {
+		return c, k
+	}
+	return featherLand(lk, c, wx, wy, sd, reach), maskNone
 }
 
 // chartWaterDist is a chamfer distance to water and to land, in world pixels.
@@ -314,7 +307,7 @@ func chartWaterDist(grid []surface, w, h int) (toWater, toLand []float32) {
 	const inf float32 = 1e6
 	any := false
 	for i, s := range grid {
-		if s == surfShallow || s == surfDeep {
+		if isWetSurf(s) {
 			any = true
 			toWater[i] = 0
 			toLand[i] = inf

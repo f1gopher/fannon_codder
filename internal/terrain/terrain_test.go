@@ -82,10 +82,23 @@ func TestShoreDiffersFromInterior(t *testing.T) {
 		tiles[x] = sim.TileWaterShallow
 	}
 	paint := paintMap(mapOf(8, 8, tiles), "grass")
-	// Two world pixels south of the water: inside the sand, past the foam.
-	edge := paint.ground.RGBAAt(4*sim.TileSize*terrainPx+8*terrainPx, sim.TileSize*terrainPx+2*terrainPx)
-	// Eight world pixels south: past the thin sand, back on grass.
-	past := paint.ground.RGBAAt(4*sim.TileSize*terrainPx+8*terrainPx, sim.TileSize*terrainPx+8*terrainPx)
+	// The shore waves, so walk south from the water until the sand shows.
+	x := 4*sim.TileSize*terrainPx + 8*terrainPx
+	edge := paint.ground.RGBAAt(x, sim.TileSize*terrainPx)
+	found := false
+	for d := 1; d <= 24; d++ {
+		c := paint.ground.RGBAAt(x, sim.TileSize*terrainPx+d*terrainPx)
+		if c.R > c.G+8 {
+			edge = c
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("no sand south of the water, last %+v", edge)
+	}
+	// Far enough inland that the shore wave has given the ground back.
+	past := paint.ground.RGBAAt(x, sim.TileSize*terrainPx+34*terrainPx)
 	mr, mg, _ := meanCell(paint.ground, 4, 6)
 	if edge.R <= edge.G {
 		t.Fatalf("shore pixel = %+v, want the sand strip", edge)
@@ -111,11 +124,25 @@ func TestBeachIsSandThenShallow(t *testing.T) {
 		paint := paintMap(mapOf(n, n, tiles), name)
 		lk := lookOf(name)
 		sandAt := func(px, py int) color.RGBA { return paint.ground.RGBAAt(px, py) }
-		// Open grass on the west bank, two world pixels inland.
-		spx, spy := shorePx(2*sim.TileSize, -2), shorePx(4*sim.TileSize+8, 0)
+		// The shore waves. Walk inland from the water for the sand.
+		spy := shorePx(4*sim.TileSize+8, 0)
+		spx := shorePx(2*sim.TileSize, -2)
 		sand := sandAt(spx, spy)
-		sx, sy := shoreWorld(spx, spy)
-		gpx, gpy := shorePx(2*sim.TileSize, -10), spy
+		foundSand := false
+		for d := 1; d <= 22; d++ {
+			px := shorePx(2*sim.TileSize, -d)
+			c := sandAt(px, spy)
+			if c.R > c.G+12 {
+				spx = px
+				sand = c
+				foundSand = true
+				break
+			}
+		}
+		if !foundSand {
+			t.Fatalf("%s found no sand on the west bank, %+v", name, sand)
+		}
+		gpx, gpy := shorePx(2*sim.TileSize, -24), spy
 		grass := sandAt(gpx, gpy)
 		gx, gy := shoreWorld(gpx, gpy)
 		hpx, hpy := shorePx(2*sim.TileSize, 2), spy
@@ -124,37 +151,57 @@ func TestBeachIsSandThenShallow(t *testing.T) {
 		dpx, dpy := shorePx(4*sim.TileSize+8, 0), shorePx(5*sim.TileSize+8, 0)
 		deep := sandAt(dpx, dpy)
 		dx, dy := shoreWorld(dpx, dpy)
-		tpx, tpy := shorePx(7*sim.TileSize, 2), shorePx(3*sim.TileSize+8, 0)
+		tpy := shorePx(3*sim.TileSize+8, 0)
+		tpx := shorePx(7*sim.TileSize, 2)
 		treeSand := sandAt(tpx, tpy)
+		foundTree := false
+		for d := -16; d <= 18; d++ {
+			px := shorePx(7*sim.TileSize, d)
+			c := sandAt(px, tpy)
+			if c.R > c.G {
+				tpx = px
+				treeSand = c
+				foundTree = true
+				break
+			}
+		}
+		if !foundTree {
+			t.Fatalf("%s tree bank has no sand", name)
+		}
 		tx, ty := shoreWorld(tpx, tpy)
 		wantShallow, _ := lk.plateColor(surfShallow, hx, hy)
 		wantDeep, _ := lk.plateColor(surfDeep, dx, dy)
 		wantGrass, _ := lk.plateColor(surfGrass, gx, gy)
+		sx, sy := shoreWorld(spx, spy)
 		wantGround, _ := lk.plateColor(surfGrass, sx, sy)
-		// The grass line wanders, so a pixel in the strip is sand-coloured,
-		// not a perfect plate sample.
-		if sand.R <= sand.G+15 || colorDist(sand, sandPlate.at(sx, sy)) >= colorDist(sand, wantGround) {
-			t.Fatalf("%s sand %+v, want sand rather than ground", name, sand)
+		// The shore waves, so this pixel is only sometimes the dry sand.
+		// It stays warm, and it stays off the meadow colour.
+		if sand.R <= sand.G+8 || colorDist(sand, wantGround) < 20 {
+			t.Fatalf("%s sand %+v, want sand rather than ground %+v", name, sand, wantGround)
 		}
 		if colorDist(grass, wantGrass) > 2 {
 			t.Fatalf("%s inland %+v, want grass past the sand", name, grass)
 		}
-		if colorDist(shallow, wantShallow) > 2 {
+		if colorDist(shallow, wantShallow) > 8 {
 			t.Fatalf("%s water edge %+v, want shallow %+v", name, shallow, wantShallow)
 		}
-		if colorDist(deep, wantDeep) > 2 {
+		if colorDist(deep, wantDeep) > 8 {
 			t.Fatalf("%s pond centre %+v, want deep %+v", name, deep, wantDeep)
 		}
-		// The canopy shadow falls on the bank, so the sand is darker than the plate.
+		if lum(shallow)+12 < lum(deep) {
+			t.Fatalf("%s edge %+v is darker than the centre %+v", name, shallow, deep)
+		}
+		// The canopy shadow falls on the bank. The pixel stays warm sand,
+		// not the meadow under the tree.
 		treeGround, _ := lk.plateColor(surfGrass, tx, ty)
-		if treeSand.R <= treeSand.G+15 || colorDist(treeSand, sandPlate.at(tx, ty)) >= colorDist(treeSand, treeGround) {
+		if treeSand.R <= treeSand.G || colorDist(treeSand, treeGround) < 16 {
 			t.Fatalf("%s tree bank %+v, want sand rather than %+v", name, treeSand, treeGround)
 		}
-		if paint.mask.RGBAAt(spx, spy).R != maskNone {
-			t.Fatalf("%s sand mask = %d, want still ground", name, paint.mask.RGBAAt(spx, spy).R)
+		if paint.mask.RGBAAt(gpx, gpy).R != maskNone {
+			t.Fatalf("%s inland mask = %d, want still ground", name, paint.mask.RGBAAt(gpx, gpy).R)
 		}
-		if paint.mask.RGBAAt(hpx, hpy).R != maskWater {
-			t.Fatalf("%s shallow mask = %d, want water", name, paint.mask.RGBAAt(hpx, hpy).R)
+		if paint.mask.RGBAAt(dpx, dpy).R != maskWater {
+			t.Fatalf("%s pond mask = %d, want water", name, paint.mask.RGBAAt(dpx, dpy).R)
 		}
 	}
 	snow := paintMap(mapOf(n, n, tiles), "snow")
@@ -179,7 +226,7 @@ func TestBeachGrassLineWanders(t *testing.T) {
 	minIn, maxIn = 99, 0
 	for x := 2 * sim.TileSize; x < 14*sim.TileSize; x++ {
 		in := 0.0
-		for d := 0.5; d < 8; d += 0.25 {
+		for d := 0.5; d < 32; d += 0.25 {
 			px := int(math.Round((float64(x)+0.5)*terrainPx - 0.5))
 			py := int(math.Round((float64(edge)-d)*terrainPx - 0.5))
 			c := paint.ground.RGBAAt(px, py)
@@ -194,8 +241,8 @@ func TestBeachGrassLineWanders(t *testing.T) {
 			maxIn = in
 		}
 	}
-	if maxIn-minIn < 0.75 {
-		t.Fatalf("grass line spans %.2f to %.2f, want a visible wander", minIn, maxIn)
+	if maxIn-minIn < 3 {
+		t.Fatalf("grass line spans %.2f to %.2f, want a flowing shore", minIn, maxIn)
 	}
 }
 
@@ -243,22 +290,23 @@ func TestShallowFadesIntoDeep(t *testing.T) {
 		return paint.ground.RGBAAt(px, py)
 	}
 	x := 10 * sim.TileSize
-	near := at(x, 2)
-	mid := at(x, 9)
-	far := at(x, 16)
-	deep := at(x, 28)
-	if near.G <= mid.G || mid.G <= far.G || far.G <= deep.G {
-		t.Fatalf("shallow fade g = %d, %d, %d, %d, want a steady drop", near.G, mid.G, far.G, deep.G)
+	// Past the sand blend the water itself lightens, then darkens offshore.
+	near := at(x, 10)
+	mid := at(x, 18)
+	far := at(x, 26)
+	deep := at(x, 40)
+	if lum(near) <= lum(mid) || lum(mid) <= lum(far) || lum(far) <= lum(deep) {
+		t.Fatalf("water lum = %d, %d, %d, %d, want a steady drop", lum(near), lum(mid), lum(far), lum(deep))
 	}
-	if int(near.G)-int(deep.G) < 20 {
-		t.Fatalf("fade only dropped g %d to %d", near.G, deep.G)
+	if lum(near)-lum(deep) < 24 {
+		t.Fatalf("fade only dropped lum %d to %d", lum(near), lum(deep))
 	}
 	// No single world pixel along the fade may jump the whole way.
 	var maxStep int
-	prev := at(x, 2)
-	for d := 2.5; d <= 20; d += 0.5 {
+	prev := at(x, 8)
+	for d := 8.5; d <= 40; d += 0.5 {
 		c := at(x, d)
-		step := int(prev.G) - int(c.G)
+		step := lum(prev) - lum(c)
 		if step < 0 {
 			step = -step
 		}
@@ -267,16 +315,16 @@ func TestShallowFadesIntoDeep(t *testing.T) {
 		}
 		prev = c
 	}
-	if maxStep > 8 {
+	if maxStep > 10 {
 		t.Fatalf("shallow/deep step of %d, want a fade", maxStep)
 	}
 	// The halfway point moves along the shore.
-	half := (int(near.G) + int(deep.G)) / 2
+	half := (lum(near) + lum(deep)) / 2
 	minD, maxD := 99.0, 0.0
 	for x := 4 * sim.TileSize; x < 16*sim.TileSize; x += 3 {
-		hit := 20.0
-		for d := 3.0; d <= 20; d += 0.5 {
-			if int(at(x, d).G) <= half {
+		hit := 40.0
+		for d := 8.0; d <= 40; d += 0.5 {
+			if lum(at(x, d)) <= half {
 				hit = d
 				break
 			}
@@ -288,7 +336,7 @@ func TestShallowFadesIntoDeep(t *testing.T) {
 			maxD = hit
 		}
 	}
-	if maxD-minD < 1 {
+	if maxD-minD < 3 {
 		t.Fatalf("fade sits at %.1f to %.1f, want it to wander", minD, maxD)
 	}
 }
@@ -314,35 +362,21 @@ func TestShallowBandsJoin(t *testing.T) {
 		}
 	}
 	paint := paintMap(mapOf(w, h, tiles), "jungle")
-	lk := lookOf("jungle")
 	at := func(wx, wy float64) color.RGBA {
 		px := int(math.Round(wx*terrainPx - 0.5))
 		py := int(math.Round(wy*terrainPx - 0.5))
 		return paint.ground.RGBAAt(px, py)
 	}
-	// Closer to the shallow plate than the deep one means the bands joined.
-	joined := func(wx, wy float64) bool {
-		c := at(wx, wy)
-		sh, _ := lk.plateColor(surfShallow, wx, wy)
-		dp, _ := lk.plateColor(surfDeep, wx, wy)
-		return colorDist(c, sh) < colorDist(c, dp)
+	// A channel is closer to two shores, so it stays lighter than open
+	// water at the same distance from a single coast.
+	gap1 := lum(at(5*sim.TileSize+8, 4*sim.TileSize+8))
+	gap2 := lum(at(17*sim.TileSize+8, 5*sim.TileSize))
+	open := lum(at(12*sim.TileSize+8, 5*sim.TileSize))
+	if gap1 < open+18 {
+		t.Fatalf("one-tile gap lum %d, open %d, want a lighter channel", gap1, open)
 	}
-	open := func(wx, wy float64) bool {
-		c := at(wx, wy)
-		sh, _ := lk.plateColor(surfShallow, wx, wy)
-		dp, _ := lk.plateColor(surfDeep, wx, wy)
-		return colorDist(c, dp) < colorDist(c, sh)
-	}
-	// Mid-channel of the one-tile gap, and of the two-tile gap.
-	if !joined(5*sim.TileSize+8, 4*sim.TileSize+8) {
-		t.Fatal("one-tile gap between island and shore still reads as deep")
-	}
-	if !joined(17*sim.TileSize+8, 5*sim.TileSize) {
-		t.Fatal("two-tile gap between island and shore still reads as deep")
-	}
-	// The same distance from a lone shore stays on the deep side of the fade.
-	if !open(12*sim.TileSize+8, 5*sim.TileSize) {
-		t.Fatal("open water at the two-tile distance joined with nothing")
+	if gap2 < open+10 {
+		t.Fatalf("two-tile gap lum %d, open %d, want a lighter channel", gap2, open)
 	}
 	// Across the two-tile gap the colour steps, it does not stripe.
 	x := float64(17*sim.TileSize + 8)

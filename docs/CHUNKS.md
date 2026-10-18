@@ -97,7 +97,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Ground, water, sand, ice, snow, rock, and trees are painted from joined map cells, sampling the meadow plates in world space. The old ground sheets stay on disk and the battle does not sample them.
 - Grass does not grow the scrub bush. `prop/scrub` stays on disk. Arctic maps still grow snowmen and igloos.
 - Each phase names jungle, forest, desert, or snow. Ground, water, and trees are separate plates per kind. Missions 1, 2, and 4 are jungle. Missions 3 and 5 are snow.
-- Jungle and forest shores are a thin sand strip, then shallow water that fades into the deep. The grass side and that fade wander, and the corners are rounded. A shore and a nearby island blend those shallow bands into one pool. Desert and snow keep the wide shore lip.
+- Shores are a soft sand strip on jungle, forest, and desert, and a pale frozen lip on snow. The line waves, corners are rounded, and the water pales at the sand then fades to deep. A narrow channel stays pale. Shallow and deep plates stay on disk and are not sampled for that fade.
 - The map editor views campaign phases with the shared ground painter. It does not save.
 - V in the map editor switches that view to a labelled tile-type grid and back. It opens on the painted terrain.
 - Bridges are a timber deck with rails and a shadow on the water, painted with the ground. Snow dusts the boards.
@@ -116,5 +116,6 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Jungle open ground is computed in world space. The jungle ground plate stays on disk and is not sampled.
 - Snow open ground is computed in world space. The snow ground plate stays on disk and is not sampled. Ice, the snow shore, and the snow canopy stay on their plates.
 - Desert open ground is computed in world space. The desert ground plate stays on disk and is not sampled. The desert shore, the desert canopy, beach sand, and quicksand stay on their plates.
-- Forest open ground is computed in world space. The forest ground plate stays on disk and is not sampled. The forest shore and the forest canopy stay on their plates.
+- Forest open ground is computed in world space. The forest ground plate stays on disk and is not sampled. The forest canopy stays on its plate.
+- Water and shores are computed in world space. The line waves instead of following the cell edge. Water is pale beside the shore and darkens offshore. Jungle, forest, and desert blend into sand. Snow blends into a pale frozen lip. Shallow, deep, and shore plates stay on disk and are not sampled for that fade.
 

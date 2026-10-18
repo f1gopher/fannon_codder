@@ -171,6 +171,7 @@ func paintMap(m sim.Map, terrain string) terrainPaint {
 	prepareSand(m.W*sim.TileSize, m.H*sim.TileSize, lk.kind)
 	prepareForest(m.W*sim.TileSize, m.H*sim.TileSize, lk.kind)
 	surf := surfacesOf(m, lk.open)
+	prepareSnowCliffTiles(surf, m.W, m.H, lk.kind, lk.open)
 	prepareShoreTiles(surf, m.W, m.H)
 	ids := labelRegions(surf, m.W, m.H)
 	pw := m.W * sim.TileSize * terrainPx
@@ -269,6 +270,7 @@ func fillCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk look,
 		for x := 0; x < span; x++ {
 			wx := (float64(x0+x) + 0.5) / terrainPx
 			c, k := lk.plateColor(base, wx, wy)
+			c, k = paintSnowCliffPixel(lk, base, wx, wy, true, c, k)
 			setRGBA(dst, x0+x, y0+y, c)
 			kind[row+x0+x] = k
 		}
@@ -315,6 +317,7 @@ func paintEdgeCell(dst *image.RGBA, kind []uint8, m sim.Map, surf []surface, lk 
 			if over {
 				k = mk
 			}
+			c, k = paintSnowCliffPixel(lk, trueS, wx, wy, true, c, k)
 			setRGBA(dst, px, py, c)
 			kind[py*pw+px] = k
 		}
@@ -352,7 +355,8 @@ func colorOf(lk look, surf []surface, w, h int, s surface, tx, ty int, wx, wy fl
 // plateColor reads this terrain's ground, water, and nothing of another
 // terrain's. Jungle open ground is grassColor. Snow open ground is
 // snowColor. Desert open ground is sandColor. Forest open ground is
-// forestColor. Ice, quicksand, rock, and ramps stay the shared materials.
+// forestColor. Ice, quicksand, and ramps stay the shared materials.
+// A snow cliff is painted in cliff.go. Other cliffs stay on the rock plate.
 func (lk look) plateColor(s surface, wx, wy float64) (color.RGBA, uint8) {
 	switch s {
 	case surfShallow, surfDeep:
@@ -369,6 +373,11 @@ func (lk look) plateColor(s surface, wx, wy float64) (color.RGBA, uint8) {
 	case surfSand:
 		return sandPlate.at(wx, wy), maskSand
 	case surfCliff:
+		// Snow moves the face in cliff.go and paints it from the palette.
+		// The rock plate would put the old straight texture back.
+		if lk.kind == Snow {
+			return snowCliffRGB(wx, wy, 0.45), maskNone
+		}
 		c := rockPlate.atScale(wx, wy, 5)
 		if lk.rockMix > 0 {
 			c = mixRGBA(c, lk.rockTint, lk.rockMix)
@@ -462,7 +471,9 @@ func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx
 	if !graded && (trueS == surfShallow || trueS == surfDeep) {
 		c = gradeWater(lk, c, surf, m.W, m.H, tx, ty, trueS, wx, wy)
 	}
-	if trueS == surfCliff {
+	// Snow cliffs wave in cliff.go. These bands are the cell edge, so they
+	// would rule a straight line back across that wave.
+	if snowCliff == nil && trueS == surfCliff {
 		if south, ok := neighbor(surf, m.W, m.H, tx, ty, 0, 1); ok && south != surfCliff && south != surfRamp && localY > 11 {
 			c = mixRGBA(c, color.RGBA{R: 42, G: 38, B: 34, A: 255}, 0.5)
 		}
@@ -470,7 +481,7 @@ func shadeCell(lk look, surf []surface, m sim.Map, tx, ty int, trueS surface, wx
 			c = mixRGBA(c, color.RGBA{R: 42, G: 38, B: 34, A: 255}, 0.4)
 		}
 	}
-	if trueS != surfCliff && trueS != surfRamp {
+	if snowCliff == nil && trueS != surfCliff && trueS != surfRamp {
 		if north, ok := neighbor(surf, m.W, m.H, tx, ty, 0, -1); ok && north == surfCliff && localY < 4 {
 			c = mixRGBA(c, color.RGBA{R: 20, G: 24, B: 28, A: 255}, 0.4*(1-localY/4))
 		}

@@ -118,4 +118,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Desert open ground is computed in world space. The desert ground plate stays on disk and is not sampled. The desert shore, the desert canopy, beach sand, and quicksand stay on their plates.
 - Forest open ground is computed in world space. The forest ground plate stays on disk and is not sampled. The forest canopy stays on its plate.
 - Water and shores are computed in world space. The line waves instead of following the cell edge. Water is pale beside the shore and darkens offshore. Jungle, forest, and desert blend into sand. Snow blends into a pale frozen lip. Shallow, deep, and shore plates stay on disk and are not sampled for that fade.
+- A snow cliff's edge waves a few pixels, like the shore. The face is the cliff palette, not the rock plate. Other terrains still sample that plate.
 

@@ -113,6 +113,7 @@ func paintChart(c Chart) terrainPaint {
 	prepareForest(ww, wh, lk.kind)
 	grid := rasterChart(c, lk.open)
 	clearSpentMines(grid, c, lk.open)
+	prepareSnowCliff(grid, ww, wh, lk.kind, lk.open, c.Regions)
 	toWater, toLand := chartWaterDist(grid, ww, wh)
 	bindShore(toWater, toLand, ww, wh)
 	pw := ww * terrainPx
@@ -251,6 +252,13 @@ func pointInRing(x, y float64, p [][2]float64) bool {
 }
 
 func chartPixel(lk look, s surface, wx, wy float64) (color.RGBA, uint8) {
+	if snowCliff != nil && !cliffBlocks(s) && snowCliff.hotAt(wx, wy) {
+		return paintSnowCliffPixel(lk, s, wx, wy, false, color.RGBA{}, 0)
+	}
+	return chartPixelPaint(lk, s, wx, wy)
+}
+
+func chartPixelPaint(lk look, s surface, wx, wy float64) (color.RGBA, uint8) {
 	if s == surfBridge {
 		c := lk.pal.PlankGap
 		if int(math.Floor(wy/bridgePlank))%2 == 0 {

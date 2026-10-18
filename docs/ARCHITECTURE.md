@@ -189,7 +189,7 @@ The skidoo hum is one looping voice on the mixer. It plays while the listener is
 
 The arrival helicopter has its own loop, `SetRotor`. It plays from the first moment of a battle until the aircraft has flown off. Pause and a scene change stop it. It does not use the skidoo pitch.
 
-Clips are original synthesis. The victory march, the defeat march, the briefing, and Boot Hill are new music for the same small band: two trumpets, horn stabs, a walking bass, and drums. Boot Hill leads with a flugelhorn. The defeat is in D minor, slower, and the lead falls an octave at the end. There is no title tune.
+The gunshot is a short muzzle crack, a low thump, and three duller slaps off a street. The whole report is about 240 ms. Clips are original synthesis. The victory march, the defeat march, the briefing, and Boot Hill are new music for the same small band: two trumpets, horn stabs, a walking bass, and drums. Boot Hill leads with a flugelhorn. The defeat is in D minor, slower, and the lead falls an octave at the end. There is no title tune.
 
 ## Sprites
 

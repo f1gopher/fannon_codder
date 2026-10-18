@@ -11,8 +11,8 @@ func TestBoomShape(t *testing.T) {
 	if len(a) != len(b) || len(a) != boomSamples*4 {
 		t.Fatalf("len=%d, want %d", len(a), boomSamples*4)
 	}
-	if boomSamples <= gunSamples*3 {
-		t.Fatalf("boom is %d samples, gun is %d; the blast should be much longer", boomSamples, gunSamples)
+	if boomSamples <= gunCrack*3 {
+		t.Fatalf("boom is %d samples, crack is %d; the blast should be much longer", boomSamples, gunCrack)
 	}
 	for i := range a {
 		if a[i] != b[i] {
@@ -53,8 +53,11 @@ func TestBoomShape(t *testing.T) {
 	if start > 200 || start < -200 || end > 200 || end < -200 {
 		t.Fatalf("endpoints %d..%d should be near silence", start, end)
 	}
-	if crossings(a) >= crossings(Gunshot())/3 {
-		t.Fatal("the blast should sit well below the gun crack")
+	// Compare the muzzle crack with the blast, not the dull street tail.
+	crackN := crossings(Gunshot()[:gunCrack*4])
+	blastN := crossings(a)
+	if blastN*gunCrack*2 >= crackN*boomSamples {
+		t.Fatalf("blast rate %d/%d should sit below the crack %d/%d", blastN, boomSamples, crackN, gunCrack)
 	}
 }
 

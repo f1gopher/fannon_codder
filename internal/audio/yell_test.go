@@ -12,7 +12,7 @@ func TestYellShape(t *testing.T) {
 	if len(a) != len(b) || len(a) != yellSamples*4 {
 		t.Fatalf("len=%d, want %d", len(a), yellSamples*4)
 	}
-	if yellSamples <= gunSamples*3 {
+	if yellSamples <= gunCrack*3 {
 		t.Fatal("a yell should be much longer than the crack")
 	}
 	for i := range a {

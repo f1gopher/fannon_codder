@@ -14,18 +14,21 @@ import (
 	"fannon-codder/assets/art"
 	"fannon-codder/internal/data"
 	"fannon-codder/internal/sim"
+	"fannon-codder/internal/terrain"
 )
 
 // artScale matches the battle sheets: source pixels per world pixel.
 const artScale = 8
 
 type propCel struct {
-	img    *ebiten.Image
-	ax, ay int
+	img      *ebiten.Image
+	ax, ay   int
+	shadow   *ebiten.Image
+	sax, say int
 }
 
 var propLib struct {
-	once                          sync.Once
+	once                         sync.Once
 	door, plain, grenade, rocket *propCel
 }
 
@@ -73,7 +76,18 @@ func loadCel(key string) (*propCel, error) {
 			frame.Set(x, y, src.At(src.Bounds().Min.X+x, src.Bounds().Min.Y+y))
 		}
 	}
-	return &propCel{img: ebiten.NewImageFromImage(frame), ax: m.AnchorX, ay: m.AnchorY}, nil
+	sil := terrain.PropSilhouette(frame)
+	cel := &propCel{
+		img: ebiten.NewImageFromImage(frame),
+		ax:  m.AnchorX,
+		ay:  m.AnchorY,
+		sax: m.AnchorX + terrain.SilhouettePad,
+		say: m.AnchorY + terrain.SilhouettePad,
+	}
+	if sil != nil {
+		cel.shadow = ebiten.NewImageFromImage(sil)
+	}
+	return cel, nil
 }
 
 func (e *Editor) drawProps(dst *ebiten.Image) {
@@ -110,9 +124,12 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		if b.Door {
 			cel = door
 		}
-		if !drawCel(dst, cel, sx, sy, s) {
+		if cel == nil || cel.img == nil {
 			drawHutFallback(dst, b, s, e)
+			continue
 		}
+		drawPropShadow(dst, cel, sx, sy, s)
+		drawCel(dst, cel, sx, sy, s)
 	}
 	for _, p := range e.pickups {
 		c := sim.TileCenter(p.X, p.Y)
@@ -121,10 +138,28 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		if p.Kind == "rocket" || p.Kind == "rockets" {
 			cel = rocket
 		}
-		if !drawCel(dst, cel, sx, sy, s) {
+		if cel == nil || cel.img == nil {
 			fillRect(dst, int(sx-6*s), int(sy-6*s), int(12*s), int(12*s), color.RGBA{R: 0x8a, G: 0x8a, B: 0x8a, A: 0xff})
+			continue
 		}
+		drawPropShadow(dst, cel, sx, sy, s)
+		drawCel(dst, cel, sx, sy, s)
 	}
+}
+
+// drawPropShadow is the same south-east silhouette the battle paints under
+// a hut or a crate. x and y are the sheet anchor in screen pixels.
+func drawPropShadow(dst *ebiten.Image, cel *propCel, x, y, scale float64) {
+	if dst == nil || cel == nil || cel.shadow == nil || scale <= 0 {
+		return
+	}
+	sc := scale / artScale
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterLinear
+	op.GeoM.Translate(-float64(cel.sax), -float64(cel.say))
+	op.GeoM.Scale(sc, sc)
+	op.GeoM.Translate(x+terrain.PropShiftX*scale, y+terrain.PropShiftY*scale)
+	dst.DrawImage(cel.shadow, op)
 }
 
 func (e *Editor) worldToScreen(x, y float64) (float64, float64) {

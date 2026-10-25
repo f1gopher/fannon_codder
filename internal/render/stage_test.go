@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"fannon-codder/internal/sim"
+	ground "fannon-codder/internal/terrain"
 )
 
 func TestSpriteScale(t *testing.T) {
@@ -257,6 +258,42 @@ func TestWalkingEnemyUsesIdle(t *testing.T) {
 	if sprites != 1 || rects != 0 {
 		t.Fatalf("walking rocketeer: sprites=%d rects=%d, want the idle sheet", sprites, rects)
 	}
+}
+
+func TestPropShadowFollowsTheSprite(t *testing.T) {
+	sh := activeSheets().Get("hut/door")
+	rgba := sh.stillRGBA()
+	if rgba == nil {
+		t.Fatal("hut sheet has no CPU frame for the shadow")
+	}
+	sil := ground.PropSilhouette(rgba)
+	if sil == nil || sil.Bounds().Dx() <= rgba.Bounds().Dx() {
+		t.Fatal("hut shadow is not a padded copy of the sprite")
+	}
+	// The empty corner of the frame stays clear. A wall pixel stays dark.
+	if _, _, _, a := sil.At(0, 0).RGBA(); a != 0 {
+		t.Fatalf("hut shadow corner alpha = %v", a)
+	}
+	px := 128 + ground.SilhouettePad
+	py := 280 + ground.SilhouettePad
+	if _, _, _, a := sil.At(px, py).RGBA(); a < 40*256 {
+		t.Fatalf("hut wall shadow alpha = %v", a)
+	}
+	if activeSheets().Get("crate/grenade").stillRGBA() == nil {
+		t.Fatal("crate sheet has no CPU frame")
+	}
+
+	w := sim.NewEmpty()
+	w.AddDoorHut(1, 1)
+	w.AddGrenadeCrate(sim.TileCenter(4, 4))
+	hut := buildingBody(w.Camera, w.Buildings[0])
+	box := crateBody(w.Camera, w.Pickups[0])
+	if hut.shadow == nil || box.shadow == nil {
+		t.Fatal("a painted hut and crate cast a ground shadow")
+	}
+	dst := ebiten.NewImage(8, 8)
+	hut.shadow(dst)
+	box.shadow(dst)
 }
 
 func TestFootSort(t *testing.T) {

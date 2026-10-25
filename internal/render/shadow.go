@@ -3,8 +3,11 @@ package render
 import (
 	"image"
 	"image/color"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+
+	ground "fannon-codder/internal/terrain"
 )
 
 // shadowOval is a soft black ellipse drawn under a painted body. It is not
@@ -50,7 +53,13 @@ func castShadow(dst *ebiten.Image, x, y float64, src *ebiten.Image) {
 	if rw < 1 {
 		rw = 1
 	}
-	rh := rw * 0.35
+	drawShadowOval(dst, x, y, rw, rw*0.35, 0, -rw*0.35*0.85)
+}
+
+func drawShadowOval(dst *ebiten.Image, x, y, rw, rh, ox, oy float64) {
+	if dst == nil || rw < 1 || rh <= 0 {
+		return
+	}
 	oval := shadowOval()
 	b := oval.Bounds()
 	ps := pictureScale
@@ -60,6 +69,52 @@ func castShadow(dst *ebiten.Image, x, y float64, src *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
 	op.Filter = ebiten.FilterLinear
 	op.GeoM.Scale(rw/float64(b.Dx())*ps, rh/float64(b.Dy())*ps)
-	op.GeoM.Translate((x-rw/2)*ps, (y-rh*0.85)*ps)
+	op.GeoM.Translate((x+ox-rw/2)*ps, (y+oy)*ps)
 	dst.DrawImage(oval, op)
+}
+
+var formCache struct {
+	mu sync.Mutex
+	m  map[*image.RGBA]*ebiten.Image
+}
+
+func formImage(src *image.RGBA) *ebiten.Image {
+	formCache.mu.Lock()
+	defer formCache.mu.Unlock()
+	if formCache.m == nil {
+		formCache.m = map[*image.RGBA]*ebiten.Image{}
+	}
+	if img := formCache.m[src]; img != nil {
+		return img
+	}
+	sil := ground.PropSilhouette(src)
+	if sil == nil {
+		return nil
+	}
+	img := ebiten.NewImageFromImage(sil)
+	formCache.m[src] = img
+	return img
+}
+
+// castForm draws the soft silhouette on the sheet anchor, shifted
+// south-east. x and y are that anchor in logical pixels.
+func castForm(dst *ebiten.Image, src *image.RGBA, ax, ay int, x, y float64) {
+	if dst == nil || src == nil {
+		return
+	}
+	img := formImage(src)
+	if img == nil {
+		return
+	}
+	sc := SpriteScale()
+	ps := pictureScale
+	if ps <= 0 {
+		ps = 1
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterLinear
+	op.GeoM.Translate(-float64(ax+ground.SilhouettePad), -float64(ay+ground.SilhouettePad))
+	op.GeoM.Scale(sc, sc)
+	op.GeoM.Translate((x+ground.PropShiftX)*ps, (y+ground.PropShiftY)*ps)
+	dst.DrawImage(img, op)
 }

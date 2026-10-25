@@ -173,8 +173,10 @@ func loadSheet(fsys fs.FS, key string) (*Sheet, error) {
 	cels := make([][]*ebiten.Image, len(m.Rows))
 	var pix [][]*image.RGBA
 	// Idle and kneel keep a CPU copy so a glance can lift the helmet
-	// without reading the GPU image back.
-	if strings.HasSuffix(key, "/idle") || strings.HasSuffix(key, "/kneel") {
+	// without reading the GPU image back. Huts and crates keep one so
+	// the ground shadow can follow the painted shape.
+	if strings.HasSuffix(key, "/idle") || strings.HasSuffix(key, "/kneel") ||
+		strings.HasPrefix(key, "hut/") || strings.HasPrefix(key, "crate/") {
 		pix = make([][]*image.RGBA, len(m.Rows))
 	}
 	for row := range m.Rows {
@@ -277,6 +279,15 @@ func (s *Sheet) image(dir string, frame int) (img *ebiten.Image, mirror bool, ok
 // still is the first stored row, used by scenery that has no facing.
 func (s *Sheet) still(frame int) (*ebiten.Image, bool) {
 	return s.Row(0, frame)
+}
+
+// stillRGBA is frame 0 of the first row. Huts and crates store it. The
+// shadow uses this frame so chimney smoke does not flicker the shape.
+func (s *Sheet) stillRGBA() *image.RGBA {
+	if s == nil || len(s.pix) == 0 || len(s.pix[0]) == 0 {
+		return nil
+	}
+	return s.pix[0][0]
 }
 
 // RowCount is the number of stored rows. tree/sway keeps one silhouette per row.

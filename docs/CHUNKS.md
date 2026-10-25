@@ -121,4 +121,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A snow cliff's edge waves a few pixels, like the shore. The face is the cliff palette, not the rock plate. Other terrains still sample that plate.
 - The map editor marks the player start in gold and each placed enemy in red, on the painted map and on the region and tile views.
 - The map editor draws each hut and crate from its sheet, and a red barrel on each mine cell. Birds stay off.
+- A hut and a crate cast a soft copy of their sprite, shifted south-east. The map editor draws the same shadow.
 

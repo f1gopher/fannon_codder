@@ -596,7 +596,16 @@ func buildingBody(cam sim.Camera, b sim.Building) body {
 	if img == nil {
 		return body{y: y, draw: fallback}
 	}
-	return spriteBody(y, sx, sy, img, sh.AnchorX, sh.AnchorY, false, fallback)
+	rgba := sh.stillRGBA()
+	return body{
+		y: y,
+		shadow: func(dst *ebiten.Image) {
+			castForm(dst, rgba, sh.AnchorX, sh.AnchorY, sx, sy)
+		},
+		draw: func(dst *ebiten.Image) {
+			DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, false, sx, sy)
+		},
+	}
 }
 
 // roofRest is how far the painted eaves sit above the hut foot, in world pixels.
@@ -690,7 +699,16 @@ func crateBody(cam sim.Camera, p sim.Pickup) body {
 	if img == nil {
 		return body{y: p.Y, draw: fallback}
 	}
-	return spriteBody(p.Y, sx, sy, img, sh.AnchorX, sh.AnchorY, false, fallback)
+	rgba := sh.stillRGBA()
+	return body{
+		y: p.Y,
+		shadow: func(dst *ebiten.Image) {
+			castForm(dst, rgba, sh.AnchorX, sh.AnchorY, sx, sy)
+		},
+		draw: func(dst *ebiten.Image) {
+			DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, false, sx, sy)
+		},
+	}
 }
 
 func unitBody(cam sim.Camera, u sim.Unit, aimLock bool) body {

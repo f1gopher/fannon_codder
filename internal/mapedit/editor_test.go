@@ -61,6 +61,26 @@ func TestOpensTheFirstPhase(t *testing.T) {
 	}
 }
 
+func TestMarksStartAndEnemies(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ed.hasStart || ed.start != [2]int{12, 13} {
+		t.Fatalf("start = %v %v", ed.hasStart, ed.start)
+	}
+	if len(ed.enemies) != 3 || ed.enemies[0].X != 19 || ed.enemies[0].Y != 3 {
+		t.Fatalf("enemies = %+v", ed.enemies)
+	}
+	ed.scale = 2
+	ed.scrollX, ed.scrollY = 16, 0
+	x, y := ed.markAt(12, 13)
+	// Tile 12 centre is 12.5*16 world px, then scale 2, then scroll 16.
+	if x != (12.5*16-16)*2 || y != 13.5*16*2 {
+		t.Fatalf("mark = %v,%v", x, y)
+	}
+}
+
 func TestTileFillsDiffer(t *testing.T) {
 	tiles := []sim.Tile{
 		sim.TileGrass, sim.TileTree, sim.TileWaterShallow, sim.TileWaterDeep,

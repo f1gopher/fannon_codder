@@ -37,6 +37,10 @@ type Editor struct {
 	freeform bool
 	chart    terrain.Chart
 	err      error
+	// start is the player tile. hasStart is false until a phase loads.
+	start    [2]int
+	hasStart bool
+	enemies  []data.Enemy
 
 	scrollX, scrollY float64
 	time             float64
@@ -103,6 +107,9 @@ func (e *Editor) load(i int) {
 	e.scrollX, e.scrollY = 0, 0
 	e.freeform = false
 	e.chart = terrain.Chart{}
+	e.start = [2]int{}
+	e.hasStart = false
+	e.enemies = nil
 	p, err := data.LoadPhase(e.phases[i].file)
 	if err != nil {
 		e.err = err
@@ -133,6 +140,9 @@ func (e *Editor) load(i int) {
 	}
 	e.err = nil
 	e.grid = g
+	e.start = p.PlayerStart
+	e.hasStart = true
+	e.enemies = append([]data.Enemy(nil), p.Enemies...)
 }
 
 func (e *Editor) label() string {
@@ -362,6 +372,7 @@ func (e *Editor) drawMap(screen *ebiten.Image) {
 	} else {
 		e.paint(e.view, terrain.Prepare(e.grid, e.biome))
 	}
+	e.drawMarks(e.view)
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(rail), 0)
 	screen.DrawImage(e.view, op)
@@ -416,6 +427,8 @@ var (
 	railInkSel = color.RGBA{R: 244, G: 236, B: 200, A: 255}
 	gridLine   = color.RGBA{R: 12, G: 12, B: 12, A: 255}
 	gridInk    = color.RGBA{R: 244, G: 236, B: 200, A: 255}
+	markPlayer = color.RGBA{R: 0xff, G: 0xc4, B: 0x00, A: 255}
+	markEnemy  = color.RGBA{R: 0xe0, G: 0x30, B: 0x30, A: 255}
 )
 
 func drawFace(dst *ebiten.Image, src *text.GoTextFaceSource, scale float64, str string, x, y float64, c color.Color) {
@@ -534,6 +547,59 @@ func groundFill(biome string) color.RGBA {
 	default:
 		return tileFill(sim.TileGrass)
 	}
+}
+
+// markAt is the screen point of a tile centre in the viewport.
+func (e *Editor) markAt(tx, ty int) (float64, float64) {
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	c := float64(sim.TileSize) * s
+	return -e.scrollX*s + (float64(tx)+0.5)*c, -e.scrollY*s + (float64(ty)+0.5)*c
+}
+
+func (e *Editor) drawMarks(dst *ebiten.Image) {
+	if dst == nil || e.err != nil || !e.hasStart && len(e.enemies) == 0 {
+		return
+	}
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	for _, en := range e.enemies {
+		x, y := e.markAt(en.X, en.Y)
+		drawDiamond(dst, x, y, 3.5*s, markEnemy)
+	}
+	if e.hasStart {
+		x, y := e.markAt(e.start[0], e.start[1])
+		drawDiamond(dst, x, y, 4.5*s, markPlayer)
+	}
+}
+
+func drawDiamond(dst *ebiten.Image, x, y, r float64, c color.Color) {
+	if r < 1 {
+		r = 1
+	}
+	p := &vector.Path{}
+	p.MoveTo(float32(x), float32(y-r))
+	p.LineTo(float32(x+r), float32(y))
+	p.LineTo(float32(x), float32(y+r))
+	p.LineTo(float32(x-r), float32(y))
+	p.Close()
+	edge := &vector.DrawPathOptions{AntiAlias: true}
+	edge.ColorScale.ScaleWithColor(gridLine)
+	vector.FillPath(dst, p, nil, edge)
+	in := &vector.Path{}
+	ri := r * 0.62
+	in.MoveTo(float32(x), float32(y-ri))
+	in.LineTo(float32(x+ri), float32(y))
+	in.LineTo(float32(x), float32(y+ri))
+	in.LineTo(float32(x-ri), float32(y))
+	in.Close()
+	fill := &vector.DrawPathOptions{AntiAlias: true}
+	fill.ColorScale.ScaleWithColor(c)
+	vector.FillPath(dst, in, nil, fill)
 }
 
 func (e *Editor) drawTileGrid(dst *ebiten.Image) {

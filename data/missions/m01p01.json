@@ -19,7 +19,8 @@
   "enemies": [
     {"x": 19, "y": 3, "kind": "grunt"},
     {"x": 3, "y": 5, "kind": "grunt"},
-    {"x": 16, "y": 10, "kind": "grunt"}
+    {"x": 16, "y": 10, "kind": "grunt"},
+    {"x": 1, "y": 1, "kind": "patrol", "line": [[4, 2], [1, 5]]}
   ],
   "buildings": [],
   "pickups": [

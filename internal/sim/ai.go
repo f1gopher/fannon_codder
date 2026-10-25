@@ -17,10 +17,12 @@ const (
 	EnemySightBlind  = 40.0  // px. 0x28. He closes even when the straight path is blocked
 )
 
-// stepAI runs enemy infantry. Mission 1 grunts hold their tile. From Mission 2,
-// and for any man who has finished walking out of a door, a grunt closes
-// once he has acquired a player, then holds and fires. Rocketeers stay
-// put. Grenade and rocket windups keep their own clocks.
+// stepAI runs enemy infantry. A grunt with no patrol holds his tile.
+// A patrol walks his curve until he sees a player or hears a shot, then
+// leaves it to attack or to walk in. From Mission 2, and for any man who
+// has finished walking out of a door, a grunt closes once he has acquired
+// a player, then holds and fires. Rocketeers stay put. Grenade and rocket
+// windups keep their own clocks.
 func (w *World) stepAI(dt float64) {
 	if !w.AI {
 		return
@@ -38,6 +40,14 @@ func (w *World) stepAI(dt float64) {
 		}
 		if u.HasPost {
 			w.stepDoorPost(u, dt)
+			continue
+		}
+		if len(u.Patrol) >= 2 {
+			if w.patrolBreak(u) {
+				w.stepPatrolAlert(u, dt)
+			} else {
+				w.stepPatrol(u, dt)
+			}
 			continue
 		}
 		px, py, ok := w.nearestLiving(SidePlayer, u.X, u.Y)

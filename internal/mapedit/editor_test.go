@@ -101,8 +101,12 @@ func TestMarksStartAndEnemies(t *testing.T) {
 	if !ed.hasStart || ed.start != [2]int{12, 13} {
 		t.Fatalf("start = %v %v", ed.hasStart, ed.start)
 	}
-	if len(ed.enemies) != 3 || ed.enemies[0].X != 19 || ed.enemies[0].Y != 3 {
+	if len(ed.enemies) != 4 || ed.enemies[0].X != 19 || ed.enemies[0].Y != 3 {
 		t.Fatalf("enemies = %+v", ed.enemies)
+	}
+	last := ed.enemies[3]
+	if last.Kind != "patrol" || last.X != 1 || last.Y != 1 || len(last.Line) != 2 || last.Line[0] != [2]int{4, 2} || last.Line[1] != [2]int{1, 5} {
+		t.Fatalf("patrol = %+v", last)
 	}
 	ed.scale = 2
 	ed.scrollX, ed.scrollY = 16, 0

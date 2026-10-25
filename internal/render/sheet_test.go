@@ -223,9 +223,6 @@ func TestEnemySheets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if lib.Get("grunt/walk") != nil {
-		t.Fatal("grunts have no walk")
-	}
 	grunt := []struct {
 		key    string
 		frames int
@@ -233,6 +230,7 @@ func TestEnemySheets(t *testing.T) {
 		loop   bool
 	}{
 		{"grunt/idle", 4, 8, true},
+		{"grunt/walk", 6, 12, true},
 		{"grunt/shoot", 2, 16.67, false},
 		{"grunt/death", 6, 15, false},
 		{"grunt/corpse", 1, 1, false},
@@ -261,7 +259,7 @@ func TestEnemySheets(t *testing.T) {
 	if float64(6)/15 != 0.4 {
 		t.Fatal("death timing")
 	}
-	for _, key := range []string{"grenadier/idle", "grenadier/throw", "rocketeer/idle", "rocketeer/throw", "grenadier/death", "rocketeer/sink"} {
+	for _, key := range []string{"grenadier/idle", "grenadier/throw", "grenadier/walk", "rocketeer/idle", "rocketeer/throw", "rocketeer/walk", "grenadier/death", "rocketeer/sink"} {
 		if lib.Get(key) == nil {
 			t.Fatalf("missing %s", key)
 		}
@@ -280,6 +278,51 @@ func TestEnemySheets(t *testing.T) {
 	}
 	if opaqueCount(idle, 0, 0, 104, 124) < 200 {
 		t.Fatal("grunt east idle is empty")
+	}
+	for _, role := range []struct {
+		name           string
+		fw, fh, ax, ay int
+	}{
+		{"grunt", 104, 124, 52, 116},
+		{"grenadier", 104, 124, 52, 116},
+		{"rocketeer", 150, 124, 60, 116},
+	} {
+		walk := lib.Get(role.name + "/walk")
+		idleSh := lib.Get(role.name + "/idle")
+		if walk.Frames != 6 || walk.FPS != 12 || !walk.Loop {
+			t.Fatalf("%s walk frames=%d fps=%v loop=%v", role.name, walk.Frames, walk.FPS, walk.Loop)
+		}
+		if walk.FrameW != role.fw || walk.FrameH != role.fh || walk.AnchorX != role.ax || walk.AnchorY != role.ay {
+			t.Fatalf("%s walk cell %dx%d @%d,%d", role.name, walk.FrameW, walk.FrameH, walk.AnchorX, walk.AnchorY)
+		}
+		if idleSh.FrameW != walk.FrameW || idleSh.FrameH != walk.FrameH || idleSh.AnchorX != walk.AnchorX || idleSh.AnchorY != walk.AnchorY {
+			t.Fatalf("%s walk cell does not match idle", role.name)
+		}
+		png := decodeArtPNG(t, role.name+"/walk.png")
+		if png.Bounds().Dx() != role.fw*6 || png.Bounds().Dy() != role.fh*5 {
+			t.Fatalf("%s walk png %v", role.name, png.Bounds())
+		}
+		if opaqueCount(png, 0, 0, role.fw, role.fh) < 200 {
+			t.Fatalf("%s east walk is empty", role.name)
+		}
+		if celDiff(png, 0, 1, 0, role.fw, role.fh) < 200 {
+			t.Fatalf("%s walk frames 0 and 1 match", role.name)
+		}
+		// The stride keeps the approved head and weapon. East frame 0 does not bob.
+		idlePNG := decodeArtPNG(t, role.name+"/idle.png")
+		if upperDiff(idlePNG, png, role.fw, 60) > 0 {
+			t.Fatalf("%s walk redrew the east head", role.name)
+		}
+		for row := 0; row < 5; row++ {
+			for frame := 0; frame < 6; frame++ {
+				if pieces(png, frame, row, role.fw, role.fh) != 1 {
+					t.Fatalf("%s walk row %d frame %d came apart", role.name, row, frame)
+				}
+				if bootRuns(png, frame, row, role.fw, role.fh) > 2 {
+					t.Fatalf("%s walk row %d frame %d has an extra leg", role.name, row, frame)
+				}
+			}
+		}
 	}
 }
 
@@ -805,6 +848,125 @@ func greenCloth(c color.NRGBA) bool {
 	}
 	h *= 60
 	return h >= 68 && h <= 188
+}
+
+func celDiff(img image.Image, a, b, row, fw, fh int) int {
+	n := 0
+	for y := 0; y < fh; y++ {
+		for x := 0; x < fw; x++ {
+			r1, g1, b1, a1 := img.At(a*fw+x, row*fh+y).RGBA()
+			r2, g2, b2, a2 := img.At(b*fw+x, row*fh+y).RGBA()
+			if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// upperDiff counts pixels that differ in the top of the east cel.
+func upperDiff(idle, walk image.Image, fw, yCut int) int {
+	n := 0
+	for y := 0; y < yCut; y++ {
+		for x := 0; x < fw; x++ {
+			r1, g1, b1, a1 := idle.At(x, y).RGBA()
+			r2, g2, b2, a2 := walk.At(x, y).RGBA()
+			if r1 != r2 || g1 != g2 || b1 != b2 || a1 != a2 {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// pieces is the number of opaque blobs larger than a speck.
+func pieces(img image.Image, frame, row, fw, fh int) int {
+	x0, y0 := frame*fw, row*fh
+	seen := make([]bool, fw*fh)
+	op := func(x, y int) bool {
+		_, _, _, a := img.At(x0+x, y0+y).RGBA()
+		return a > 20*256
+	}
+	n := 0
+	var q []int
+	for y := 0; y < fh; y++ {
+		for x := 0; x < fw; x++ {
+			if !op(x, y) || seen[y*fw+x] {
+				continue
+			}
+			q = q[:0]
+			q = append(q, y*fw+x)
+			seen[y*fw+x] = true
+			area := 0
+			for len(q) > 0 {
+				i := q[len(q)-1]
+				q = q[:len(q)-1]
+				area++
+				cy, cx := i/fw, i%fw
+				for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+					nx, ny := cx+d[0], cy+d[1]
+					if nx < 0 || ny < 0 || nx >= fw || ny >= fh || seen[ny*fw+nx] || !op(nx, ny) {
+						continue
+					}
+					seen[ny*fw+nx] = true
+					q = append(q, ny*fw+nx)
+				}
+			}
+			if area > 15 {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+// bootRuns counts separated feet in the bottom of a cel. A third run is an extra leg.
+func bootRuns(img image.Image, frame, row, fw, fh int) int {
+	x0, y0 := frame*fw, row*fh
+	foot := -1
+	for y := fh - 1; y >= 0; y-- {
+		for x := 0; x < fw; x++ {
+			_, _, _, a := img.At(x0+x, y0+y).RGBA()
+			if a > 40*256 {
+				foot = y
+				break
+			}
+		}
+		if foot >= 0 {
+			break
+		}
+	}
+	if foot < 0 {
+		return 0
+	}
+	col := make([]bool, fw)
+	for y := foot - 10; y <= foot; y++ {
+		if y < 0 {
+			continue
+		}
+		for x := 0; x < fw; x++ {
+			_, _, _, a := img.At(x0+x, y0+y).RGBA()
+			if a > 40*256 {
+				col[x] = true
+			}
+		}
+	}
+	runs := 0
+	for x := 0; x < fw; {
+		if !col[x] {
+			x++
+			continue
+		}
+		x1 := x
+		for x1 < fw && col[x1] {
+			x1++
+		}
+		if x1-x >= 5 {
+			runs++
+		}
+		x = x1
+	}
+	return runs
 }
 
 func opaqueCount(img image.Image, frame, row, fw, fh int) int {

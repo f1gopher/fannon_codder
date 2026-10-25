@@ -231,12 +231,16 @@ func TestBlastOutlineOnlyWhenSheetMissing(t *testing.T) {
 	}
 }
 
-func TestWalkingEnemyUsesIdle(t *testing.T) {
+func TestWalkingEnemyUsesWalk(t *testing.T) {
 	restoreRender(t)
 	SetPictureScale(1)
 	ResetAnim()
 	var sprites, rects int
-	spriteHook = func(*ebiten.Image, bool) { sprites++ }
+	var got *ebiten.Image
+	spriteHook = func(img *ebiten.Image, _ bool) {
+		sprites++
+		got = img
+	}
 	rectHook = func() { rects++ }
 	t.Cleanup(func() { spriteHook, rectHook = nil, nil })
 
@@ -247,16 +251,20 @@ func TestWalkingEnemyUsesIdle(t *testing.T) {
 	u.VX = 20
 	u.Facing = 0
 	dst := ebiten.NewImage(64, 64)
-	Field(dst, w, "grass")
-	if sprites != 1 || rects != 0 {
-		t.Fatalf("walking grunt: sprites=%d rects=%d, want the idle sheet", sprites, rects)
-	}
-
-	sprites, rects = 0, 0
-	u.Kind = sim.KindRocketeer
-	Field(dst, w, "grass")
-	if sprites != 1 || rects != 0 {
-		t.Fatalf("walking rocketeer: sprites=%d rects=%d, want the idle sheet", sprites, rects)
+	for _, kind := range []sim.UnitKind{sim.KindInfantry, sim.KindGrenadier, sim.KindRocketeer} {
+		u.Kind = kind
+		sprites, rects = 0, 0
+		got = nil
+		Field(dst, w, "grass")
+		key := actorKey(u)
+		sh := activeSheets().Get(key + "/walk")
+		if sh == nil {
+			t.Fatalf("missing %s/walk", key)
+		}
+		want, _, ok := sh.image("E", poseFrame(poseWalk, u, sh))
+		if !ok || got != want || sprites != 1 || rects != 0 {
+			t.Fatalf("walking %s: sprites=%d rects=%d ok=%v", key, sprites, rects, ok && got == want)
+		}
 	}
 }
 

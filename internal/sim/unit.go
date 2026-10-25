@@ -64,6 +64,13 @@ type Unit struct {
 	Aggressive  bool    // closes on an acquired player, then stops to shoot. Mission 1 leaves this false.
 	PostX       float64
 	PostY       float64
+	Patrol      []Vec2  // world points he walks back and forth. Nil stays on his tile.
+	PatrolTo    int     // index of the point he is walking toward
+	PatrolDir   int     // +1 toward the last point, -1 toward the first
+	PatrolWait  float64 // seconds left standing to look around. 0 means he is walking.
+	PatrolSpan  float64 // full length of this look-around
+	PatrolHead  float64 // route facing the look sweeps around
+	PatrolGap   float64 // seconds of walking left before the next look-around
 	SinceShot   float64 // seconds since this unit's last MG round. Render only.
 	SinceThrow  float64 // seconds since this unit's last grenade or rocket. Render only.
 	Hop         float64 // corpse height above the ground, in world pixels

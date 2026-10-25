@@ -90,6 +90,10 @@ type Enemy struct {
 	X    int    `json:"x"`
 	Y    int    `json:"y"`
 	Kind string `json:"kind"`
+	// Line is the rest of a patrol route, in tile coordinates, after (x, y).
+	// Two points are a straight segment. More points are a curve through them.
+	// He walks to the last point, back to (x, y), and repeats.
+	Line [][2]int `json:"line,omitempty"`
 }
 
 func missionsDir() string {
@@ -208,11 +212,27 @@ func (p *Phase) World() (*sim.World, error) {
 		case "rocketeer":
 			u.Kind = sim.KindRocketeer
 			u.RocketCD = sim.RocketeerFirstDelay
+		case "patrol":
 		default:
 			return nil, fmt.Errorf("unknown enemy %q", e.Kind)
 		}
-		// Mission 1 grunts stay on their tile. Later grunts and grenadiers close.
-		// Rocketeers stay put on every phase.
+		if e.Kind != "patrol" && len(e.Line) > 0 {
+			name := e.Kind
+			if name == "" {
+				name = "grunt"
+			}
+			return nil, fmt.Errorf("%s at %d,%d has a line; use kind patrol", name, e.X, e.Y)
+		}
+		if e.Kind == "patrol" {
+			tiles := make([][2]int, 0, 1+len(e.Line))
+			tiles = append(tiles, [2]int{e.X, e.Y})
+			tiles = append(tiles, e.Line...)
+			if err := w.SetPatrolFromTiles(u, tiles); err != nil {
+				return nil, fmt.Errorf("enemy at %d,%d: %w", e.X, e.Y, err)
+			}
+		}
+		// Mission 1 grunts stay on their tile. Later grunts, patrols, and
+		// grenadiers close. Rocketeers stay put on every phase.
 		if p.Mission >= 2 && u.Kind != sim.KindRocketeer {
 			u.Aggressive = true
 		}

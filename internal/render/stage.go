@@ -149,8 +149,8 @@ func clamp01(p float64) float64 {
 	return p
 }
 
-// sheetForPose is the painted cycle for this pose. Enemy ranks have no walk
-// sheet, so a man leaving a door (or a rocketeer closing in) keeps his idle.
+// sheetForPose is the painted cycle for this pose. A missing walk or kneel
+// keeps that actor's idle, so a man is never a rectangle for want of a stride.
 func sheetForPose(u *sim.Unit, p pose) *Sheet {
 	key := actorKey(u)
 	sh := activeSheets().Get(key + "/" + p.name())

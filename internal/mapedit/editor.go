@@ -578,6 +578,9 @@ func (e *Editor) drawMarks(dst *ebiten.Image) {
 		s = 1
 	}
 	for _, en := range e.enemies {
+		if en.Kind == "patrol" {
+			e.drawPatrol(dst, en)
+		}
 		x, y := e.markAt(en.X, en.Y)
 		drawDiamond(dst, x, y, 3.5*s, markEnemy)
 	}
@@ -585,6 +588,48 @@ func (e *Editor) drawMarks(dst *ebiten.Image) {
 		x, y := e.markAt(e.start[0], e.start[1])
 		drawDiamond(dst, x, y, 4.5*s, markPlayer)
 	}
+}
+
+// drawPatrol strokes the curve the level gave this soldier.
+// The spawn diamond is drawn by the caller. Extra control points get a smaller mark.
+func (e *Editor) drawPatrol(dst *ebiten.Image, en data.Enemy) {
+	if len(en.Line) == 0 {
+		return
+	}
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	controls := []sim.Vec2{sim.TileCenter(en.X, en.Y)}
+	for _, pt := range en.Line {
+		controls = append(controls, sim.TileCenter(pt[0], pt[1]))
+	}
+	curve := sim.PatrolCurve(controls)
+	p := &vector.Path{}
+	x, y := e.worldMark(curve[0].X, curve[0].Y)
+	p.MoveTo(float32(x), float32(y))
+	for _, pt := range curve[1:] {
+		x, y = e.worldMark(pt.X, pt.Y)
+		p.LineTo(float32(x), float32(y))
+	}
+	ink := &vector.DrawPathOptions{AntiAlias: true}
+	ink.ColorScale.ScaleWithColor(markEnemy)
+	vector.StrokePath(dst, p, &vector.StrokeOptions{
+		Width:    float32(math.Max(1.5, s*0.7)),
+		LineJoin: vector.LineJoinRound,
+	}, ink)
+	for _, pt := range en.Line {
+		x, y = e.markAt(pt[0], pt[1])
+		drawDiamond(dst, x, y, 2.2*s, markEnemy)
+	}
+}
+
+func (e *Editor) worldMark(x, y float64) (float64, float64) {
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	return -e.scrollX*s + x*s, -e.scrollY*s + y*s
 }
 
 func drawDiamond(dst *ebiten.Image, x, y, r float64, c color.Color) {

@@ -15,8 +15,8 @@ func TestLoadMission1(t *testing.T) {
 	if p.Deploy != 2 {
 		t.Fatalf("deploy=%d, want 2", p.Deploy)
 	}
-	if len(p.Enemies) != 3 {
-		t.Fatalf("enemies=%d, want 3", len(p.Enemies))
+	if len(p.Enemies) != 4 {
+		t.Fatalf("enemies=%d, want 4", len(p.Enemies))
 	}
 	w, err := p.World()
 	if err != nil {
@@ -42,8 +42,8 @@ func TestLoadMission1(t *testing.T) {
 			nE++
 		}
 	}
-	if nP != 2 || nE != 3 {
-		t.Fatalf("units player=%d enemy=%d, want 2 and 3", nP, nE)
+	if nP != 2 || nE != 4 {
+		t.Fatalf("units player=%d enemy=%d, want 2 and 4", nP, nE)
 	}
 	if len(w.Pickups) != 1 || w.Pickups[0].Kind != sim.PickupGrenades || w.Pickups[0].Amount != sim.CrateAmount {
 		t.Fatalf("pickups=%+v, want one grenade crate", w.Pickups)
@@ -66,15 +66,23 @@ func TestMission1GruntsHoldAtSpawn(t *testing.T) {
 		x, y float64
 	}
 	var posts []post
+	var patrols int
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Side != sim.SideEnemy {
+			continue
+		}
+		if len(u.Patrol) >= 2 {
+			patrols++
 			continue
 		}
 		if u.Facing != 0 {
 			t.Fatalf("grunt facing %v, want east", u.Facing)
 		}
 		posts = append(posts, post{u.X, u.Y})
+	}
+	if len(posts) != 3 || patrols != 1 {
+		t.Fatalf("posted=%d patrols=%d, want 3 and 1", len(posts), patrols)
 	}
 	w.Step(1)
 	if len(w.Projectiles) != 0 {
@@ -83,7 +91,7 @@ func TestMission1GruntsHoldAtSpawn(t *testing.T) {
 	n := 0
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Side != sim.SideEnemy || !u.Living() {
+		if u.Side != sim.SideEnemy || !u.Living() || len(u.Patrol) >= 2 {
 			continue
 		}
 		if u.X != posts[n].x || u.Y != posts[n].y || u.VX != 0 || u.VY != 0 {
@@ -566,6 +574,160 @@ func TestStartGrenadesPerTrooper(t *testing.T) {
 	w = mustWorld(t, &base)
 	if got := w.ActiveSquad().Grenades; got != 0 {
 		t.Fatalf("no free grenades, got %d", got)
+	}
+}
+
+func TestPatrolKindLoadsALine(t *testing.T) {
+	p := mustPhase(t, "m01p01.json")
+	var spec Enemy
+	n := 0
+	for _, e := range p.Enemies {
+		if e.Kind != "patrol" {
+			continue
+		}
+		spec = e
+		n++
+	}
+	if n != 1 || spec.X != 1 || spec.Y != 1 || len(spec.Line) != 2 || spec.Line[0] != [2]int{4, 2} || spec.Line[1] != [2]int{1, 5} {
+		t.Fatalf("patrol spec %+v count %d", spec, n)
+	}
+	w := mustWorld(t, p)
+	var id int
+	var found bool
+	posted := 0
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != sim.SideEnemy {
+			continue
+		}
+		if len(u.Patrol) < 2 {
+			posted++
+			if u.Aggressive {
+				t.Fatal("a mission 1 grunt should stay posted")
+			}
+			continue
+		}
+		found = true
+		id = u.ID
+		if u.Aggressive {
+			t.Fatal("a mission 1 patrol is not marked aggressive")
+		}
+		a := sim.TileCenter(1, 1)
+		b := sim.TileCenter(1, 5)
+		last := u.Patrol[len(u.Patrol)-1]
+		if u.Patrol[0] != a || last != b || len(u.Patrol) < 8 || u.PatrolDir != 1 {
+			t.Fatalf("route ends (%v)->(%v) points=%d dir=%d", u.Patrol[0], last, len(u.Patrol), u.PatrolDir)
+		}
+		var bowed bool
+		for _, p := range u.Patrol {
+			// The straight chord from (1,1) to (1,5) is x = that centre.
+			if math.Abs(p.X-a.X) > 4 {
+				bowed = true
+			}
+			for _, man := range w.Units {
+				if man.Side != sim.SidePlayer {
+					continue
+				}
+				if math.Hypot(p.X-man.X, p.Y-man.Y) <= sim.EnemySight {
+					t.Fatalf("curve sample (%v,%v) is inside sight of a spawn", p.X, p.Y)
+				}
+			}
+		}
+		if !bowed {
+			t.Fatal("the mission 1 route should bow off the straight north-south line")
+		}
+	}
+	if !found || posted != 3 {
+		t.Fatalf("posted=%d found=%v", posted, found)
+	}
+	x0 := w.Unit(id).X
+	y0 := w.Unit(id).Y
+	for i := 0; i < 60; i++ {
+		w.Step(1.0 / 60)
+	}
+	u := w.Unit(id)
+	moved := math.Hypot(u.X-x0, u.Y-y0)
+	if moved < 12 || moved > 22 {
+		t.Fatalf("he should stroll the curve, not close, moved %v from (%v,%v) to (%v,%v)", moved, x0, y0, u.X, u.Y)
+	}
+}
+
+func TestMission2PatrolIsAggressive(t *testing.T) {
+	p := mustPhase(t, "m02p01.json")
+	n := 0
+	for _, e := range p.Enemies {
+		if e.Kind == "patrol" {
+			n++
+			if e.X != 1 || e.Y != 0 || len(e.Line) != 1 || e.Line[0] != [2]int{8, 0} {
+				t.Fatalf("patrol spec %+v", e)
+			}
+		}
+	}
+	if n != 1 {
+		t.Fatalf("patrols=%d", n)
+	}
+	w := mustWorld(t, p)
+	var found bool
+	for i := range w.Units {
+		u := &w.Units[i]
+		if len(u.Patrol) < 2 {
+			continue
+		}
+		found = true
+		if !u.Aggressive {
+			t.Fatal("a mission 2 patrol closes once he acquires the squad")
+		}
+	}
+	if !found {
+		t.Fatal("mission 2 phase 1 has no patrol")
+	}
+}
+
+func TestPatrolLineMustBeOpen(t *testing.T) {
+	rows := make([]string, 4)
+	for i := range rows {
+		rows[i] = "...."
+	}
+	rows[1] = ".T.."
+	base := Phase{
+		Deploy:      1,
+		PlayerStart: [2]int{0, 3},
+		Map:         Tilemap{W: 4, H: 4, Tiles: rows},
+	}
+	blocked := base
+	blocked.Enemies = []Enemy{{X: 0, Y: 1, Kind: "patrol", Line: [][2]int{{3, 1}}}}
+	if _, err := blocked.World(); err == nil {
+		t.Fatal("a line through a tree should fail")
+	}
+	off := base
+	off.Enemies = []Enemy{{X: 0, Y: 0, Kind: "patrol", Line: [][2]int{{9, 0}}}}
+	if _, err := off.World(); err == nil {
+		t.Fatal("a point off the map should fail")
+	}
+	bare := base
+	bare.Enemies = []Enemy{{X: 0, Y: 0, Kind: "patrol"}}
+	if _, err := bare.World(); err == nil {
+		t.Fatal("a patrol with no line should fail")
+	}
+	grunt := base
+	grunt.Enemies = []Enemy{{X: 0, Y: 0, Kind: "grunt", Line: [][2]int{{2, 0}}}}
+	if _, err := grunt.World(); err == nil {
+		t.Fatal("a posted grunt should not take a line")
+	}
+	open := base
+	open.Enemies = []Enemy{{X: 0, Y: 0, Kind: "patrol", Line: [][2]int{{0, 3}}}}
+	w, err := open.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var route bool
+	for i := range w.Units {
+		if len(w.Units[i].Patrol) == 2 {
+			route = true
+		}
+	}
+	if !route {
+		t.Fatal("an open line should load")
 	}
 }
 

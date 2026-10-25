@@ -37,7 +37,7 @@ Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, m
 
 ## Map editor
 
-`go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. A left rail picks the phase. Under the list, the rail shows the selected phase's terrain and its size. The rest of the window is that whole map at the game's picture scale. It opens on the painted terrain. Escape closes it. Nothing is written. A gold diamond marks the player start tile. A red diamond marks each placed enemy. Huts, crates, and birds are not drawn. Wheel and the arrow keys scroll in every view. A left drag scrolls too, except in the regions view.
+`go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. A left rail picks the phase. Under the list, the rail shows the selected phase's terrain and its size. The rest of the window is that whole map at the game's picture scale. It opens on the painted terrain. Escape closes it. Nothing is written. A gold diamond marks the player start tile. A red diamond marks each placed enemy. A hut draws from `hut/door` or `hut/plain` on its footprint, and a crate draws from `crate/grenade` or `crate/rocket` on its tile. A mine cell draws a red barrel. Birds are not drawn. Wheel and the arrow keys scroll in every view. A left drag scrolls too, except in the regions view.
 
 A phase is either a tile grid or freeform regions. Regions are a closed ring of world-pixel points. The map starts as that terrain's open ground, and each region paints over it. A later region wins on the overlap. A tree region is a canopy. Water, ice, sand, rock, a ramp, a timber bridge, and mines paint as those materials. `PrepareChart` in `internal/terrain` does that paint. The battle calls it for a region phase.
 

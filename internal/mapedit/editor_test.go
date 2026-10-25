@@ -61,6 +61,38 @@ func TestOpensTheFirstPhase(t *testing.T) {
 	}
 }
 
+func TestShowsHutsCratesAndMines(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ed.buildings) != 0 || len(ed.pickups) != 1 || ed.pickups[0].Kind != "grenades" {
+		t.Fatalf("m01 props buildings=%d pickups=%+v", len(ed.buildings), ed.pickups)
+	}
+	found := false
+	for i, row := range ed.phases {
+		if row.name != "m04p04" {
+			continue
+		}
+		found = true
+		ed.load(i)
+	}
+	if !found || ed.err != nil {
+		t.Fatal(ed.err)
+	}
+	mines := 0
+	for ty := 0; ty < ed.grid.H; ty++ {
+		for tx := 0; tx < ed.grid.W; tx++ {
+			if ed.grid.At(tx, ty) == sim.TileMine {
+				mines++
+			}
+		}
+	}
+	if mines == 0 || len(ed.buildings) == 0 || len(ed.pickups) == 0 {
+		t.Fatalf("m04p04 mines=%d buildings=%d pickups=%d", mines, len(ed.buildings), len(ed.pickups))
+	}
+}
+
 func TestMarksStartAndEnemies(t *testing.T) {
 	ed, err := New()
 	if err != nil {

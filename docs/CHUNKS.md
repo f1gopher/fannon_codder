@@ -120,4 +120,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Water and shores are computed in world space. The line waves instead of following the cell edge. Water is pale beside the shore and darkens offshore. Jungle, forest, and desert blend into sand. Snow blends into a pale frozen lip. Shallow, deep, and shore plates stay on disk and are not sampled for that fade.
 - A snow cliff's edge waves a few pixels, like the shore. The face is the cliff palette, not the rock plate. Other terrains still sample that plate.
 - The map editor marks the player start in gold and each placed enemy in red, on the painted map and on the region and tile views.
+- The map editor draws each hut and crate from its sheet, and a red barrel on each mine cell. Birds stay off.
 

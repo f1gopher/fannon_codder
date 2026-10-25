@@ -38,9 +38,11 @@ type Editor struct {
 	chart    terrain.Chart
 	err      error
 	// start is the player tile. hasStart is false until a phase loads.
-	start    [2]int
-	hasStart bool
-	enemies  []data.Enemy
+	start     [2]int
+	hasStart  bool
+	enemies   []data.Enemy
+	buildings []data.BuildingSpec
+	pickups   []data.PickupSpec
 
 	scrollX, scrollY float64
 	time             float64
@@ -110,6 +112,8 @@ func (e *Editor) load(i int) {
 	e.start = [2]int{}
 	e.hasStart = false
 	e.enemies = nil
+	e.buildings = nil
+	e.pickups = nil
 	p, err := data.LoadPhase(e.phases[i].file)
 	if err != nil {
 		e.err = err
@@ -143,6 +147,8 @@ func (e *Editor) load(i int) {
 	e.start = p.PlayerStart
 	e.hasStart = true
 	e.enemies = append([]data.Enemy(nil), p.Enemies...)
+	e.buildings = append([]data.BuildingSpec(nil), p.Buildings...)
+	e.pickups = append([]data.PickupSpec(nil), p.Pickups...)
 }
 
 func (e *Editor) label() string {
@@ -560,6 +566,7 @@ func (e *Editor) markAt(tx, ty int) (float64, float64) {
 }
 
 func (e *Editor) drawMarks(dst *ebiten.Image) {
+	e.drawProps(dst)
 	if dst == nil || e.err != nil || !e.hasStart && len(e.enemies) == 0 {
 		return
 	}

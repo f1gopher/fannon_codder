@@ -125,4 +125,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - The map editor marks the player start in gold and each placed enemy in red, on the painted map and on the region and tile views.
 - The map editor draws each hut and crate from its sheet, and a red barrel on each mine cell. Birds stay off.
 - A hut and a crate cast a soft copy of their sprite, shifted south-east. The map editor draws the same shadow.
+- The map editor drags the player start, enemies, patrol points, barrels, huts, and crates. 1–9 and a left click on empty ground add one. S writes those lists. A drawn tree region is still not written.
+- The map editor has a menu bar. Each place tool is an icon from the soldier or prop sheet. A click selects it. Keys 1–9 select the same tools.
+- Tree crowns pad their edge on the CPU. A one-pixel GPU slice of that frame aborted the graphics driver when the window was fullscreen.
 

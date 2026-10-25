@@ -110,6 +110,25 @@ func missionsDir() string {
 	return filepath.Join("data", "missions")
 }
 
+// WritePhase writes one phase file. The caller passes the full path.
+func WritePhase(path string, p *Phase) error {
+	b, err := json.MarshalIndent(p, "", "  ")
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	return os.WriteFile(path, b, 0o644)
+}
+
+// SavePhase writes a campaign phase next to campaign.json.
+func SavePhase(file string, p *Phase) error {
+	name := filepath.Base(file)
+	if name == "." || name == string(filepath.Separator) || name == "" {
+		return fmt.Errorf("phase file %q", file)
+	}
+	return WritePhase(filepath.Join(missionsDir(), name), p)
+}
+
 func LoadCampaign() (*Campaign, error) {
 	b, err := os.ReadFile(filepath.Join(missionsDir(), "campaign.json"))
 	if err != nil {

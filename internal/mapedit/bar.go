@@ -1,0 +1,184 @@
+package mapedit
+
+import (
+	"image/color"
+	"sync"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
+)
+
+// barStamps is the menu, left to right. Keys 1–9 follow the same order.
+var barStamps = []string{
+	stampGrunt, stampGrenadier, stampRocketeer, stampPatrol,
+	stampBarrel, stampHut, stampDoor, stampGrenades, stampRockets,
+}
+
+// BarHeight is the menu strip in offscreen pixels.
+func BarHeight(scale float64) float64 {
+	if scale <= 0 {
+		scale = 1
+	}
+	h := 36 * scale / 3
+	if h < 32 {
+		h = 32
+	}
+	return h
+}
+
+func toolButtons(scale float64) (size, gap, x0, y0 float64) {
+	size = BarHeight(scale) - 10
+	if size < 18 {
+		size = 18
+	}
+	return size, 6, 8, 5
+}
+
+// ToolHit reports which menu icon is under an offscreen point.
+// A point in a gap, or past the last icon, is not a tool.
+func ToolHit(x, y, scale float64) (int, bool) {
+	size, gap, x0, y0 := toolButtons(scale)
+	if y < y0 || y >= y0+size || x < x0 {
+		return 0, false
+	}
+	step := size + gap
+	rel := x - x0
+	i := int(rel / step)
+	if i < 0 || i >= len(barStamps) {
+		return 0, false
+	}
+	if rel-float64(i)*step > size {
+		return 0, false
+	}
+	return i, true
+}
+
+var barBG = color.RGBA{R: 18, G: 24, B: 14, A: 255}
+
+var iconLib struct {
+	once sync.Once
+	cels []*propCel
+}
+
+// iconCels matches barStamps. Patrol reuses the grunt and draws its own route.
+func iconCels() []*propCel {
+	iconLib.once.Do(func() {
+		grunt, _ := loadCelRow("grunt/idle", 2)
+		gren, _ := loadCelRow("grenadier/idle", 2)
+		rocket, _ := loadCelRow("rocketeer/idle", 2)
+		_, plain, grenade, rockets, barrel := sheets()
+		door, _, _, _, _ := sheets()
+		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets}
+	})
+	return iconLib.cels
+}
+
+func (e *Editor) drawBar(screen *ebiten.Image) {
+	if screen == nil || e.offW < 1 {
+		return
+	}
+	h := BarHeight(e.scale)
+	fillRect(screen, 0, 0, e.offW, int(h), barBG)
+	fillRect(screen, 0, int(h)-1, e.offW, 1, railSel)
+	size, gap, x0, y0 := toolButtons(e.scale)
+	cels := iconCels()
+	for i, stamp := range barStamps {
+		x := x0 + float64(i)*(size+gap)
+		if stamp == e.stamp || (e.stamp == "" && stamp == stampGrunt) {
+			fillRect(screen, int(x), int(y0), int(size), int(size), railSel)
+		}
+		if i < len(cels) {
+			drawIcon(screen, cels[i], x, y0, size)
+		}
+		if stamp == stampPatrol {
+			drawPatrolIcon(screen, x, y0, size)
+		}
+	}
+	nameX := x0 + float64(len(barStamps))*(size+gap) + 8
+	drawFace(screen, e.font, e.scale, stampName(e.stamp), nameX, y0+size*0.25, railInkSel)
+	cx, cy := e.cursor()
+	if i, ok := ToolHit(cx, cy, e.scale); ok {
+		x := x0 + float64(i)*(size+gap)
+		e.drawTip(screen, stampTip(barStamps[i]), x, h+4)
+	}
+}
+
+func stampTip(stamp string) string {
+	switch stamp {
+	case stampGrunt:
+		return "Grunt — left click places"
+	case stampGrenadier:
+		return "Grenadier — left click places"
+	case stampRocketeer:
+		return "Rocketeer — left click places"
+	case stampPatrol:
+		return "Patrol — left click places, W adds a point"
+	case stampBarrel:
+		return "Barrel — left click places"
+	case stampHut:
+		return "Hut — left click places"
+	case stampDoor:
+		return "Door hut — left click places"
+	case stampGrenades:
+		return "Grenade crate — left click places"
+	case stampRockets:
+		return "Rocket crate — left click places"
+	default:
+		return "Left click places"
+	}
+}
+
+func (e *Editor) drawTip(dst *ebiten.Image, label string, x, y float64) {
+	if dst == nil || label == "" {
+		return
+	}
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	face := 14 * s / 3
+	tw := float64(len(label))*face*0.52 + 12
+	th := face + 8
+	if x+tw > float64(e.offW)-4 {
+		x = float64(e.offW) - 4 - tw
+	}
+	if x < 4 {
+		x = 4
+	}
+	fillRect(dst, int(x), int(y), int(tw), int(th), barBG)
+	fillRect(dst, int(x), int(y), int(tw), 1, railSel)
+	drawFace(dst, e.font, s, label, x+6, y+3, railInkSel)
+}
+
+func drawIcon(dst *ebiten.Image, cel *propCel, x, y, size float64) {
+	if dst == nil || cel == nil || cel.img == nil || size < 4 {
+		return
+	}
+	b := cel.img.Bounds()
+	fw, fh := float64(b.Dx()), float64(b.Dy())
+	if fw < 1 || fh < 1 {
+		return
+	}
+	pad := size * 0.14
+	sc := (size - pad*2) / fh
+	if fw*sc > size-pad*2 {
+		sc = (size - pad*2) / fw
+	}
+	op := &ebiten.DrawImageOptions{}
+	op.Filter = ebiten.FilterLinear
+	op.GeoM.Scale(sc, sc)
+	op.GeoM.Translate(x+(size-fw*sc)/2, y+(size-fh*sc)/2)
+	dst.DrawImage(cel.img, op)
+}
+
+func drawPatrolIcon(dst *ebiten.Image, x, y, size float64) {
+	p := &vector.Path{}
+	x0 := float32(x + size*0.18)
+	y0 := float32(y + size*0.72)
+	p.MoveTo(x0, y0)
+	p.LineTo(float32(x+size*0.55), float32(y+size*0.42))
+	p.LineTo(float32(x+size*0.82), float32(y+size*0.62))
+	ink := &vector.DrawPathOptions{AntiAlias: true}
+	ink.ColorScale.ScaleWithColor(markEnemy)
+	vector.StrokePath(dst, p, &vector.StrokeOptions{Width: float32(size * 0.06)}, ink)
+}

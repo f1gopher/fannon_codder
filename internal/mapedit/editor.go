@@ -28,7 +28,8 @@ const (
 
 // Editor shows one campaign phase. A region map is painted from its
 // polygons. A tile map still uses the battle ground. In the regions
-// view a left drag adds a tree region for this session. Nothing is written.
+// view a left drag adds a tree region for this session. That ring is
+// not written. S writes the start, enemies, huts, crates, and barrels.
 type Editor struct {
 	phases   []phaseRow
 	index    int
@@ -38,12 +39,32 @@ type Editor struct {
 	chart    terrain.Chart
 	err      error
 	// start is the player tile. hasStart is false until a phase loads.
-	start     [2]int
-	hasStart  bool
-	enemies   []data.Enemy
-	buildings []data.BuildingSpec
-	pickups   []data.PickupSpec
-	barrels   []data.BarrelSpec
+	start                  [2]int
+	hasStart               bool
+	enemies                []data.Enemy
+	buildings              []data.BuildingSpec
+	pickups                []data.PickupSpec
+	barrels                []data.BarrelSpec
+	phase                  *data.Phase
+	memos                  map[int]memo
+	dirty                  bool
+	stamp                  string
+	status                 string
+	sel                    pick
+	grabbing               bool
+	grab                   pick
+	grabTX                 int
+	grabTY                 int
+	homeStart              [2]int
+	homeEnemy              data.Enemy
+	homeLine               [2]int
+	homeBarrel             data.BarrelSpec
+	homeHut                data.BuildingSpec
+	homeCrate              data.PickupSpec
+	armPlace               bool
+	armX, armY             float64
+	armWX, armWY           float64
+	armScrollX, armScrollY float64
 
 	scrollX, scrollY float64
 	time             float64
@@ -81,7 +102,7 @@ func New() (*Editor, error) {
 	if err != nil {
 		return nil, err
 	}
-	ed := &Editor{font: src, scale: 1}
+	ed := &Editor{font: src, scale: 1, stamp: stampGrunt, memos: map[int]memo{}}
 	for _, file := range c.Phases {
 		row := phaseRow{file: file, name: strings.TrimSuffix(file, ".json")}
 		if p, err := data.LoadPhase(file); err == nil {
@@ -94,8 +115,13 @@ func New() (*Editor, error) {
 }
 
 func (e *Editor) load(i int) {
+	e.remember()
 	e.drag = false
 	e.stroke = nil
+	e.grabbing = false
+	e.armPlace = false
+	e.sel = pick{}
+	e.status = ""
 	if len(e.phases) == 0 {
 		e.err = fmt.Errorf("campaign has no phases")
 		return
@@ -116,6 +142,36 @@ func (e *Editor) load(i int) {
 	e.buildings = nil
 	e.pickups = nil
 	e.barrels = nil
+	e.phase = nil
+	e.dirty = false
+	if m, ok := e.memos[i]; ok && m.phase != nil {
+		e.index = i
+		p := m.phase
+		e.phases[i].title = p.Title
+		g, err := p.Grid()
+		if err != nil {
+			e.err = err
+			e.grid = sim.Map{}
+			e.biome = p.Terrain
+			return
+		}
+		e.biome = p.Terrain
+		e.freeform = p.Map.Freeform()
+		if e.freeform {
+			ch, err := chartFrom(p)
+			if err != nil {
+				e.err = err
+				e.grid = sim.Map{}
+				return
+			}
+			e.chart = ch
+			e.chart.Regions = append(e.chart.Regions, e.added[i]...)
+		}
+		e.err = nil
+		e.grid = g
+		e.useMemo(m)
+		return
+	}
 	p, err := data.LoadPhase(e.phases[i].file)
 	if err != nil {
 		e.err = err
@@ -152,6 +208,8 @@ func (e *Editor) load(i int) {
 	e.buildings = append([]data.BuildingSpec(nil), p.Buildings...)
 	e.pickups = append([]data.PickupSpec(nil), p.Pickups...)
 	e.barrels = append([]data.BarrelSpec(nil), p.Barrels...)
+	e.phase = p
+	e.dirty = false
 }
 
 func (e *Editor) label() string {
@@ -159,10 +217,14 @@ func (e *Editor) label() string {
 		return "Fannon Codder"
 	}
 	row := e.phases[e.index]
-	if row.title == "" {
-		return "Fannon Codder — " + row.name
+	label := "Fannon Codder — " + row.name
+	if row.title != "" {
+		label += " " + row.title
 	}
-	return "Fannon Codder — " + row.name + " " + row.title
+	if e.dirty {
+		label += " *"
+	}
+	return label
 }
 
 func (e *Editor) Update() error {
@@ -173,6 +235,20 @@ func (e *Editor) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyV) {
 		e.gridView = !e.gridView
 		e.stroke = nil
+	}
+	e.stampKey()
+	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
+		e.save()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyDelete) || inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
+		e.removeSelected()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyW) {
+		cx, cy := e.cursor()
+		if cx >= float64(RailWidth(e.offW)) {
+			x, y := e.worldCursor(cx, cy)
+			e.addPatrolPoint(x, y)
+		}
 	}
 	ebiten.SetWindowTitle(e.label())
 
@@ -207,11 +283,19 @@ func (e *Editor) Update() error {
 func (e *Editor) pointer() {
 	cx, cy := e.cursor()
 	rail := RailWidth(e.offW)
+	bar := BarHeight(e.scale)
+	onBar := cy >= 0 && cy < bar
 	down := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if onBar && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		if i, ok := ToolHit(cx, cy, e.scale); ok {
+			e.stamp = barStamps[i]
+			e.status = ""
+		}
+	}
+	if !onBar && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if cx < float64(rail) {
 			if cy < InfoTop(e.offH, e.scale) {
-				if row, ok := RailHit(cx, cy, rail, RowHeight(e.scale), len(e.phases)); ok {
+				if row, ok := RailHit(cx, cy-bar, rail, RowHeight(e.scale), len(e.phases)); ok {
 					e.drag = false
 					e.stroke = nil
 					e.load(row)
@@ -219,19 +303,45 @@ func (e *Editor) pointer() {
 			}
 		} else {
 			x, y := e.worldCursor(cx, cy)
-			if !e.beginStroke(x, y) {
-				e.drag = true
-				e.dragX, e.dragY = cx, cy
-				e.dragScrollX, e.dragScrollY = e.scrollX, e.scrollY
+			if hit := e.pickAt(x, y); hit.ok() {
+				e.beginGrab(hit, x, y)
+			} else {
+				e.armPlace = true
+				e.armX, e.armY = cx, cy
+				e.armWX, e.armWY = x, y
+				e.armScrollX, e.armScrollY = e.scrollX, e.scrollY
+				if !e.beginStroke(x, y) {
+					e.sel = pick{}
+					e.drag = true
+					e.dragX, e.dragY = cx, cy
+					e.dragScrollX, e.dragScrollY = e.scrollX, e.scrollY
+				}
 			}
 		}
 	}
+	keptStroke := false
 	if len(e.stroke) > 0 {
 		x, y := e.worldCursor(cx, cy)
 		if down {
 			e.extendStroke(x, y)
 		} else {
-			e.finishStroke(x, y)
+			keptStroke = e.finishStroke(x, y)
+		}
+	}
+	if e.armPlace && !down {
+		dx, dy := cx-e.armX, cy-e.armY
+		if !keptStroke && !e.grabbing && dx*dx+dy*dy <= 36 {
+			e.scrollX, e.scrollY = e.armScrollX, e.armScrollY
+			e.placeAt(e.armWX, e.armWY)
+		}
+		e.armPlace = false
+	}
+	if e.grabbing {
+		x, y := e.worldCursor(cx, cy)
+		if down {
+			e.dragGrab(x, y)
+		} else {
+			e.grabbing = false
 		}
 	}
 	if e.drag {
@@ -262,7 +372,7 @@ func (e *Editor) mapPixels() (float64, float64) {
 }
 
 func (e *Editor) viewWorld() (float64, float64) {
-	pw, ph := viewportPixels(e.offW, e.offH)
+	pw, ph := e.viewportPixels()
 	s := e.scale
 	if s <= 0 {
 		s = 1
@@ -270,12 +380,12 @@ func (e *Editor) viewWorld() (float64, float64) {
 	return float64(pw) / s, float64(ph) / s
 }
 
-func viewportPixels(offW, offH int) (int, int) {
-	w := offW - RailWidth(offW)
+func (e *Editor) viewportPixels() (int, int) {
+	w := e.offW - RailWidth(e.offW)
 	if w < 1 {
 		w = 1
 	}
-	h := offH
+	h := e.offH - int(BarHeight(e.scale))
 	if h < 1 {
 		h = 1
 	}
@@ -291,6 +401,7 @@ func (e *Editor) Draw(screen *ebiten.Image) {
 	screen.Fill(railBG)
 	e.drawRail(screen)
 	e.drawMap(screen)
+	e.drawBar(screen)
 }
 
 func (e *Editor) drawRail(screen *ebiten.Image) {
@@ -304,8 +415,9 @@ func (e *Editor) drawRail(screen *ebiten.Image) {
 	}
 	rh := RowHeight(e.scale)
 	infoTop := InfoTop(e.offH, e.scale)
+	top := BarHeight(e.scale)
 	for i, row := range e.phases {
-		y := float64(i) * rh
+		y := top + float64(i)*rh
 		if y+rh > infoTop {
 			break
 		}
@@ -364,7 +476,7 @@ func (e *Editor) viewName() string {
 
 func (e *Editor) drawMap(screen *ebiten.Image) {
 	rail := RailWidth(e.offW)
-	vw, vh := viewportPixels(e.offW, e.offH)
+	vw, vh := e.viewportPixels()
 	if e.view == nil || e.viewW != vw || e.viewH != vh {
 		e.view = ebiten.NewImage(vw, vh)
 		e.viewW, e.viewH = vw, vh
@@ -382,8 +494,9 @@ func (e *Editor) drawMap(screen *ebiten.Image) {
 		e.paint(e.view, terrain.Prepare(e.grid, e.biome))
 	}
 	e.drawMarks(e.view)
+	e.drawHelp(e.view)
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(rail), 0)
+	op.GeoM.Translate(float64(rail), BarHeight(e.scale))
 	screen.DrawImage(e.view, op)
 }
 
@@ -587,6 +700,97 @@ func (e *Editor) drawMarks(dst *ebiten.Image) {
 	if e.hasStart {
 		x, y := e.markAt(e.start[0], e.start[1])
 		drawDiamond(dst, x, y, 4.5*s, markPlayer)
+	}
+	e.drawSelection(dst)
+}
+
+func (e *Editor) drawHelp(dst *ebiten.Image) {
+	if dst == nil || e.err != nil {
+		return
+	}
+	drawFace(dst, e.font, e.scale, e.help(), 8, 6, gridInk)
+	if e.status != "" {
+		drawFace(dst, e.font, e.scale, e.status, 8, 6+RowHeight(e.scale), gridInk)
+	}
+}
+
+func (e *Editor) drawSelection(dst *ebiten.Image) {
+	if dst == nil || !e.sel.ok() {
+		return
+	}
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	var x, y, r float64
+	switch e.sel.kind {
+	case pickStart:
+		x, y = e.markAt(e.start[0], e.start[1])
+		r = 6 * s
+	case pickEnemy:
+		if e.sel.i >= len(e.enemies) {
+			return
+		}
+		en := e.enemies[e.sel.i]
+		x, y = e.markAt(en.X, en.Y)
+		r = 5 * s
+	case pickLine:
+		if e.sel.i >= len(e.enemies) || e.sel.j >= len(e.enemies[e.sel.i].Line) {
+			return
+		}
+		pt := e.enemies[e.sel.i].Line[e.sel.j]
+		x, y = e.markAt(pt[0], pt[1])
+		r = 4 * s
+	case pickBarrel:
+		if e.sel.i >= len(e.barrels) {
+			return
+		}
+		b := e.barrels[e.sel.i]
+		x, y = e.markAt(b.X, b.Y)
+		r = 6 * s
+	case pickCrate:
+		if e.sel.i >= len(e.pickups) {
+			return
+		}
+		pk := e.pickups[e.sel.i]
+		x, y = e.markAt(pk.X, pk.Y)
+		r = 6 * s
+	case pickHut:
+		if e.sel.i >= len(e.buildings) {
+			return
+		}
+		b := e.buildings[e.sel.i]
+		tw, th := hutSize(b)
+		x0, y0 := e.markAt(b.X, b.Y)
+		x1, y1 := e.markAt(b.X+tw-1, b.Y+th-1)
+		x, y = (x0+x1)/2, (y0+y1)/2
+		r = math.Hypot(x1-x0, y1-y0)/2 + 4*s
+	default:
+		return
+	}
+	vector.StrokeCircle(dst, float32(x), float32(y), float32(r), float32(math.Max(1.5, s*0.6)), gridInk, true)
+}
+
+func (e *Editor) stampKey() {
+	switch {
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit1), inpututil.IsKeyJustPressed(ebiten.KeyNumpad1):
+		e.stamp = stampGrunt
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit2), inpututil.IsKeyJustPressed(ebiten.KeyNumpad2):
+		e.stamp = stampGrenadier
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit3), inpututil.IsKeyJustPressed(ebiten.KeyNumpad3):
+		e.stamp = stampRocketeer
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit4), inpututil.IsKeyJustPressed(ebiten.KeyNumpad4):
+		e.stamp = stampPatrol
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit5), inpututil.IsKeyJustPressed(ebiten.KeyNumpad5):
+		e.stamp = stampBarrel
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit6), inpututil.IsKeyJustPressed(ebiten.KeyNumpad6):
+		e.stamp = stampHut
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit7), inpututil.IsKeyJustPressed(ebiten.KeyNumpad7):
+		e.stamp = stampDoor
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit8), inpututil.IsKeyJustPressed(ebiten.KeyNumpad8):
+		e.stamp = stampGrenades
+	case inpututil.IsKeyJustPressed(ebiten.KeyDigit9), inpututil.IsKeyJustPressed(ebiten.KeyNumpad9):
+		e.stamp = stampRockets
 	}
 }
 

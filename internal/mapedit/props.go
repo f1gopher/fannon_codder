@@ -28,7 +28,7 @@ type propCel struct {
 }
 
 var propLib struct {
-	once                         sync.Once
+	once                                 sync.Once
 	door, plain, grenade, rocket, barrel *propCel
 }
 
@@ -51,6 +51,11 @@ type celManifest struct {
 }
 
 func loadCel(key string) (*propCel, error) {
+	return loadCelRow(key, 0)
+}
+
+// loadCelRow takes one frame row. Soldier sheets stack E, SE, S, so row 2 faces the camera.
+func loadCelRow(key string, row int) (*propCel, error) {
 	raw, err := art.Files.ReadFile(key + ".json")
 	if err != nil {
 		return nil, err
@@ -71,10 +76,17 @@ func loadCel(key string) (*propCel, error) {
 		b := src.Bounds()
 		m.FrameW, m.FrameH = b.Dx(), b.Dy()
 	}
+	if row < 0 {
+		row = 0
+	}
+	oy := row * m.FrameH
+	if oy+m.FrameH > src.Bounds().Dy() {
+		oy = 0
+	}
 	frame := image.NewRGBA(image.Rect(0, 0, m.FrameW, m.FrameH))
 	for y := 0; y < m.FrameH; y++ {
 		for x := 0; x < m.FrameW; x++ {
-			frame.Set(x, y, src.At(src.Bounds().Min.X+x, src.Bounds().Min.Y+y))
+			frame.Set(x, y, src.At(src.Bounds().Min.X+x, src.Bounds().Min.Y+oy+y))
 		}
 	}
 	sil := terrain.PropSilhouette(frame)

@@ -107,7 +107,7 @@ func (e *Editor) worldCursor(cx, cy float64) (float64, float64) {
 	if s <= 0 {
 		s = 1
 	}
-	return e.scrollX + (cx-float64(RailWidth(e.offW)))/s, e.scrollY + cy/s
+	return e.scrollX + (cx-float64(RailWidth(e.offW)))/s, e.scrollY + (cy-BarHeight(e.scale))/s
 }
 
 // ringArea is the absolute shoelace area. The closing edge is included.

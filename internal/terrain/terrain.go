@@ -168,21 +168,48 @@ func bledTerrain(img *ebiten.Image) *ebiten.Image {
 	if w == 0 || h == 0 {
 		return img
 	}
-	pad := ebiten.NewImage(w+2, h+2)
-	put := func(src *ebiten.Image, x, y float64) {
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(x, y)
-		pad.DrawImage(src, op)
+	// One-pixel GPU slices of an atlas image abort the iGPU when the window
+	// is fullscreen. Copy the edge on the CPU, then upload one image.
+	src := make([]byte, 4*w*h)
+	img.ReadPixels(src)
+	pw, ph := w+2, h+2
+	pix := make([]byte, 4*pw*ph)
+	pxAt := func(x, y int) (byte, byte, byte, byte) {
+		o := (y*w + x) * 4
+		return src[o], src[o+1], src[o+2], src[o+3]
 	}
-	put(img, 1, 1)
-	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Min.X+1, b.Max.Y)).(*ebiten.Image), 0, 1)
-	put(img.SubImage(image.Rect(b.Max.X-1, b.Min.Y, b.Max.X, b.Max.Y)).(*ebiten.Image), float64(w+1), 1)
-	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Max.X, b.Min.Y+1)).(*ebiten.Image), 1, 0)
-	put(img.SubImage(image.Rect(b.Min.X, b.Max.Y-1, b.Max.X, b.Max.Y)).(*ebiten.Image), 1, float64(h+1))
-	put(img.SubImage(image.Rect(b.Min.X, b.Min.Y, b.Min.X+1, b.Min.Y+1)).(*ebiten.Image), 0, 0)
-	put(img.SubImage(image.Rect(b.Max.X-1, b.Min.Y, b.Max.X, b.Min.Y+1)).(*ebiten.Image), float64(w+1), 0)
-	put(img.SubImage(image.Rect(b.Min.X, b.Max.Y-1, b.Min.X+1, b.Max.Y)).(*ebiten.Image), 0, float64(h+1))
-	put(img.SubImage(image.Rect(b.Max.X-1, b.Max.Y-1, b.Max.X, b.Max.Y)).(*ebiten.Image), float64(w+1), float64(h+1))
+	put := func(x, y int, r, g, bl, a byte) {
+		o := (y*pw + x) * 4
+		pix[o], pix[o+1], pix[o+2], pix[o+3] = r, g, bl, a
+	}
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			r, g, bl, a := pxAt(x, y)
+			put(x+1, y+1, r, g, bl, a)
+		}
+	}
+	for y := 0; y < h; y++ {
+		r, g, bl, a := pxAt(0, y)
+		put(0, y+1, r, g, bl, a)
+		r, g, bl, a = pxAt(w-1, y)
+		put(pw-1, y+1, r, g, bl, a)
+	}
+	for x := 0; x < w; x++ {
+		r, g, bl, a := pxAt(x, 0)
+		put(x+1, 0, r, g, bl, a)
+		r, g, bl, a = pxAt(x, h-1)
+		put(x+1, ph-1, r, g, bl, a)
+	}
+	r, g, bl, a := pxAt(0, 0)
+	put(0, 0, r, g, bl, a)
+	r, g, bl, a = pxAt(w-1, 0)
+	put(pw-1, 0, r, g, bl, a)
+	r, g, bl, a = pxAt(0, h-1)
+	put(0, ph-1, r, g, bl, a)
+	r, g, bl, a = pxAt(w-1, h-1)
+	put(pw-1, ph-1, r, g, bl, a)
+	pad := ebiten.NewImage(pw, ph)
+	pad.WritePixels(pix)
 	inner := pad.SubImage(image.Rect(1, 1, w+1, h+1)).(*ebiten.Image)
 	bledTerrainCache.Store(img, inner)
 	return inner

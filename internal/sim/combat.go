@@ -372,6 +372,9 @@ func (w *World) stepProjectiles(dt float64) {
 		if p.Alive {
 			w.tryHitCrate(p, x0, y0, p.X, p.Y)
 		}
+		if p.Alive {
+			w.tryHitBarrel(p, x0, y0, p.X, p.Y)
+		}
 		if blocked {
 			p.Alive = false
 		}

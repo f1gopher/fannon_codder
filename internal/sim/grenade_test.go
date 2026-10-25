@@ -115,6 +115,59 @@ func TestEnemyCannotDestroyCrates(t *testing.T) {
 	}
 }
 
+func TestBarrelShotChains(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Spread = 0
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 0, Y: 0}})
+	w.AddBarrel(Vec2{X: 60, Y: 0})
+	w.AddBarrel(Vec2{X: 76, Y: 0})
+	victim := w.SpawnUnit(SideEnemy, Vec2{X: 76, Y: 12})
+	w.SetFire(60, 0, true)
+	for i := 0; i < 30; i++ {
+		w.Step(1.0 / 60)
+	}
+	if w.Barrels[0].Alive || w.Barrels[1].Alive {
+		t.Fatal("a shot should set off the drum and the neighbour")
+	}
+	if victim.Living() {
+		t.Fatal("the chain should kill the grunt beside the second drum")
+	}
+	if !w.Unit(w.ActiveSquad().LeaderID).Living() {
+		t.Fatal("the shooter was outside the blast")
+	}
+}
+
+func TestWalkingPastABarrelLeavesIt(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 40, Y: 40}})
+	w.AddBarrel(Vec2{X: 40, Y: 40})
+	w.Step(1.0 / 60)
+	if !w.Barrels[0].Alive {
+		t.Fatal("walking onto a barrel should not set it off")
+	}
+}
+
+func TestEnemyShotDetonatesBarrel(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	enemy := w.SpawnUnit(SideEnemy, Vec2{X: 0, Y: 0})
+	w.AddBarrel(Vec2{X: 40, Y: 0})
+	w.Projectiles = append(w.Projectiles, Projectile{
+		X: 10, Y: 0, VX: MGSpeed, VY: 0, Left: 80,
+		Alive: true, OwnerID: enemy.ID, OwnerSide: SideEnemy,
+	})
+	for i := 0; i < 12; i++ {
+		w.Step(1.0 / 60)
+	}
+	if w.Barrels[0].Alive {
+		t.Fatal("an enemy round should set off a barrel")
+	}
+}
+
 func TestGrenadeHurtsFriendlies(t *testing.T) {
 	w := NewEmpty()
 	w.AI = false

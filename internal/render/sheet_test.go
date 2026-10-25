@@ -464,6 +464,10 @@ func TestHutCrateAndSkidooSheets(t *testing.T) {
 			t.Fatalf("%s %+v", key, sh)
 		}
 	}
+	drum := lib.Get("barrel/drum")
+	if drum == nil || drum.Frames != 1 || drum.FrameW != 128 || drum.FrameH != 128 || drum.AnchorX != 64 || drum.AnchorY != 116 || drum.stillRGBA() == nil {
+		t.Fatalf("barrel/drum %+v", drum)
+	}
 	idle := lib.Get("skidoo/idle")
 	move := lib.Get("skidoo/move")
 	if idle == nil || move == nil || idle.Frames != 4 || move.Frames != 4 || idle.RowCount() != 5 || move.RowCount() != 5 {

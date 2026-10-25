@@ -20,6 +20,7 @@ var (
 	overviewView        = color.RGBA{R: 0xf0, G: 0xf0, B: 0xf0, A: 0xff}
 	overviewHut         = color.RGBA{R: 80, G: 62, B: 52, A: 0xff}
 	overviewCrate       = color.RGBA{R: 0xd0, G: 0xd0, B: 0xd0, A: 0xff}
+	overviewBarrel      = color.RGBA{R: 0xc4, G: 0x28, B: 0x1c, A: 0xff}
 	overviewShallow     = color.RGBA{R: 93, G: 156, B: 198, A: 0xff}
 	overviewDeep        = color.RGBA{R: 39, G: 69, B: 153, A: 0xff}
 	overviewForestWater = color.RGBA{R: 42, G: 108, B: 78, A: 0xff}
@@ -109,6 +110,16 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 			bh = 2
 		}
 		fillRect(dst, x, y, bw, bh, overviewHut)
+	}
+	for i := range w.Barrels {
+		b := &w.Barrels[i]
+		if !b.Alive {
+			continue
+		}
+		fillRect(dst,
+			ox+int(b.X/pw*float64(drawW))-1,
+			oy+int(b.Y/ph*float64(drawH))-1,
+			3, 3, overviewBarrel)
 	}
 	for i := range w.Pickups {
 		p := &w.Pickups[i]

@@ -33,6 +33,7 @@ type Phase struct {
 	Civilians              []Enemy        `json:"civilians"`
 	Buildings              []BuildingSpec `json:"buildings"`
 	Pickups                []PickupSpec   `json:"pickups"`
+	Barrels                []BarrelSpec   `json:"barrels,omitempty"`
 	Vehicles               []VehicleSpec  `json:"vehicles"`
 	Objectives             []string       `json:"objectives"`
 }
@@ -54,6 +55,12 @@ type BuildingSpec struct {
 	H     int     `json:"h"`
 	Door  bool    `json:"door"`
 	Spawn float64 `json:"spawn"`
+}
+
+// BarrelSpec is an exploding drum in tile coordinates.
+type BarrelSpec struct {
+	X int `json:"x"`
+	Y int `json:"y"`
 }
 
 // PickupSpec is a crate. Kind "grenades" is four grenades.
@@ -225,6 +232,9 @@ func (p *Phase) World() (*sim.World, error) {
 		default:
 			return nil, fmt.Errorf("unknown pickup %q", pk.Kind)
 		}
+	}
+	for _, b := range p.Barrels {
+		w.AddBarrel(sim.TileCenter(b.X, b.Y))
 	}
 	for _, v := range p.Vehicles {
 		if v.Kind != "" && v.Kind != "skidoo" {

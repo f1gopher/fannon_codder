@@ -29,17 +29,18 @@ type propCel struct {
 
 var propLib struct {
 	once                         sync.Once
-	door, plain, grenade, rocket *propCel
+	door, plain, grenade, rocket, barrel *propCel
 }
 
-func sheets() (door, plain, grenade, rocket *propCel) {
+func sheets() (door, plain, grenade, rocket, barrel *propCel) {
 	propLib.once.Do(func() {
 		propLib.door, _ = loadCel("hut/door")
 		propLib.plain, _ = loadCel("hut/plain")
 		propLib.grenade, _ = loadCel("crate/grenade")
 		propLib.rocket, _ = loadCel("crate/rocket")
+		propLib.barrel, _ = loadCel("barrel/drum")
 	})
-	return propLib.door, propLib.plain, propLib.grenade, propLib.rocket
+	return propLib.door, propLib.plain, propLib.grenade, propLib.rocket, propLib.barrel
 }
 
 type celManifest struct {
@@ -108,7 +109,7 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 			drawBarrel(dst, bx, by, s)
 		}
 	}
-	door, plain, grenade, rocket := sheets()
+	door, plain, grenade, rocket, barrel := sheets()
 	for _, b := range e.buildings {
 		tw, th := b.W, b.H
 		if tw < 1 {
@@ -130,6 +131,16 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		}
 		drawPropShadow(dst, cel, sx, sy, s)
 		drawCel(dst, cel, sx, sy, s)
+	}
+	for _, b := range e.barrels {
+		c := sim.TileCenter(b.X, b.Y)
+		bx, by := e.worldToScreen(c.X, c.Y)
+		if barrel == nil || barrel.img == nil {
+			drawBarrel(dst, bx, by, s)
+			continue
+		}
+		drawPropShadow(dst, barrel, bx, by, s)
+		drawCel(dst, barrel, bx, by, s)
 	}
 	for _, p := range e.pickups {
 		c := sim.TileCenter(p.X, p.Y)
@@ -196,7 +207,7 @@ func drawHutFallback(dst *ebiten.Image, b data.BuildingSpec, s float64, e *Edito
 	fillRect(dst, int(x), int(y), int(float64(tw*sim.TileSize)*s), int(float64(th*sim.TileSize)*s), color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff})
 }
 
-// drawBarrel is a red drum on a mine cell. Phases store mines, not a barrel list.
+// drawBarrel is a red drum. Mine cells and exploding barrels both use it.
 func drawBarrel(dst *ebiten.Image, x, y, s float64) {
 	w, h := 5*s, 8*s
 	if w < 3 {

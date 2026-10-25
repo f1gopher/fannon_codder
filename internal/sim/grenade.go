@@ -30,6 +30,17 @@ const (
 	PickupRockets
 )
 
+// Barrel is a red drum. A shot or a blast sets it off. Walking past does not.
+type Barrel struct {
+	X, Y  float64
+	Alive bool
+}
+
+// AddBarrel drops an exploding drum at a world point.
+func (w *World) AddBarrel(p Vec2) {
+	w.Barrels = append(w.Barrels, Barrel{X: p.X, Y: p.Y, Alive: true})
+}
+
 // Pickup is a crate. Walking over a grenade crate adds ammo; shooting it explodes.
 type Pickup struct {
 	Kind   PickupKind
@@ -236,8 +247,8 @@ func (w *World) stepBlasts(dt float64) {
 	w.Explosions = out
 }
 
-// explode kills every man in the radius, standing or wounded, and destroys huts and crates.
-// Grenades do not spare friendlies. A destroyed crate explodes too.
+// explode kills every man in the radius, standing or wounded, and destroys huts, crates, and barrels.
+// Grenades do not spare friendlies. A destroyed crate or barrel explodes too.
 func (w *World) explode(x, y float64, ownerID int) {
 	w.emit(CueBoom, x, y)
 	w.Explosions = append(w.Explosions, Explosion{X: x, Y: y, R: GrenadeRadius})
@@ -273,6 +284,18 @@ func (w *World) explode(x, y float64, ownerID int) {
 			b.HP = 0
 			w.launchRoof(b, x, y, ownerID)
 		}
+	}
+	// A blast sets off a barrel whoever fired it. Crates stay for the player.
+	for i := range w.Barrels {
+		b := &w.Barrels[i]
+		if !b.Alive {
+			continue
+		}
+		if hypot(b.X-x, b.Y-y) > GrenadeRadius {
+			continue
+		}
+		b.Alive = false
+		w.explode(b.X, b.Y, ownerID)
 	}
 	// Enemy fire, bombs, and rockets leave crates for the player.
 	if w.enemyOwned(ownerID) {
@@ -312,6 +335,23 @@ func (w *World) tryHitCrate(p *Projectile, x0, y0, x1, y1 float64) {
 		c.Alive = false
 		p.Alive = false
 		w.explode(c.X, c.Y, p.OwnerID)
+		return
+	}
+}
+
+// tryHitBarrel detonates a drum a bullet passes through. Either side can set one off.
+func (w *World) tryHitBarrel(p *Projectile, x0, y0, x1, y1 float64) {
+	for i := range w.Barrels {
+		b := &w.Barrels[i]
+		if !b.Alive {
+			continue
+		}
+		if !segmentHitsCircle(x0, y0, x1, y1, b.X, b.Y, CrateHitR) {
+			continue
+		}
+		b.Alive = false
+		p.Alive = false
+		w.explode(b.X, b.Y, p.OwnerID)
 		return
 	}
 }

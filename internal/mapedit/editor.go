@@ -43,6 +43,7 @@ type Editor struct {
 	enemies   []data.Enemy
 	buildings []data.BuildingSpec
 	pickups   []data.PickupSpec
+	barrels   []data.BarrelSpec
 
 	scrollX, scrollY float64
 	time             float64
@@ -114,6 +115,7 @@ func (e *Editor) load(i int) {
 	e.enemies = nil
 	e.buildings = nil
 	e.pickups = nil
+	e.barrels = nil
 	p, err := data.LoadPhase(e.phases[i].file)
 	if err != nil {
 		e.err = err
@@ -149,6 +151,7 @@ func (e *Editor) load(i int) {
 	e.enemies = append([]data.Enemy(nil), p.Enemies...)
 	e.buildings = append([]data.BuildingSpec(nil), p.Buildings...)
 	e.pickups = append([]data.PickupSpec(nil), p.Pickups...)
+	e.barrels = append([]data.BarrelSpec(nil), p.Barrels...)
 }
 
 func (e *Editor) label() string {

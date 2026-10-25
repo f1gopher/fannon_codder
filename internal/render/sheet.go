@@ -72,6 +72,7 @@ type Library struct {
 // ground/water-deep, ground/quicksand, ground/ice, ground/bridge,
 // ground/cliff, ground/ramp, ground/mine.
 // Props use tree/sway, hut/door, hut/plain, crate/grenade, crate/rocket,
+// barrel/drum,
 // skidoo/idle, skidoo/move, chopper/fly, prop/snowman, prop/igloo.
 // chopper/fly is the opening aircraft, one south-east frame. The rotor
 // is drawn on top of it.
@@ -176,7 +177,8 @@ func loadSheet(fsys fs.FS, key string) (*Sheet, error) {
 	// without reading the GPU image back. Huts and crates keep one so
 	// the ground shadow can follow the painted shape.
 	if strings.HasSuffix(key, "/idle") || strings.HasSuffix(key, "/kneel") ||
-		strings.HasPrefix(key, "hut/") || strings.HasPrefix(key, "crate/") {
+		strings.HasPrefix(key, "hut/") || strings.HasPrefix(key, "crate/") ||
+		strings.HasPrefix(key, "barrel/") {
 		pix = make([][]*image.RGBA, len(m.Rows))
 	}
 	for row := range m.Rows {

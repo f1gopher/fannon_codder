@@ -66,8 +66,8 @@ func TestShowsHutsCratesAndMines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ed.buildings) != 0 || len(ed.pickups) != 1 || ed.pickups[0].Kind != "grenades" {
-		t.Fatalf("m01 props buildings=%d pickups=%+v", len(ed.buildings), ed.pickups)
+	if len(ed.buildings) != 0 || len(ed.pickups) != 1 || ed.pickups[0].Kind != "grenades" || len(ed.barrels) != 3 {
+		t.Fatalf("m01 props buildings=%d pickups=%+v barrels=%d", len(ed.buildings), ed.pickups, len(ed.barrels))
 	}
 	found := false
 	for i, row := range ed.phases {

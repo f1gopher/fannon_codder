@@ -37,7 +37,7 @@ Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, m
 
 ## Map editor
 
-`go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. A left rail picks the phase. Under the list, the rail shows the selected phase's terrain and its size. The rest of the window is that whole map at the game's picture scale. It opens on the painted terrain. Escape closes it. Nothing is written. A gold diamond marks the player start tile. A red diamond marks each placed enemy. A hut draws from `hut/door` or `hut/plain` on its footprint, and a crate draws from `crate/grenade` or `crate/rocket` on its tile. A mine cell draws a red barrel. Birds are not drawn. Wheel and the arrow keys scroll in every view. A left drag scrolls too, except in the regions view.
+`go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. A left rail picks the phase. Under the list, the rail shows the selected phase's terrain and its size. The rest of the window is that whole map at the game's picture scale. It opens on the painted terrain. Escape closes it. Nothing is written. A gold diamond marks the player start tile. A red diamond marks each placed enemy. A hut draws from `hut/door` or `hut/plain` on its footprint, and a crate draws from `crate/grenade` or `crate/rocket` on its tile. A mine cell draws a red drum. An exploding barrel draws `barrel/drum`. Birds are not drawn. Wheel and the arrow keys scroll in every view. A left drag scrolls too, except in the regions view.
 
 A phase is either a tile grid or freeform regions. Regions are a closed ring of world-pixel points. The map starts as that terrain's open ground, and each region paints over it. A later region wins on the overlap. A tree region is a canopy. Water, ice, sand, rock, a ramp, a timber bridge, and mines paint as those materials. `PrepareChart` in `internal/terrain` does that paint. The battle calls it for a region phase.
 
@@ -66,6 +66,8 @@ Tiles: grass, tree, waterShallow, waterDeep, ice, quicksand, cliff, bridge, mine
 A building with a door spawns grunts until destroyed. Cap is `maxDoorSpawns` (6). Doors do not spawn grenadiers or rocketeers. A doorless hut is scenery and is not a `destroy_enemy_buildings` target. MG fire does not damage a hut.
 
 A crate holds 4 grenades or 4 rockets (`CrateAmount`). A player shot, grenade, or rocket explodes it. Enemy fire leaves it.
+
+An exploding barrel is the painted drum `barrel/drum`, the same 3/4 view as the crates. A shot from either side, or any blast that reaches it, sets it off with the same grenade blast, and that blast chains into a neighbour. Walking past it does nothing. Mission 1 places three in a row on tiles (5, 10), (6, 10), and (7, 10).
 
 The only vehicle is the skidoo. A jeep would be the same struct with another skin.
 
@@ -135,7 +137,7 @@ One slot at `userConfig/fannon-codder/save.json`. Boot Hill saves only after a f
 
 `campaign.json` plays missions 1–5 (11 phases). After Mission 5, Boot Hill says the campaign continues.
 
-- m01p01 deploy 2, jungle, kill-all, one grenade crate. The file is open ground plus four tree regions. Every campaign phase is stored the same way. The battle paints those rings and still moves on the same cells.
+- m01p01 deploy 2, jungle, kill-all, one grenade crate, three exploding barrels. The file is open ground plus four tree regions. Every campaign phase is stored the same way. The battle paints those rings and still moves on the same cells.
 - m02p01 Bridge Over the River Pie, deploy 3, jungle, kill-all. m02p02 Trash Enemy HQ, deploy 3, jungle, kill-all and one door hut.
 - m03p01 Blast It's Cold, deploy 4, snow, ice, cliff, four door huts, scarce crates.
 - m04p01 Beachy Head, deploy 4, jungle, five huts, two crates, start grenades 0. m04p02 Pier Pressure, deploy 4, jungle, kill-all and four huts, start grenades 2 from here on. m04p03 Village People, deploy 5, jungle, civilians, doorless huts, one quicksand. m04p04 Quicksand, deploy 5, jungle, pools, mines, grenadiers.

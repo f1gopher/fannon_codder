@@ -557,6 +557,13 @@ func collectBodies(w *sim.World, terrain string) []body {
 		}
 		bodies = append(bodies, crateBody(cam, p))
 	}
+	for i := range w.Barrels {
+		b := w.Barrels[i]
+		if !b.Alive {
+			continue
+		}
+		bodies = append(bodies, barrelBody(cam, b))
+	}
 	leadID := -1
 	if s := w.ActiveSquad(); s != nil && s.ID == controlledSquad {
 		leadID = s.LeaderID
@@ -702,6 +709,32 @@ func crateBody(cam sim.Camera, p sim.Pickup) body {
 	rgba := sh.stillRGBA()
 	return body{
 		y: p.Y,
+		shadow: func(dst *ebiten.Image) {
+			castForm(dst, rgba, sh.AnchorX, sh.AnchorY, sx, sy)
+		},
+		draw: func(dst *ebiten.Image) {
+			DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, false, sx, sy)
+		},
+	}
+}
+
+// barrelBody draws barrel/drum. The anchor is the foot, on the sim point.
+func barrelBody(cam sim.Camera, b sim.Barrel) body {
+	sx := cam.ScreenX(b.X)
+	sy := cam.ScreenY(b.Y)
+	sh := activeSheets().Get("barrel/drum")
+	var img *ebiten.Image
+	if sh != nil {
+		img, _ = sh.still(0)
+	}
+	if img == nil {
+		return body{y: b.Y, draw: func(dst *ebiten.Image) {
+			fillRectF(dst, sx-4, sy-12, 8, 12, color.RGBA{R: 0xc4, G: 0x28, B: 0x1c, A: 0xff})
+		}}
+	}
+	rgba := sh.stillRGBA()
+	return body{
+		y: b.Y,
 		shadow: func(dst *ebiten.Image) {
 			castForm(dst, rgba, sh.AnchorX, sh.AnchorY, sx, sy)
 		},

@@ -25,6 +25,11 @@
   "pickups": [
     {"x": 8, "y": 13, "kind": "grenades"}
   ],
+  "barrels": [
+    {"x": 5, "y": 10},
+    {"x": 6, "y": 10},
+    {"x": 7, "y": 10}
+  ],
   "vehicles": [],
   "objectives": ["kill_all_enemy"]
 }

@@ -17,6 +17,7 @@ type World struct {
 	Projectiles []Projectile
 	Buildings   []Building
 	Pickups     []Pickup
+	Barrels     []Barrel
 	Grenades    []Grenade
 	Explosions  []Explosion
 	Roofs       []Roof

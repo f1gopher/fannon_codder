@@ -296,6 +296,22 @@ func TestPropShadowFollowsTheSprite(t *testing.T) {
 	box.shadow(dst)
 }
 
+func TestBarrelDrawsOnTheField(t *testing.T) {
+	saved := pictureScale
+	pictureScale = 2
+	t.Cleanup(func() { pictureScale = saved })
+	w := sim.NewEmpty()
+	w.AddBarrel(sim.Vec2{X: 40, Y: 40})
+	body := barrelBody(w.Camera, w.Barrels[0])
+	if body.draw == nil || body.shadow == nil {
+		t.Fatal("a live barrel should paint")
+	}
+	dst := ebiten.NewImage(200, 200)
+	body.shadow(dst)
+	body.draw(dst)
+	Field(dst, w, "jungle")
+}
+
 func TestFootSort(t *testing.T) {
 	w := sim.NewEmpty()
 	tiles := make([]sim.Tile, 16)

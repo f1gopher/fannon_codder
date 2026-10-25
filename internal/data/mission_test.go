@@ -48,6 +48,9 @@ func TestLoadMission1(t *testing.T) {
 	if len(w.Pickups) != 1 || w.Pickups[0].Kind != sim.PickupGrenades || w.Pickups[0].Amount != sim.CrateAmount {
 		t.Fatalf("pickups=%+v, want one grenade crate", w.Pickups)
 	}
+	if len(w.Barrels) != 3 || !w.Barrels[0].Alive {
+		t.Fatalf("barrels=%+v, want three live drums", w.Barrels)
+	}
 }
 
 func TestMission1GruntsHoldAtSpawn(t *testing.T) {

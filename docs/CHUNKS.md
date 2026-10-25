@@ -72,6 +72,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 
 ## After the numbered plan
 
+- Exploding barrels. A shot from either side, or a nearby blast, sets off a painted drum (`barrel/drum`). The blast chains. Walking past does not. Mission 1 has three on tiles (5, 10), (6, 10), and (7, 10).
 - Enemy acquire matches the original troop check: 200 px on a clear walk, 40 px if it is blocked. A heard shot does not pull him in.
 - Mission 2 and later grunts and grenadiers close in. Mission 1 and sandboxes stay posted. Rocketeers stay put. No pathfinding. `a37048e`
 - A missing walk sheet draws idle, so a walking enemy is not a rectangle. `409fabd`

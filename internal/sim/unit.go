@@ -57,7 +57,8 @@ type Unit struct {
 	WanderY     float64
 	WanderT     float64 // seconds until the next stroll pick
 	Escorting   bool    // walking behind the squad; he does not flee a shot
-	Saved       bool    // entered the tent or the handover; no longer on the field
+	MustHome    bool    // a civilian who stands until touched, then must reach a home
+	Saved       bool    // entered the tent, the handover, or a home; no longer on the field
 	Captured    bool    // a leader who has been touched and left the enemy side
 	Bombs       int     // grenades a grenadier still carries
 	GrenadeWind float64 // seconds left in the throw telegraph; the bomb leaves at 0

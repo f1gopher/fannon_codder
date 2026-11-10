@@ -766,6 +766,43 @@ func TestLeaderStaysPosted(t *testing.T) {
 	}
 }
 
+func TestCivilianHomeLoads(t *testing.T) {
+	rows := make([]string, 4)
+	for i := range rows {
+		rows[i] = "...."
+	}
+	p := &Phase{
+		Deploy:      1,
+		PlayerStart: [2]int{0, 0},
+		Map:         Tilemap{W: 4, H: 4, Tiles: rows},
+		Civilians:   []Enemy{{X: 1, Y: 1, Home: true}, {X: 3, Y: 1}},
+		Buildings:   []BuildingSpec{{X: 0, Y: 2, W: 2, H: 2, Kind: "home"}},
+		Objectives:  []string{"get_civilian_home"},
+	}
+	w, err := p.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var marked, wander int
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side != sim.SideCivilian {
+			continue
+		}
+		if u.MustHome {
+			marked++
+		} else {
+			wander++
+		}
+	}
+	if marked != 1 || wander != 1 {
+		t.Fatalf("marked=%d wander=%d", marked, wander)
+	}
+	if len(w.Buildings) != 1 || w.Buildings[0].Kind != sim.HutHome {
+		t.Fatalf("buildings=%v", w.Buildings)
+	}
+}
+
 func TestUnknownEnemyKind(t *testing.T) {
 	rows := make([]string, 4)
 	for i := range rows {

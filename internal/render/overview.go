@@ -116,6 +116,9 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 		if b.Kind == sim.HutHandover {
 			col = color.RGBA{R: 0xc4, G: 0xb4, B: 0x88, A: 0xff}
 		}
+		if b.Kind == sim.HutHome {
+			col = color.RGBA{R: 0xf0, G: 0xe6, B: 0xc8, A: 0xff}
+		}
 		fillRect(dst, x, y, bw, bh, col)
 	}
 	for i := range w.Barrels {

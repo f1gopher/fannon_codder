@@ -260,6 +260,77 @@ func TestHostageAndTentRoundTrip(t *testing.T) {
 	}
 }
 
+func TestHomePlaceDragDeleteAndSave(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed.stamp = stampCivilian
+	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
+	ed.flipHome()
+	if !ed.civilians[len(ed.civilians)-1].Home {
+		t.Fatal("H should mark the civilian")
+	}
+	ed.flipHome()
+	if ed.civilians[len(ed.civilians)-1].Home {
+		t.Fatal("H should clear the flag")
+	}
+	ed.flipHome()
+	c := sim.TileCenter(ed.civilians[len(ed.civilians)-1].X, ed.civilians[len(ed.civilians)-1].Y)
+	ed.beginGrab(ed.pickAt(c.X, c.Y), c.X, c.Y)
+	ed.dragGrab(c.X+sim.TileSize, c.Y)
+	last := len(ed.civilians) - 1
+	if ed.civilians[last].X != 4 || !ed.civilians[last].Home {
+		t.Fatalf("moved = %+v", ed.civilians[last])
+	}
+	ed.stamp = stampHome
+	ed.placeAt(8*sim.TileSize, 4*sim.TileSize)
+	if ed.buildings[len(ed.buildings)-1].Kind != "home" {
+		t.Fatalf("home = %+v", ed.buildings)
+	}
+	bi := len(ed.buildings) - 1
+	ed.sel = pick{kind: pickHut, i: bi}
+	ed.removeSelected()
+	for _, b := range ed.buildings {
+		if b.Kind == "home" {
+			t.Fatal("home stayed after delete")
+		}
+	}
+	if !ed.civilians[last].Home {
+		t.Fatal("deleting the home cleared the civilian")
+	}
+	ed.stamp = stampHome
+	ed.placeAt(8*sim.TileSize, 4*sim.TileSize)
+	ed.dirty = true
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(b, p); err != nil {
+		t.Fatal(err)
+	}
+	foundHome := false
+	for _, spec := range p.Buildings {
+		if spec.Kind == "home" {
+			foundHome = true
+		}
+	}
+	foundFlag := false
+	for _, civ := range p.Civilians {
+		if civ.X == 4 && civ.Y == 4 && civ.Home {
+			foundFlag = true
+		}
+	}
+	if !foundHome || !foundFlag {
+		t.Fatalf("saved buildings=%+v civilians=%+v", p.Buildings, p.Civilians)
+	}
+}
+
 func TestLeaderAndHandoverRoundTrip(t *testing.T) {
 	ed, err := New()
 	if err != nil {

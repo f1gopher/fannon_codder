@@ -23,6 +23,9 @@ const (
 	// KidnapLeader is met when the captured leader enters a handover.
 	// His death before that loses the phase.
 	KidnapLeader
+	// GetCivilianHome is met when every civilian marked home has entered a home.
+	// That civilian's death loses the phase. A wandering civilian does not.
+	GetCivilianHome
 )
 
 func ParseObjective(s string) (Objective, bool) {
@@ -37,6 +40,8 @@ func ParseObjective(s string) (Objective, bool) {
 		return RescueHostages, true
 	case "kidnap_leader":
 		return KidnapLeader, true
+	case "get_civilian_home":
+		return GetCivilianHome, true
 	default:
 		return 0, false
 	}
@@ -71,7 +76,7 @@ func (w *World) HoldOutcome() bool {
 	if w == nil || w.Status != Playing || len(w.Objectives) == 0 || !w.unresolvedHarm() {
 		return false
 	}
-	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() || w.kidnapFailed() {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() || w.kidnapFailed() || w.homeFailed() {
 		return true
 	}
 	return w.objectivesMet()
@@ -127,6 +132,37 @@ func (w *World) leaderOutstanding() bool {
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Kind != KindLeader {
+			continue
+		}
+		saw = true
+		if !u.Dead() && !u.Saved {
+			return true
+		}
+	}
+	return !saw
+}
+
+// homeFailed is a dead civilian who was required to reach a home.
+func (w *World) homeFailed() bool {
+	if !w.hasObjective(GetCivilianHome) {
+		return false
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.MustHome && u.Dead() && !u.Saved {
+			return true
+		}
+	}
+	return false
+}
+
+// homeOutstanding is a marked civilian who has not entered a home.
+// A listed objective with nobody marked is never met.
+func (w *World) homeOutstanding() bool {
+	saw := false
+	for i := range w.Units {
+		u := &w.Units[i]
+		if !u.MustHome {
 			continue
 		}
 		saw = true
@@ -195,6 +231,10 @@ func (w *World) objectivesMet() bool {
 			if w.kidnapFailed() || w.leaderOutstanding() {
 				return false
 			}
+		case GetCivilianHome:
+			if w.homeFailed() || w.homeOutstanding() {
+				return false
+			}
 		}
 	}
 	return true
@@ -207,7 +247,7 @@ func (w *World) evaluateObjectives() {
 	if w.unresolvedHarm() {
 		return
 	}
-	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() || w.kidnapFailed() {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() || w.kidnapFailed() || w.homeFailed() {
 		w.Status = Lost
 		w.Firing = false
 		return

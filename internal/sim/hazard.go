@@ -107,9 +107,24 @@ func (w *World) stepCivilians(dt float64) {
 	if w.rng == nil {
 		w.rng = newRNG()
 	}
+	slot := 0
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Side != SideCivilian || !u.Living() || u.Sinking {
+		if u.Side != SideCivilian || !u.Living() || u.Sinking || u.Saved {
+			continue
+		}
+		if u.MustHome {
+			if !u.Escorting && w.playerTouches(u) {
+				u.Escorting = true
+			}
+			if u.Escorting {
+				w.stepEscort(u, slot, dt)
+				slot++
+			} else {
+				u.VX = 0
+				u.VY = 0
+			}
+			w.saveHome(u)
 			continue
 		}
 		if !u.Escorting {

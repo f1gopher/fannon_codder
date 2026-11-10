@@ -47,6 +47,7 @@ const (
 	stampTent      = "tent"
 	stampLeader    = "leader"
 	stampHandover  = "handover"
+	stampHome      = "home"
 )
 
 func stampName(s string) string {
@@ -77,13 +78,15 @@ func stampName(s string) string {
 		return "leader"
 	case stampHandover:
 		return "handover"
+	case stampHome:
+		return "home"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    S saves"
+	return "left-click places    drag moves    Del removes    W patrol point    H home flag    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -298,7 +301,7 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampBarrel:
 		e.barrels = append(e.barrels, data.BarrelSpec{X: tx, Y: ty})
 		e.sel = pick{kind: pickBarrel, i: len(e.barrels) - 1}
-	case stampHut, stampDoor, stampTent, stampHandover:
+	case stampHut, stampDoor, stampTent, stampHandover, stampHome:
 		tw, th := 2, 2
 		if tx > e.grid.W-tw {
 			tx = e.grid.W - tw
@@ -319,6 +322,9 @@ func (e *Editor) placeAt(wx, wy float64) {
 		}
 		if e.stamp == stampHandover {
 			b.Kind = "handover"
+		}
+		if e.stamp == stampHome {
+			b.Kind = "home"
 		}
 		e.buildings = append(e.buildings, b)
 		e.sel = pick{kind: pickHut, i: len(e.buildings) - 1}
@@ -344,6 +350,21 @@ func (e *Editor) placeAt(wx, wy float64) {
 	}
 	e.dirty = true
 	e.status = ""
+}
+
+// flipHome toggles the selected civilian's home flag.
+func (e *Editor) flipHome() {
+	if e.sel.kind != pickCivilian || e.sel.i < 0 || e.sel.i >= len(e.civilians) {
+		e.status = "select a civilian first"
+		return
+	}
+	e.civilians[e.sel.i].Home = !e.civilians[e.sel.i].Home
+	e.dirty = true
+	if e.civilians[e.sel.i].Home {
+		e.status = "civilian must reach home"
+	} else {
+		e.status = "civilian wanders"
+	}
 }
 
 func (e *Editor) addPatrolPoint(wx, wy float64) {

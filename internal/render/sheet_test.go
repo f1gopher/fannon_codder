@@ -497,6 +497,10 @@ func TestLeaderAndHandoverSheets(t *testing.T) {
 	if red > 40 {
 		t.Fatalf("handover still has a red mark (%d px)", red)
 	}
+	home := lib.Get("hut/home")
+	if home == nil || home.Frames != 1 || home.FrameW != 256 || home.FrameH != 320 || home.AnchorX != 128 || home.AnchorY != 312 {
+		t.Fatalf("hut/home %+v", home)
+	}
 }
 
 func TestGroundSheets(t *testing.T) {

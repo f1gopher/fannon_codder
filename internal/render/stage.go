@@ -600,6 +600,8 @@ func buildingBody(cam sim.Camera, b sim.Building) body {
 		key = "hut/tent"
 	} else if b.Kind == sim.HutHandover {
 		key = "hut/handover"
+	} else if b.Kind == sim.HutHome {
+		key = "hut/home"
 	} else if b.HasDoor {
 		key = "hut/door"
 	}

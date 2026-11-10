@@ -52,20 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 4. Get a civilian home
-
-`get_civilian_home` uses escort. A listed civilian stands until touched, then escorts. He is met when he enters a building `kind` of `home`. That building is indestructible, like the tent.
-
-If the phase also has `protect_civilians`, his death still loses. A civilian who is only wandering is not required to reach the home. JSON marks the one who must: `civilians[].home` true. One home building is enough.
-
-No new person. He uses the civilian sheets from chunk 1, including swim and sink.
-
-Editor. A home icon writes a building `kind` of `home`. The civilian icon from chunk 1 is how you add the person. H on the selected civilian flips `home`. Drag and delete work on the house and on the civilian separately.
-
-Pictures. `hut/home` uses the hut cell (256×320, anchor 128,312). One frame is enough. A cottage with a lit door, distinct from `hut/plain` and from the tent. It does not burn and has no roof flight.
-
-Sound. Delivery emits `CueSave`. His death emits `CueCry`.
-
 ### 5. Reinforced door
 
 A building `kind` of `reinforced` is a door hut. It spawns grunts the same way and counts for `destroy_enemy_buildings`. A grenade or barrel does not hurt it. A rocket does. MG fire still does not.

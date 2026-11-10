@@ -57,6 +57,7 @@ type BuildingSpec struct {
 	Door  bool    `json:"door"`
 	Spawn float64 `json:"spawn"`
 	// Kind is empty for a hut. "tent" is the rescue marker. "handover" is the leader post.
+	// "home" is the cottage a marked civilian must enter.
 	Kind string `json:"kind,omitempty"`
 }
 
@@ -97,6 +98,8 @@ type Enemy struct {
 	// Two points are a straight segment. More points are a curve through them.
 	// He walks to the last point, back to (x, y), and repeats.
 	Line [][2]int `json:"line,omitempty"`
+	// Home marks the civilian who must be escorted into a home building.
+	Home bool `json:"home,omitempty"`
 }
 
 func missionsDir() string {
@@ -262,7 +265,8 @@ func (p *Phase) World() (*sim.World, error) {
 		}
 	}
 	for _, c := range p.Civilians {
-		w.SpawnUnit(sim.SideCivilian, sim.TileCenter(c.X, c.Y))
+		u := w.SpawnUnit(sim.SideCivilian, sim.TileCenter(c.X, c.Y))
+		u.MustHome = c.Home
 	}
 	for _, h := range p.Hostages {
 		w.SpawnUnit(sim.SideHostage, sim.TileCenter(h.X, h.Y))
@@ -275,6 +279,8 @@ func (p *Phase) World() (*sim.World, error) {
 			w.AddTent(b.X, b.Y, b.W, b.H)
 		case "handover":
 			w.AddHandover(b.X, b.Y, b.W, b.H)
+		case "home":
+			w.AddHome(b.X, b.Y, b.W, b.H)
 		default:
 			return nil, fmt.Errorf("unknown building %q", b.Kind)
 		}

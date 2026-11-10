@@ -22,6 +22,8 @@ const (
 	HutTent
 	// HutHandover is where a captured leader is delivered. Same rules as the tent.
 	HutHandover
+	// HutHome is where a marked civilian is delivered. Same rules as the tent.
+	HutHome
 )
 
 // Building is a hut or a rescue tent.
@@ -127,9 +129,30 @@ func (w *World) AddHandover(tx, ty, tw, th int) int {
 	return len(w.Buildings) - 1
 }
 
-// marker is a tent or a handover. Neither blocks, burns, nor hides a shot.
+// AddHome places the cottage a marked civilian walks into. It does not burn.
+func (w *World) AddHome(tx, ty, tw, th int) int {
+	if tw < 1 {
+		tw = 2
+	}
+	if th < 1 {
+		th = 2
+	}
+	b := Building{
+		X:     float64(tx * TileSize),
+		Y:     float64(ty * TileSize),
+		W:     float64(tw * TileSize),
+		H:     float64(th * TileSize),
+		Kind:  HutHome,
+		HP:    buildingHP,
+		Alive: true,
+	}
+	w.Buildings = append(w.Buildings, b)
+	return len(w.Buildings) - 1
+}
+
+// marker is a tent, a handover, or a home. None of them block, burn, or hide a shot.
 func (b *Building) marker() bool {
-	return b != nil && (b.Kind == HutTent || b.Kind == HutHandover)
+	return b != nil && (b.Kind == HutTent || b.Kind == HutHandover || b.Kind == HutHome)
 }
 
 // Holds is true when (x, y) is inside a standing building.

@@ -251,6 +251,9 @@ func (e *Editor) Update() error {
 	if inpututil.IsKeyJustPressed(ebiten.KeyDelete) || inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
 		e.removeSelected()
 	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
+		e.flipHome()
+	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		cx, cy := e.cursor()
 		if cx >= float64(RailWidth(e.offW)) {

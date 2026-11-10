@@ -52,28 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 2. Escort, hostages, rescue tent
-
-The escort, the hostage, the tent, the editor icons, and `CueSave` are in the game. This chunk stays until `hostage` and `hut/tent` sheets play in the battle. Show one contact sheet and wait before writing `assets/art`.
-
-One escort rule, reused by the later leader and home chunks.
-
-An escort walks behind the active squad at `FileSpacing` and does not shoot, board, or take orders. He stops when the squad stops. Water, trees, and cliffs use the same slide as a soldier.
-
-A hostage is not a civilian and not an enemy. He stands until a living player on foot touches him, then he escorts. JSON is `hostages: [{x, y}]`, same tile coordinates as civilians.
-
-`rescue_hostages` is met when every hostage has entered a tent. A hostage who dies first loses the phase. Killing him does not score.
-
-A building `kind` of `tent` is the rescue marker. It does not spawn, does not block the destroy-buildings objective, and does not take damage. Overlap with the tent removes that hostage and counts him saved.
-
-Editor. A hostage icon and a tent icon. Hostage writes `hostages`. Tent writes a building `kind` of `tent`. Load both from the phase. Drag and delete work on each. Deleting a tent does not delete a hostage.
-
-Pictures. New actor `hostage`, same poses and cell as the civilian: idle, walk, death, corpse, swim, sink. No gun. Shirt and trousers read at a glance as not the olive civilian and not a soldier. Walk is 6 frames at 12 fps.
-
-`hut/tent` matches `hut/door`: 256×320, anchor 128,312, four frames at 5 fps, one east row, looping. A canvas tent with a red cross, not a tin hut. The door frames are the flap stirring, not a spawning door. No roof cut. It never burns.
-
-Sound. Entering the tent emits `CueSave` once: a short bright sting, under half a second, not the victory march. A hostage death emits `CueCry`. Walking with the squad is silent.
-
 ### 3. Enemy leader
 
 `enemies[].kind` of `leader`. He fights as a posted grunt until a living player on foot touches him. Touch captures him: he stops shooting, leaves the enemy side, and escorts. He no longer blocks `kill_all_enemy`.

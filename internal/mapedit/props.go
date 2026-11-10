@@ -29,17 +29,19 @@ type propCel struct {
 
 var propLib struct {
 	once                                        sync.Once
-	door, plain, grenade, rocket, barrel, civil *propCel
+	door, plain, tent, grenade, rocket, barrel, civil, hostage *propCel
 }
 
 func sheets() (door, plain, grenade, rocket, barrel *propCel) {
 	propLib.once.Do(func() {
 		propLib.door, _ = loadCel("hut/door")
 		propLib.plain, _ = loadCel("hut/plain")
+		propLib.tent, _ = loadCel("hut/tent")
 		propLib.grenade, _ = loadCel("crate/grenade")
 		propLib.rocket, _ = loadCel("crate/rocket")
 		propLib.barrel, _ = loadCel("barrel/drum")
 		propLib.civil, _ = loadCelRow("civilian/idle", 2)
+		propLib.hostage, _ = loadCelRow("hostage/idle", 2)
 	})
 	return propLib.door, propLib.plain, propLib.grenade, propLib.rocket, propLib.barrel
 }
@@ -47,6 +49,16 @@ func sheets() (door, plain, grenade, rocket, barrel *propCel) {
 func civilianCel() *propCel {
 	sheets()
 	return propLib.civil
+}
+
+func hostageCel() *propCel {
+	sheets()
+	return propLib.hostage
+}
+
+func tentCel() *propCel {
+	sheets()
+	return propLib.tent
 }
 
 type celManifest struct {
@@ -141,7 +153,7 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		sx, sy := e.worldToScreen(footX, footY)
 		cel := plain
 		if b.Kind == "tent" {
-			cel = nil
+			cel = tentCel()
 		} else if b.Door {
 			cel = door
 		}
@@ -173,10 +185,16 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		drawPropShadow(dst, civil, sx, sy, s)
 		drawCel(dst, civil, sx, sy, s)
 	}
+	host := hostageCel()
 	for _, h := range e.hostages {
 		p := sim.TileCenter(h.X, h.Y)
 		sx, sy := e.worldToScreen(p.X, p.Y)
-		fillRect(dst, int(sx-4*s), int(sy-8*s), int(8*s), int(10*s), color.RGBA{R: 0x3a, G: 0x6e, B: 0xc8, A: 0xff})
+		if host == nil || host.img == nil {
+			fillRect(dst, int(sx-4*s), int(sy-8*s), int(8*s), int(10*s), color.RGBA{R: 0x3a, G: 0x6e, B: 0xc8, A: 0xff})
+			continue
+		}
+		drawPropShadow(dst, host, sx, sy, s)
+		drawCel(dst, host, sx, sy, s)
 	}
 	for _, p := range e.pickups {
 		c := sim.TileCenter(p.X, p.Y)

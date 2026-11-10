@@ -77,7 +77,7 @@ A battle opens with the player squad still aboard a helicopter. It flies in from
 
 Objectives in use are `kill_all_enemy`, `destroy_enemy_buildings`, `protect_civilians`, and `rescue_hostages`. A phase that lists `protect_civilians` is lost when a civilian dies. A wound does not lose it. The loss waits while a round, grenade, blast, or flying roof is still in the air. `kill_all_enemy` still ignores civilians and hostages. Mission 4 phase 3 has civilians and does not list `protect_civilians`.
 
-A hostage is not a civilian and not an enemy. JSON is `hostages: [{x, y}]` in tile coordinates. He stands until a living player on foot touches him, then he walks one file slot behind the active squad and stops when that squad stops. He does not shoot, board, or take orders. Water, trees, and cliffs use the same slide as a soldier. Overlap with a tent removes him and emits `CueSave` once. `rescue_hostages` is met when every hostage is saved. A hostage who dies first loses the phase, and that death is `CueCry`. Killing him does not score.
+A hostage is not a civilian and not an enemy. JSON is `hostages: [{x, y}]` in tile coordinates. He stands until a living player on foot touches him, then he walks one file slot behind the active squad and stops when that squad stops. He does not shoot, board, or take orders. Water, trees, and cliffs use the same slide as a soldier. Overlap with a tent removes him and emits `CueSave` once. `rescue_hostages` is met when every hostage is saved. A hostage who dies first loses the phase, and that death is `CueCry`. Killing him does not score. He uses the `hostage` sheets, same cells as the civilian, in a blue shirt and rust trousers. A tent uses `hut/tent`.
 
 ## Combat
 

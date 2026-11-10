@@ -378,6 +378,63 @@ func TestCivilianSheets(t *testing.T) {
 	}
 }
 
+func TestHostageAndTentSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []struct {
+		key    string
+		frames int
+		fps    float64
+		loop   bool
+	}{
+		{"hostage/idle", 4, 8, true},
+		{"hostage/walk", 6, 12, true},
+		{"hostage/death", 6, 15, false},
+		{"hostage/corpse", 1, 1, false},
+		{"hostage/swim", 1, 8, true},
+		{"hostage/sink", 1, 4, false},
+	}
+	for _, tc := range want {
+		sh := lib.Get(tc.key)
+		if sh == nil {
+			t.Fatalf("missing %s", tc.key)
+		}
+		if sh.Frames != tc.frames || sh.FPS != tc.fps || sh.Loop != tc.loop {
+			t.Fatalf("%s frames=%d fps=%v loop=%v", tc.key, sh.Frames, sh.FPS, sh.Loop)
+		}
+		if sh.FrameW != lib.Get("civilian/"+tc.key[len("hostage/"):]).FrameW {
+			t.Fatalf("%s cell %d", tc.key, sh.FrameW)
+		}
+	}
+	idle := decodeArtPNG(t, "hostage/idle.png")
+	civil := decodeArtPNG(t, "civilian/idle.png")
+	// South-facing shirt pixel should not still be the civilian cream.
+	hr, hg, hb, _ := idle.At(56, 256+52).RGBA()
+	cr, cg, cb, _ := civil.At(56, 256+52).RGBA()
+	if hr>>8 > 180 && hg>>8 > 170 && hb>>8 > 140 {
+		t.Fatalf("hostage shirt still cream %d %d %d", hr>>8, hg>>8, hb>>8)
+	}
+	if hr == cr && hg == cg && hb == cb {
+		t.Fatal("hostage idle matches the civilian")
+	}
+	tent := lib.Get("hut/tent")
+	if tent == nil || tent.Frames != 4 || tent.FPS != 5 || !tent.Loop || tent.FrameW != 256 || tent.FrameH != 320 {
+		t.Fatalf("hut/tent %+v", tent)
+	}
+	if tent.AnchorX != 128 || tent.AnchorY != 312 {
+		t.Fatalf("tent anchor %d,%d", tent.AnchorX, tent.AnchorY)
+	}
+	img := decodeArtPNG(t, "hut/tent.png")
+	if img.Bounds().Dx() != 256*4 || img.Bounds().Dy() != 320 {
+		t.Fatalf("tent bounds %v", img.Bounds())
+	}
+	if frameDelta(img, 256, 0, 1) < 0.02 {
+		t.Fatal("tent flap does not move")
+	}
+}
+
 func TestGroundSheets(t *testing.T) {
 	lib, err := Load(art.Files)
 	if err != nil {

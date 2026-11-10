@@ -1,0 +1,6 @@
+{
+  "frameW": 200, "frameH": 128, "anchorX": 100, "anchorY": 120,
+  "fps": 1, "loop": false,
+  "rows": ["E", "SE", "S", "N", "NE"],
+  "mirrors": {"W": "E", "SW": "SE", "NW": "NE"}
+}

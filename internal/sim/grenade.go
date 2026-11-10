@@ -254,7 +254,7 @@ func (w *World) explode(x, y float64, ownerID int) {
 	w.Explosions = append(w.Explosions, Explosion{X: x, Y: y, R: GrenadeRadius})
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Dead() {
+		if u.Dead() || u.Saved {
 			continue
 		}
 		if hypot(u.X-x, u.Y-y) > GrenadeRadius {
@@ -276,7 +276,7 @@ func (w *World) explode(x, y float64, ownerID int) {
 	}
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if !b.Alive {
+		if !b.Alive || b.Kind == HutTent {
 			continue
 		}
 		if circleHitsRect(x, y, GrenadeRadius, b.X, b.Y, b.W, b.H) {

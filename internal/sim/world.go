@@ -366,6 +366,7 @@ func (w *World) Step(dt float64) {
 	w.stepPickups()
 	w.refreshTerrain()
 	w.stepCivilians(dt)
+	w.stepHostages(dt)
 	w.stepAI(dt)
 	w.stepVehicles(dt)
 	w.stepMines()

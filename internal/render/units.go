@@ -18,6 +18,8 @@ var (
 	playerDead    = color.RGBA{R: 0x20, G: 0x50, B: 0x20, A: 0xff}
 	civilianFill  = color.RGBA{R: 0xe6, G: 0xd2, B: 0x3a, A: 0xff}
 	civilianDead  = color.RGBA{R: 0x6a, G: 0x5a, B: 0x20, A: 0xff}
+	hostageFill   = color.RGBA{R: 0x3a, G: 0x6e, B: 0xc8, A: 0xff}
+	hostageDead   = color.RGBA{R: 0x1c, G: 0x32, B: 0x58, A: 0xff}
 	grenadierFill = color.RGBA{R: 0xe0, G: 0x60, B: 0x18, A: 0xff}
 	rocketeerFill = color.RGBA{R: 0x78, G: 0x18, B: 0x38, A: 0xff}
 	grenadeWindup = color.RGBA{R: 0xff, G: 0xd0, B: 0x30, A: 0xff}
@@ -45,12 +47,17 @@ func unitColor(u *sim.Unit) color.RGBA {
 			return playerDead
 		case sim.SideCivilian:
 			return civilianDead
+		case sim.SideHostage:
+			return hostageDead
 		default:
 			return corpseFill
 		}
 	}
 	if u.Side == sim.SideCivilian {
 		return civilianFill
+	}
+	if u.Side == sim.SideHostage {
+		return hostageFill
 	}
 	if u.Side == sim.SideEnemy {
 		if u.Kind == sim.KindGrenadier {

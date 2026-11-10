@@ -140,7 +140,9 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		footY := float64((b.Y + th) * sim.TileSize)
 		sx, sy := e.worldToScreen(footX, footY)
 		cel := plain
-		if b.Door {
+		if b.Kind == "tent" {
+			cel = nil
+		} else if b.Door {
 			cel = door
 		}
 		if cel == nil || cel.img == nil {
@@ -170,6 +172,11 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		}
 		drawPropShadow(dst, civil, sx, sy, s)
 		drawCel(dst, civil, sx, sy, s)
+	}
+	for _, h := range e.hostages {
+		p := sim.TileCenter(h.X, h.Y)
+		sx, sy := e.worldToScreen(p.X, p.Y)
+		fillRect(dst, int(sx-4*s), int(sy-8*s), int(8*s), int(10*s), color.RGBA{R: 0x3a, G: 0x6e, B: 0xc8, A: 0xff})
 	}
 	for _, p := range e.pickups {
 		c := sim.TileCenter(p.X, p.Y)
@@ -233,7 +240,17 @@ func drawHutFallback(dst *ebiten.Image, b data.BuildingSpec, s float64, e *Edito
 		th = 2
 	}
 	x, y := e.worldToScreen(float64(b.X*sim.TileSize), float64(b.Y*sim.TileSize))
-	fillRect(dst, int(x), int(y), int(float64(tw*sim.TileSize)*s), int(float64(th*sim.TileSize)*s), color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff})
+	col := color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff}
+	if b.Kind == "tent" {
+		col = color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 0xff}
+	}
+	bw := int(float64(tw*sim.TileSize) * s)
+	bh := int(float64(th*sim.TileSize) * s)
+	fillRect(dst, int(x), int(y), bw, bh, col)
+	if b.Kind == "tent" && bw > 4 && bh > 4 {
+		fillRect(dst, int(x)+bw/2-1, int(y)+bh/2-bh/4, 2, bh/2, color.RGBA{R: 0xc8, G: 0x28, B: 0x28, A: 0xff})
+		fillRect(dst, int(x)+bw/2-bw/5, int(y)+bh/2-1, bw/3, 2, color.RGBA{R: 0xc8, G: 0x28, B: 0x28, A: 0xff})
+	}
 }
 
 // drawBarrel is a red drum. Mine cells and exploding barrels both use it.

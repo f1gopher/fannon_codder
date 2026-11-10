@@ -54,6 +54,8 @@ Do these from the top. One chunk a session. The big map is last and uses every c
 
 ### 2. Escort, hostages, rescue tent
 
+The escort, the hostage, the tent, the editor icons, and `CueSave` are in the game. This chunk stays until `hostage` and `hut/tent` sheets play in the battle. Show one contact sheet and wait before writing `assets/art`.
+
 One escort rule, reused by the later leader and home chunks.
 
 An escort walks behind the active squad at `FileSpacing` and does not shoot, board, or take orders. He stops when the squad stops. Water, trees, and cliffs use the same slide as a soldier.

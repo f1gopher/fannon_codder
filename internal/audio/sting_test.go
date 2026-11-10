@@ -35,6 +35,22 @@ func TestStingsAreNotTheGun(t *testing.T) {
 	}
 }
 
+func TestSaveStingIsShort(t *testing.T) {
+	save := Save()
+	if !bytes.Equal(save, Save()) {
+		t.Fatal("save sting is not stable")
+	}
+	if len(save) != saveSamples*4 || saveSamples >= SampleRate/2 {
+		t.Fatalf("save length %d samples", saveSamples)
+	}
+	if bytes.Equal(save, Win()) || bytes.Equal(save, Click()) {
+		t.Fatal("the save sting matches another clip")
+	}
+	if rms(save) < 0.02 {
+		t.Fatal("save sting is quiet")
+	}
+}
+
 func TestMarchFadeEasesOut(t *testing.T) {
 	if stingLevel(MarchFade, MarchFade) != 1 {
 		t.Fatal("a fade starts at full level")

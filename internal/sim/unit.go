@@ -7,6 +7,8 @@ const (
 	SidePlayer Side = iota
 	SideEnemy
 	SideCivilian
+	// SideHostage waits to be touched, then walks behind the squad.
+	SideHostage
 )
 
 // HP is the coarse health state. An MG round kills a standing man or drops him
@@ -50,6 +52,7 @@ type Unit struct {
 	WanderY     float64
 	WanderT     float64 // seconds until the next stroll pick
 	Escorting   bool    // walking behind the squad; he does not flee a shot
+	Saved       bool    // entered the rescue tent; no longer on the field
 	Bombs       int     // grenades a grenadier still carries
 	GrenadeWind float64 // seconds left in the throw telegraph; the bomb leaves at 0
 	GrenadeCD   float64 // seconds until the next windup may start

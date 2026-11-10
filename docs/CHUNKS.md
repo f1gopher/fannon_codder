@@ -129,4 +129,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - The map editor has a menu bar. Each place tool is an icon from the soldier or prop sheet. A click selects it. Keys 1–9 select the same tools.
 - Tree crowns pad their edge on the CPU. A one-pixel GPU slice of that frame aborted the graphics driver when the window was fullscreen.
 - `protect_civilians` loses the phase when a civilian dies, after shots already in the air finish. A nearby shot or blast makes him walk away. His death is `CueCry`. The editor places civilians, and `civilian/swim` and `civilian/sink` reuse the side walk pose.
+- A hostage stands until a player on foot touches him, then walks behind the active squad and stops when it stops. A tent saves him with `CueSave`. His death is `CueCry` and fails `rescue_hostages`. The editor places both. The `hostage` and `hut/tent` sheets are not in yet.
 

@@ -19,6 +19,7 @@ const (
 	pickHut
 	pickCrate
 	pickCivilian
+	pickHostage
 )
 
 type pick struct {
@@ -42,6 +43,8 @@ const (
 	stampGrenades  = "grenades"
 	stampRockets   = "rockets"
 	stampCivilian  = "civilian"
+	stampHostage   = "hostage"
+	stampTent      = "tent"
 )
 
 func stampName(s string) string {
@@ -64,13 +67,17 @@ func stampName(s string) string {
 		return "rocket crate"
 	case stampCivilian:
 		return "civilian"
+	case stampHostage:
+		return "hostage"
+	case stampTent:
+		return "tent"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    Shift+1 civilian    S saves"
+	return "left-click places    drag moves    Del removes    W patrol point    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -121,6 +128,10 @@ func (e *Editor) pickAt(wx, wy float64) pick {
 	for i, c := range e.civilians {
 		p := sim.TileCenter(c.X, c.Y)
 		take(p.X, p.Y, pick{kind: pickCivilian, i: i})
+	}
+	for i, h := range e.hostages {
+		p := sim.TileCenter(h.X, h.Y)
+		take(p.X, p.Y, pick{kind: pickHostage, i: i})
 	}
 	for i, b := range e.barrels {
 		c := sim.TileCenter(b.X, b.Y)
@@ -178,6 +189,8 @@ func (e *Editor) beginGrab(p pick, wx, wy float64) {
 		e.homeCrate = e.pickups[p.i]
 	case pickCivilian:
 		e.homeCivilian = e.civilians[p.i]
+	case pickHostage:
+		e.homeHostage = e.hostages[p.i]
 	}
 }
 
@@ -256,6 +269,14 @@ func (e *Editor) dragGrab(wx, wy float64) {
 			e.dirty = true
 			e.status = ""
 		}
+	case pickHostage:
+		i := e.grab.i
+		nx, ny := e.clampTile(e.homeHostage.X+dx, e.homeHostage.Y+dy)
+		if e.hostages[i].X != nx || e.hostages[i].Y != ny {
+			e.hostages[i].X, e.hostages[i].Y = nx, ny
+			e.dirty = true
+			e.status = ""
+		}
 	}
 }
 
@@ -271,7 +292,7 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampBarrel:
 		e.barrels = append(e.barrels, data.BarrelSpec{X: tx, Y: ty})
 		e.sel = pick{kind: pickBarrel, i: len(e.barrels) - 1}
-	case stampHut, stampDoor:
+	case stampHut, stampDoor, stampTent:
 		tw, th := 2, 2
 		if tx > e.grid.W-tw {
 			tx = e.grid.W - tw
@@ -287,11 +308,17 @@ func (e *Editor) placeAt(wx, wy float64) {
 			b.Door = true
 			b.Spawn = 2.5
 		}
+		if e.stamp == stampTent {
+			b.Kind = "tent"
+		}
 		e.buildings = append(e.buildings, b)
 		e.sel = pick{kind: pickHut, i: len(e.buildings) - 1}
 	case stampCivilian:
 		e.civilians = append(e.civilians, data.Enemy{X: tx, Y: ty})
 		e.sel = pick{kind: pickCivilian, i: len(e.civilians) - 1}
+	case stampHostage:
+		e.hostages = append(e.hostages, data.Enemy{X: tx, Y: ty})
+		e.sel = pick{kind: pickHostage, i: len(e.hostages) - 1}
 	case stampGrenades, stampRockets:
 		kind := "grenades"
 		if e.stamp == stampRockets {
@@ -344,6 +371,8 @@ func (e *Editor) removeSelected() {
 		e.pickups = append(e.pickups[:p.i], e.pickups[p.i+1:]...)
 	case pickCivilian:
 		e.civilians = append(e.civilians[:p.i], e.civilians[p.i+1:]...)
+	case pickHostage:
+		e.hostages = append(e.hostages[:p.i], e.hostages[p.i+1:]...)
 	}
 	e.sel = pick{}
 	e.grabbing = false

@@ -31,6 +31,7 @@ type Phase struct {
 	PlayerStart            [2]int         `json:"playerStart"`
 	Enemies                []Enemy        `json:"enemies"`
 	Civilians              []Enemy        `json:"civilians"`
+	Hostages               []Enemy        `json:"hostages,omitempty"`
 	Buildings              []BuildingSpec `json:"buildings"`
 	Pickups                []PickupSpec   `json:"pickups"`
 	Barrels                []BarrelSpec   `json:"barrels,omitempty"`
@@ -55,6 +56,8 @@ type BuildingSpec struct {
 	H     int     `json:"h"`
 	Door  bool    `json:"door"`
 	Spawn float64 `json:"spawn"`
+	// Kind is empty for a hut. "tent" is the rescue marker.
+	Kind string `json:"kind,omitempty"`
 }
 
 // BarrelSpec is an exploding drum in tile coordinates.
@@ -259,8 +262,18 @@ func (p *Phase) World() (*sim.World, error) {
 	for _, c := range p.Civilians {
 		w.SpawnUnit(sim.SideCivilian, sim.TileCenter(c.X, c.Y))
 	}
+	for _, h := range p.Hostages {
+		w.SpawnUnit(sim.SideHostage, sim.TileCenter(h.X, h.Y))
+	}
 	for _, b := range p.Buildings {
-		w.AddBuilding(b.X, b.Y, b.W, b.H, b.Door, b.Spawn)
+		switch b.Kind {
+		case "", "hut":
+			w.AddBuilding(b.X, b.Y, b.W, b.H, b.Door, b.Spawn)
+		case "tent":
+			w.AddTent(b.X, b.Y, b.W, b.H)
+		default:
+			return nil, fmt.Errorf("unknown building %q", b.Kind)
+		}
 	}
 	for _, pk := range p.Pickups {
 		switch pk.Kind {

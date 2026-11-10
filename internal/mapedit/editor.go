@@ -46,6 +46,7 @@ type Editor struct {
 	pickups                []data.PickupSpec
 	barrels                []data.BarrelSpec
 	civilians              []data.Enemy
+	hostages               []data.Enemy
 	phase                  *data.Phase
 	memos                  map[int]memo
 	dirty                  bool
@@ -63,6 +64,7 @@ type Editor struct {
 	homeHut                data.BuildingSpec
 	homeCrate              data.PickupSpec
 	homeCivilian           data.Enemy
+	homeHostage            data.Enemy
 	armPlace               bool
 	armX, armY             float64
 	armWX, armWY           float64
@@ -145,6 +147,7 @@ func (e *Editor) load(i int) {
 	e.pickups = nil
 	e.barrels = nil
 	e.civilians = nil
+	e.hostages = nil
 	e.phase = nil
 	e.dirty = false
 	if m, ok := e.memos[i]; ok && m.phase != nil {
@@ -212,6 +215,7 @@ func (e *Editor) load(i int) {
 	e.pickups = append([]data.PickupSpec(nil), p.Pickups...)
 	e.barrels = append([]data.BarrelSpec(nil), p.Barrels...)
 	e.civilians = append([]data.Enemy(nil), p.Civilians...)
+	e.hostages = append([]data.Enemy(nil), p.Hostages...)
 	e.phase = p
 	e.dirty = false
 }
@@ -765,6 +769,13 @@ func (e *Editor) drawSelection(dst *ebiten.Image) {
 		}
 		c := e.civilians[e.sel.i]
 		x, y = e.markAt(c.X, c.Y)
+		r = 6 * s
+	case pickHostage:
+		if e.sel.i >= len(e.hostages) {
+			return
+		}
+		h := e.hostages[e.sel.i]
+		x, y = e.markAt(h.X, h.Y)
 		r = 6 * s
 	case pickHut:
 		if e.sel.i >= len(e.buildings) {

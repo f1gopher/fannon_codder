@@ -10,6 +10,8 @@ import (
 
 var (
 	hutFill   = color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff}
+	tentFill  = color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 0xff}
+	crossFill = color.RGBA{R: 0xc8, G: 0x28, B: 0x28, A: 0xff}
 	doorFill  = color.RGBA{R: 0x12, G: 0x12, B: 0x12, A: 0xff}
 	crateFill = color.RGBA{R: 0x8a, G: 0x8a, B: 0x8a, A: 0xff}
 	bombFill  = color.RGBA{R: 0x22, G: 0x22, B: 0x22, A: 0xff}
@@ -28,7 +30,15 @@ var blastRectHook func()
 func drawBuildingRect(dst *ebiten.Image, cam sim.Camera, b sim.Building) {
 	x := cam.ScreenX(b.X)
 	y := cam.ScreenY(b.Y)
-	fillRectF(dst, x, y, b.W, b.H, hutFill)
+	fill := hutFill
+	if b.Kind == sim.HutTent {
+		fill = tentFill
+	}
+	fillRectF(dst, x, y, b.W, b.H, fill)
+	if b.Kind == sim.HutTent {
+		fillRectF(dst, x+b.W/2-1, y+b.H/2-6, 2, 12, crossFill)
+		fillRectF(dst, x+b.W/2-6, y+b.H/2-1, 12, 2, crossFill)
+	}
 	if b.HasDoor {
 		fillRectF(dst, x+b.W/2-3, y+b.H-8, 6, 6, doorFill)
 	}

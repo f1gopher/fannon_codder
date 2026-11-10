@@ -17,6 +17,9 @@ const (
 	DestroyEnemyBuildings
 	// ProtectCivilians loses the phase when a civilian dies. A wound does not.
 	ProtectCivilians
+	// RescueHostages is met when every hostage has entered a tent.
+	// A hostage who dies first loses the phase.
+	RescueHostages
 )
 
 func ParseObjective(s string) (Objective, bool) {
@@ -27,6 +30,8 @@ func ParseObjective(s string) (Objective, bool) {
 		return DestroyEnemyBuildings, true
 	case "protect_civilians":
 		return ProtectCivilians, true
+	case "rescue_hostages":
+		return RescueHostages, true
 	default:
 		return 0, false
 	}
@@ -61,7 +66,7 @@ func (w *World) HoldOutcome() bool {
 	if w == nil || w.Status != Playing || len(w.Objectives) == 0 || !w.unresolvedHarm() {
 		return false
 	}
-	if !w.anyLiving(SidePlayer) || w.protectFailed() {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() {
 		return true
 	}
 	return w.objectivesMet()
@@ -76,6 +81,31 @@ func (w *World) protectFailed() bool {
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Side == SideCivilian && u.Dead() {
+			return true
+		}
+	}
+	return false
+}
+
+// rescueFailed is a dead hostage on a phase that must get them into a tent.
+func (w *World) rescueFailed() bool {
+	if !w.hasObjective(RescueHostages) {
+		return false
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side == SideHostage && u.Dead() {
+			return true
+		}
+	}
+	return false
+}
+
+// hostagesOutstanding is a hostage still on the field.
+func (w *World) hostagesOutstanding() bool {
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side == SideHostage && !u.Dead() && !u.Saved {
 			return true
 		}
 	}
@@ -121,6 +151,10 @@ func (w *World) objectivesMet() bool {
 			if w.protectFailed() {
 				return false
 			}
+		case RescueHostages:
+			if w.rescueFailed() || w.hostagesOutstanding() {
+				return false
+			}
 		}
 	}
 	return true
@@ -133,7 +167,7 @@ func (w *World) evaluateObjectives() {
 	if w.unresolvedHarm() {
 		return
 	}
-	if !w.anyLiving(SidePlayer) || w.protectFailed() {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() {
 		w.Status = Lost
 		w.Firing = false
 		return

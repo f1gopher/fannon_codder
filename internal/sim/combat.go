@@ -388,7 +388,7 @@ func (w *World) stepProjectiles(dt float64) {
 func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.ID == p.OwnerID || u.VehicleID != 0 {
+		if u.ID == p.OwnerID || u.VehicleID != 0 || u.Saved {
 			continue
 		}
 		if !w.mgCanHurt(p, u) || !roundStopsOn(u) {
@@ -611,7 +611,7 @@ func (w *World) kill(u *Unit) {
 	u.VY = 0
 	w.dropFromFile(u.ID)
 	kind := CueDeath
-	if u.Side == SideCivilian {
+	if u.Side == SideCivilian || u.Side == SideHostage {
 		kind = CueCry
 	}
 	w.emitFrom(kind, u.X, u.Y, u.ID)

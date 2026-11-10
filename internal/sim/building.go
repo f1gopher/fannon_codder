@@ -10,10 +10,25 @@ const (
 	DoorPostTiles = 3
 )
 
-// Building is a hut. Door huts spawn grunts until a grenade destroys them.
+// BuildingKind is what a placed structure does.
+type BuildingKind int
+
+const (
+	// HutScenery is a doorless hut. It is not a destroy-buildings target.
+	HutScenery BuildingKind = iota
+	// HutDoor spawns grunts until a blast destroys it.
+	HutDoor
+	// HutTent is the rescue marker. It does not spawn, block, or take damage.
+	HutTent
+)
+
+// Building is a hut or a rescue tent.
+// Door huts spawn grunts until a grenade destroys them.
 // Doorless huts are scenery: they do not count for destroy_enemy_buildings.
+// A tent never does.
 type Building struct {
 	X, Y, W, H float64
+	Kind       BuildingKind
 	HasDoor    bool
 	HP         int
 	Alive      bool
@@ -43,11 +58,16 @@ func (w *World) addBuilding(tx, ty, tw, th int, door bool, spawn float64) int {
 	if th < 1 {
 		th = 2
 	}
+	kind := HutScenery
+	if door {
+		kind = HutDoor
+	}
 	b := Building{
 		X:       float64(tx * TileSize),
 		Y:       float64(ty * TileSize),
 		W:       float64(tw * TileSize),
 		H:       float64(th * TileSize),
+		Kind:    kind,
 		HasDoor: door,
 		HP:      buildingHP,
 		Alive:   true,
@@ -61,6 +81,32 @@ func (w *World) addBuilding(tx, ty, tw, th int, door bool, spawn float64) int {
 	}
 	w.Buildings = append(w.Buildings, b)
 	return len(w.Buildings) - 1
+}
+
+// AddTent places a rescue tent. It does not spawn and it does not burn.
+func (w *World) AddTent(tx, ty, tw, th int) int {
+	if tw < 1 {
+		tw = 2
+	}
+	if th < 1 {
+		th = 2
+	}
+	b := Building{
+		X:     float64(tx * TileSize),
+		Y:     float64(ty * TileSize),
+		W:     float64(tw * TileSize),
+		H:     float64(th * TileSize),
+		Kind:  HutTent,
+		HP:    buildingHP,
+		Alive: true,
+	}
+	w.Buildings = append(w.Buildings, b)
+	return len(w.Buildings) - 1
+}
+
+// Holds is true when (x, y) is inside a standing building.
+func (b *Building) Holds(x, y float64) bool {
+	return b != nil && b.Alive && x >= b.X && y >= b.Y && x < b.X+b.W && y < b.Y+b.H
 }
 
 func (w *World) stepSpawners(dt float64) {
@@ -144,7 +190,10 @@ func (w *World) anyDoorBuilding() bool {
 func (w *World) pointInBuilding(x, y float64) bool {
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if b.Alive && x >= b.X && y >= b.Y && x < b.X+b.W && y < b.Y+b.H {
+		if b.Kind == HutTent {
+			continue
+		}
+		if b.Holds(x, y) {
 			return true
 		}
 	}
@@ -156,7 +205,7 @@ func (w *World) unitHitsBuilding(x, y, half float64) bool {
 	aw, ah := half*2, half*2
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if !b.Alive {
+		if !b.Alive || b.Kind == HutTent {
 			continue
 		}
 		if ax < b.X+b.W && ax+aw > b.X && ay < b.Y+b.H && ay+ah > b.Y {

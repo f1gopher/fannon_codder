@@ -17,8 +17,10 @@ const (
 	CuePickup
 	CueBoard
 	CueExit
-	// CueCry is a civilian's short higher yell. Soldiers stay on CueDeath.
+	// CueCry is a civilian's or a hostage's short higher yell. Soldiers stay on CueDeath.
 	CueCry
+	// CueSave is the short sting when a hostage enters the tent.
+	CueSave
 	// CueClick, CueWin, CueFail, CueBrief, and CueHill are menu stings.
 	// Nothing in the world emits them. Scenes play them with PlayKind.
 	CueClick

@@ -164,6 +164,8 @@ func actorKey(u *sim.Unit) string {
 	switch u.Side {
 	case sim.SideCivilian:
 		return "civilian"
+	case sim.SideHostage:
+		return "hostage"
 	case sim.SideEnemy:
 		switch u.Kind {
 		case sim.KindGrenadier:
@@ -570,7 +572,7 @@ func collectBodies(w *sim.World, terrain string) []body {
 	}
 	for i := range w.Units {
 		u := w.Units[i]
-		if u.VehicleID != 0 || dropHides(u.ID) {
+		if u.VehicleID != 0 || u.Saved || dropHides(u.ID) {
 			continue
 		}
 		aimLock := u.ID == leadID && !kneelHold[u.SquadID]
@@ -591,7 +593,9 @@ func buildingBody(cam sim.Camera, b sim.Building) body {
 	sx := cam.ScreenX(b.X + b.W/2)
 	sy := cam.ScreenY(y)
 	key := "hut/plain"
-	if b.HasDoor {
+	if b.Kind == sim.HutTent {
+		key = "hut/tent"
+	} else if b.HasDoor {
 		key = "hut/door"
 	}
 	sh := activeSheets().Get(key)

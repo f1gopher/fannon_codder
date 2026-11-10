@@ -207,6 +207,59 @@ func TestCivilianPlaceDragDeleteAndSave(t *testing.T) {
 	}
 }
 
+func TestHostageAndTentRoundTrip(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed.stamp = stampHostage
+	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
+	if len(ed.hostages) != 1 || ed.sel.kind != pickHostage {
+		t.Fatalf("placed %+v n=%d", ed.sel, len(ed.hostages))
+	}
+	c := sim.TileCenter(ed.hostages[0].X, ed.hostages[0].Y)
+	ed.beginGrab(ed.pickAt(c.X, c.Y), c.X, c.Y)
+	ed.dragGrab(c.X+sim.TileSize, c.Y)
+	if ed.hostages[0].X != 4 || ed.hostages[0].Y != 4 {
+		t.Fatalf("moved = %+v", ed.hostages[0])
+	}
+	ed.stamp = stampTent
+	ed.placeAt(8*sim.TileSize, 4*sim.TileSize)
+	if len(ed.buildings) != 1 || ed.buildings[0].Kind != "tent" {
+		t.Fatalf("tent = %+v", ed.buildings)
+	}
+	kept := len(ed.buildings)
+	ed.placeAt(10*sim.TileSize, 6*sim.TileSize)
+	if len(ed.buildings) != kept+1 || ed.buildings[kept].Kind != "tent" {
+		t.Fatal("second tent")
+	}
+	ed.sel = pick{kind: pickHut, i: 0}
+	nHost := len(ed.hostages)
+	ed.removeSelected()
+	if len(ed.buildings) != 1 || ed.buildings[0].Kind != "tent" || len(ed.hostages) != nHost {
+		t.Fatal("deleting the tent removed the hostage or the other tent")
+	}
+	ed.dirty = true
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(b, p); err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Hostages) != 1 || p.Hostages[0].X != 4 || p.Hostages[0].Y != 4 {
+		t.Fatalf("saved hostages = %+v", p.Hostages)
+	}
+	if len(p.Buildings) != 1 || p.Buildings[0].Kind != "tent" {
+		t.Fatalf("saved tent = %+v", p.Buildings)
+	}
+}
+
 func TestSaveWritesPlacementsAndKeepsTheMap(t *testing.T) {
 	ed, err := New()
 	if err != nil {

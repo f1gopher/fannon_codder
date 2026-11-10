@@ -80,6 +80,7 @@ func NewMixer() *Mixer {
 	m.Load(sim.CueBoom, Boom(), boomVoices, boomVolume)
 	m.load(sim.CueDeath, [][]byte{DeathPCM(0), DeathPCM(1), DeathPCM(2)}, deathVoices, deathVolume, false)
 	m.Load(sim.CueCry, Cry(), cryVoices, cryVolume)
+	m.Load(sim.CueSave, Save(), 2, 0.55)
 	m.Load(sim.CueThrow, Throw(), throwVoices, throwVolume)
 	m.Load(sim.CueRocket, Rocket(), rocketVoices, rocketVolume)
 	m.Load(sim.CueSplash, Splash(), 1, splashVolume)

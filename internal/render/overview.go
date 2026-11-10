@@ -109,7 +109,11 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 		if bh < 2 {
 			bh = 2
 		}
-		fillRect(dst, x, y, bw, bh, overviewHut)
+		col := overviewHut
+		if b.Kind == sim.HutTent {
+			col = color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 0xff}
+		}
+		fillRect(dst, x, y, bw, bh, col)
 	}
 	for i := range w.Barrels {
 		b := &w.Barrels[i]
@@ -137,7 +141,7 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Dead() || u.VehicleID != 0 {
+		if u.Dead() || u.Saved || u.VehicleID != 0 {
 			continue
 		}
 		fillRect(dst,
@@ -283,6 +287,9 @@ func overviewUnit(u *sim.Unit) color.RGBA {
 	}
 	if u.Side == sim.SideCivilian {
 		return color.RGBA{R: 0xe0, G: 0xe0, B: 0x40, A: 0xff}
+	}
+	if u.Side == sim.SideHostage {
+		return color.RGBA{R: 0x40, G: 0x80, B: 0xe0, A: 0xff}
 	}
 	return squadFill(u.SquadID, false)
 }

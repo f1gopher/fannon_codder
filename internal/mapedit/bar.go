@@ -8,14 +8,29 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
-// barStamps is the menu, left to right. Keys 1–9 follow the same order.
+// barStamps is the first menu row, left to right. Keys 1–9 follow that order.
 var barStamps = []string{
 	stampGrunt, stampGrenadier, stampRocketeer, stampPatrol,
 	stampBarrel, stampHut, stampDoor, stampGrenades, stampRockets,
 }
 
-// BarHeight is the menu strip in offscreen pixels.
-func BarHeight(scale float64) float64 {
+// barRow2 is the second menu row. Shift+1 selects the first icon, and so on.
+var barRow2 = []string{stampCivilian}
+
+func menuRows() [][]string {
+	return [][]string{barStamps, barRow2}
+}
+
+func allStamps() []string {
+	var out []string
+	for _, row := range menuRows() {
+		out = append(out, row...)
+	}
+	return out
+}
+
+// barRowHeight is one icon row. BarHeight stacks every row.
+func barRowHeight(scale float64) float64 {
 	if scale <= 0 {
 		scale = 1
 	}
@@ -26,8 +41,13 @@ func BarHeight(scale float64) float64 {
 	return h
 }
 
+// BarHeight is the menu strip in offscreen pixels.
+func BarHeight(scale float64) float64 {
+	return barRowHeight(scale) * float64(len(menuRows()))
+}
+
 func toolButtons(scale float64) (size, gap, x0, y0 float64) {
-	size = BarHeight(scale) - 10
+	size = barRowHeight(scale) - 10
 	if size < 18 {
 		size = 18
 	}
@@ -38,19 +58,32 @@ func toolButtons(scale float64) (size, gap, x0, y0 float64) {
 // A point in a gap, or past the last icon, is not a tool.
 func ToolHit(x, y, scale float64) (int, bool) {
 	size, gap, x0, y0 := toolButtons(scale)
-	if y < y0 || y >= y0+size || x < x0 {
+	rows := menuRows()
+	rowH := barRowHeight(scale)
+	if y < y0 || x < x0 {
+		return 0, false
+	}
+	row := int((y - y0) / rowH)
+	if row < 0 || row >= len(rows) {
+		return 0, false
+	}
+	if y-y0-float64(row)*rowH >= size {
 		return 0, false
 	}
 	step := size + gap
 	rel := x - x0
 	i := int(rel / step)
-	if i < 0 || i >= len(barStamps) {
+	if i < 0 || i >= len(rows[row]) {
 		return 0, false
 	}
 	if rel-float64(i)*step > size {
 		return 0, false
 	}
-	return i, true
+	base := 0
+	for r := 0; r < row; r++ {
+		base += len(rows[r])
+	}
+	return base + i, true
 }
 
 var barBG = color.RGBA{R: 18, G: 24, B: 14, A: 255}
@@ -68,7 +101,8 @@ func iconCels() []*propCel {
 		rocket, _ := loadCelRow("rocketeer/idle", 2)
 		_, plain, grenade, rockets, barrel := sheets()
 		door, _, _, _, _ := sheets()
-		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets}
+		civil := civilianCel()
+		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil}
 	})
 	return iconLib.cels
 }
@@ -82,24 +116,37 @@ func (e *Editor) drawBar(screen *ebiten.Image) {
 	fillRect(screen, 0, int(h)-1, e.offW, 1, railSel)
 	size, gap, x0, y0 := toolButtons(e.scale)
 	cels := iconCels()
-	for i, stamp := range barStamps {
-		x := x0 + float64(i)*(size+gap)
-		if stamp == e.stamp || (e.stamp == "" && stamp == stampGrunt) {
-			fillRect(screen, int(x), int(y0), int(size), int(size), railSel)
-		}
-		if i < len(cels) {
-			drawIcon(screen, cels[i], x, y0, size)
-		}
-		if stamp == stampPatrol {
-			drawPatrolIcon(screen, x, y0, size)
+	rowH := barRowHeight(e.scale)
+	n := 0
+	for row, stamps := range menuRows() {
+		for col, stamp := range stamps {
+			x := x0 + float64(col)*(size+gap)
+			y := y0 + float64(row)*rowH
+			if stamp == e.stamp || (e.stamp == "" && stamp == stampGrunt) {
+				fillRect(screen, int(x), int(y), int(size), int(size), railSel)
+			}
+			if n < len(cels) {
+				drawIcon(screen, cels[n], x, y, size)
+			}
+			if stamp == stampPatrol {
+				drawPatrolIcon(screen, x, y, size)
+			}
+			n++
 		}
 	}
 	nameX := x0 + float64(len(barStamps))*(size+gap) + 8
 	drawFace(screen, e.font, e.scale, stampName(e.stamp), nameX, y0+size*0.25, railInkSel)
 	cx, cy := e.cursor()
 	if i, ok := ToolHit(cx, cy, e.scale); ok {
-		x := x0 + float64(i)*(size+gap)
-		e.drawTip(screen, stampTip(barStamps[i]), x, h+4)
+		stamps := allStamps()
+		col := i
+		row := 0
+		if i >= len(barStamps) {
+			col = i - len(barStamps)
+			row = 1
+		}
+		x := x0 + float64(col)*(size+gap)
+		e.drawTip(screen, stampTip(stamps[i]), x, y0+float64(row)*rowH+size+4)
 	}
 }
 
@@ -123,6 +170,8 @@ func stampTip(stamp string) string {
 		return "Grenade crate — left click places"
 	case stampRockets:
 		return "Rocket crate — left click places"
+	case stampCivilian:
+		return "Civilian — left click places"
 	default:
 		return "Left click places"
 	}

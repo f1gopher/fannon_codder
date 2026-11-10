@@ -128,4 +128,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - The map editor drags the player start, enemies, patrol points, barrels, huts, and crates. 1–9 and a left click on empty ground add one. S writes those lists. A drawn tree region is still not written.
 - The map editor has a menu bar. Each place tool is an icon from the soldier or prop sheet. A click selects it. Keys 1–9 select the same tools.
 - Tree crowns pad their edge on the CPU. A one-pixel GPU slice of that frame aborted the graphics driver when the window was fullscreen.
+- `protect_civilians` loses the phase when a civilian dies, after shots already in the air finish. A nearby shot or blast makes him walk away. His death is `CueCry`. The editor places civilians, and `civilian/swim` and `civilian/sink` reuse the side walk pose.
 

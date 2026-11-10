@@ -168,7 +168,7 @@ func TestShootingCivilianDoesNotFailPhase(t *testing.T) {
 	}
 }
 
-func TestProtectCiviliansIsReserved(t *testing.T) {
+func TestProtectCiviliansLosesWhenOneDies(t *testing.T) {
 	o, ok := ParseObjective("protect_civilians")
 	if !ok || o != ProtectCivilians {
 		t.Fatalf("parse protect_civilians = %v ok=%v", o, ok)
@@ -176,10 +176,65 @@ func TestProtectCiviliansIsReserved(t *testing.T) {
 	w := gunWorld([]Vec2{{X: 8, Y: 8}}, Vec2{X: 200, Y: 8})
 	w.Objectives = []Objective{KillAllEnemy, ProtectCivilians}
 	civID := w.SpawnUnit(SideCivilian, Vec2{X: 40, Y: 80}).ID
-	w.kill(w.Unit(civID))
+	w.WoundChance = 1
+	w.Unit(civID).HP = Wounded
 	w.evaluateObjectives()
 	if w.Status != Playing {
-		t.Fatalf("protect_civilians must not change the phase, status=%v", w.Status)
+		t.Fatal("a wound must not fail protect_civilians")
+	}
+	w.kill(w.Unit(civID))
+	w.evaluateObjectives()
+	if w.Status != Lost {
+		t.Fatalf("a finished civilian must lose the phase, status=%v", w.Status)
+	}
+	cues := w.TakeCues()
+	if len(cues) != 1 || cues[0].Kind != CueCry {
+		t.Fatalf("cues=%v, want CueCry", cues)
+	}
+}
+
+func TestProtectCiviliansWaitsOnTheGrenade(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = []Objective{ProtectCivilians}
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 8, Y: 8}})
+	civ := w.SpawnUnit(SideCivilian, Vec2{X: 70, Y: 8})
+	w.launchGrenade(w.Unit(w.ActiveSquad().LeaderID), civ.X, civ.Y)
+	if w.Status != Playing {
+		t.Fatal("the loss waits while the grenade is in the air")
+	}
+	for i := 0; i < 300 && w.Status == Playing; i++ {
+		w.Step(1.0 / 60)
+	}
+	if !w.Unit(civ.ID).Dead() || w.Status != Lost {
+		t.Fatalf("status=%v dead=%v", w.Status, w.Unit(civ.ID).Dead())
+	}
+}
+
+func TestCivilianFleesANearbyShot(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	id := w.SpawnUnit(SideCivilian, Vec2{X: 120, Y: 100}).ID
+	w.Projectiles = append(w.Projectiles, Projectile{X: 100, Y: 100, VX: 1, VY: 0, Alive: true, Left: 400})
+	for i := 0; i < 20; i++ {
+		w.Step(1.0 / 60)
+	}
+	u := w.Unit(id)
+	if u.X <= 120 {
+		t.Fatalf("civilian should walk away from the round, x=%v", u.X)
+	}
+	if len(w.Projectiles) == 0 && u.X < 120 {
+		t.Fatal("flee went the wrong way")
+	}
+	w.Projectiles = nil
+	w.Explosions = nil
+	u.Escorting = true
+	x := u.X
+	w.Explosions = append(w.Explosions, Explosion{X: u.X - 8, Y: u.Y, R: GrenadeRadius})
+	w.Step(1.0 / 60)
+	if w.Unit(id).X < x-1 {
+		t.Fatal("an escort does not flee the blast")
 	}
 }
 

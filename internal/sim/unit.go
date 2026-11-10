@@ -49,6 +49,7 @@ type Unit struct {
 	WanderX     float64 // civilian stroll target
 	WanderY     float64
 	WanderT     float64 // seconds until the next stroll pick
+	Escorting   bool    // walking behind the squad; he does not flee a shot
 	Bombs       int     // grenades a grenadier still carries
 	GrenadeWind float64 // seconds left in the throw telegraph; the bomb leaves at 0
 	GrenadeCD   float64 // seconds until the next windup may start

@@ -17,6 +17,8 @@ const (
 	CuePickup
 	CueBoard
 	CueExit
+	// CueCry is a civilian's short higher yell. Soldiers stay on CueDeath.
+	CueCry
 	// CueClick, CueWin, CueFail, CueBrief, and CueHill are menu stings.
 	// Nothing in the world emits them. Scenes play them with PlayKind.
 	CueClick

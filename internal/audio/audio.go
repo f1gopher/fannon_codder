@@ -23,6 +23,8 @@ const (
 	boomVolume   = 0.7
 	deathVoices  = 4
 	deathVolume  = 0.55
+	cryVoices    = 3
+	cryVolume    = 0.5
 	throwVoices  = 4
 	throwVolume  = 0.42
 	rocketVoices = 3
@@ -77,6 +79,7 @@ func NewMixer() *Mixer {
 	m.Load(sim.CueGun, Gunshot(), gunVoices, gunVolume)
 	m.Load(sim.CueBoom, Boom(), boomVoices, boomVolume)
 	m.load(sim.CueDeath, [][]byte{DeathPCM(0), DeathPCM(1), DeathPCM(2)}, deathVoices, deathVolume, false)
+	m.Load(sim.CueCry, Cry(), cryVoices, cryVolume)
 	m.Load(sim.CueThrow, Throw(), throwVoices, throwVolume)
 	m.Load(sim.CueRocket, Rocket(), rocketVoices, rocketVolume)
 	m.Load(sim.CueSplash, Splash(), 1, splashVolume)

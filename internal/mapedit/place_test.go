@@ -36,7 +36,12 @@ func TestToolHitPicksTheMenuIcon(t *testing.T) {
 		t.Fatal("gap between icons hit a tool")
 	}
 	if _, ok := ToolHit(x0, y0+size+2, 3); ok {
-		t.Fatal("point under the bar hit a tool")
+		t.Fatal("point under the icon hit a tool")
+	}
+	rowH := barRowHeight(3)
+	i, ok = ToolHit(x0+size/2, y0+rowH+size/2, 3)
+	if !ok || allStamps()[i] != stampCivilian {
+		t.Fatalf("second row = %d %v", i, ok)
 	}
 }
 
@@ -143,6 +148,62 @@ func TestPlaceAddsEnemiesHutsBarrelsAndCrates(t *testing.T) {
 	ed.removeSelected()
 	if ed.pickups[len(ed.pickups)-1].Kind == "rockets" {
 		t.Fatal("rocket crate still there")
+	}
+}
+
+func TestCivilianPlaceDragDeleteAndSave(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, row := range ed.phases {
+		if row.name == "m04p03" {
+			ed.load(i)
+		}
+	}
+	if len(ed.civilians) != 3 {
+		t.Fatalf("loaded civilians = %d", len(ed.civilians))
+	}
+	c := sim.TileCenter(ed.civilians[0].X, ed.civilians[0].Y)
+	ed.beginGrab(ed.pickAt(c.X, c.Y), c.X, c.Y)
+	if ed.grab.kind != pickCivilian {
+		t.Fatalf("pick = %+v", ed.grab)
+	}
+	ed.dragGrab(c.X+sim.TileSize, c.Y)
+	if ed.civilians[0].X != 13 || ed.civilians[0].Y != 9 {
+		t.Fatalf("moved = %+v", ed.civilians[0])
+	}
+	ed.stamp = stampCivilian
+	ed.placeAt(2*sim.TileSize, 2*sim.TileSize)
+	if len(ed.civilians) != 4 || ed.sel.kind != pickCivilian {
+		t.Fatalf("placed %+v n=%d", ed.sel, len(ed.civilians))
+	}
+	ed.removeSelected()
+	if len(ed.civilians) != 3 {
+		t.Fatalf("after delete = %d", len(ed.civilians))
+	}
+	ed.dirty = true
+	path := filepath.Join(t.TempDir(), "m04p03.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	p, err := data.LoadPhase(path)
+	if err != nil {
+		// LoadPhase looks beside the campaign, so read the temp file.
+		b, rerr := os.ReadFile(path)
+		if rerr != nil {
+			t.Fatal(err)
+		}
+		p = &data.Phase{}
+		if jerr := json.Unmarshal(b, p); jerr != nil {
+			t.Fatal(jerr)
+		}
+	}
+	if len(p.Civilians) != 3 || p.Civilians[0].X != 13 || p.Civilians[0].Y != 9 {
+		t.Fatalf("saved civilians = %+v", p.Civilians)
+	}
+	if p.Title == "" || len(p.Map.Regions) == 0 {
+		t.Fatal("save dropped the rest of the phase")
 	}
 }
 

@@ -34,7 +34,7 @@ const (
 	generalRange  = 150.0
 	privateSpread = 0.12 // radians, wide
 	generalSpread = 0.02 // tight
-	rankMax       = 15 // General
+	rankMax       = 15   // General
 
 	// Cannon Fodder waits 3 frames at 50 Hz, then counts a squad cooldown.
 	// Ranks 0–3 use cooldown 5, so a shot every 6 ticks (0.36 s).
@@ -610,7 +610,11 @@ func (w *World) kill(u *Unit) {
 	u.VX = 0
 	u.VY = 0
 	w.dropFromFile(u.ID)
-	w.emitFrom(CueDeath, u.X, u.Y, u.ID)
+	kind := CueDeath
+	if u.Side == SideCivilian {
+		kind = CueCry
+	}
+	w.emitFrom(kind, u.X, u.Y, u.ID)
 }
 
 func (w *World) dropFromFile(id int) {

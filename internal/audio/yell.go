@@ -80,6 +80,37 @@ func Pitch(pcm []byte, rate float64) []byte {
 	return out
 }
 
+// crySamples is about 200 ms, higher than the soldier yell.
+const crySamples = SampleRate * 200 / 1000
+
+// Cry is a short civilian shout. It sits above the soldier yell.
+func Cry() []byte {
+	out := make([]byte, crySamples*4)
+	var noise lcg = 0xC17
+	var phase float64
+	for i := 0; i < crySamples; i++ {
+		t := float64(i) / SampleRate
+		f0 := 340 + 90*math.Exp(-t*10)
+		phase += f0 / SampleRate
+		s := 0.0
+		for h := 1; h <= 4; h++ {
+			s += math.Sin(2*math.Pi*phase*float64(h)) / float64(h)
+		}
+		s /= 2.1
+		breath := noise.signed() * 0.05 * math.Exp(-t*30)
+		env := math.Exp(-t * 8)
+		if t < 0.01 {
+			env *= t / 0.01
+		}
+		remain := float64(crySamples-1-i) / SampleRate
+		if remain < 0.02 {
+			env *= remain / 0.02
+		}
+		putStereo(out, i, (s+breath)*env)
+	}
+	return out
+}
+
 // DeathPCM is the yell at the pitch for this unit id.
 func DeathPCM(id int) []byte {
 	return Pitch(Yell(), deathRates[DeathVariant(id)])

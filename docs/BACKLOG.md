@@ -40,7 +40,7 @@ Do not rebuild these.
 
 - Grunts: posted, patrol, Mission 2+ chase, burst fire, short hearing.
 - Grenadiers and rocketeers. Door huts spawn grunts only. Plain huts are scenery.
-- Civilians wander, do not shoot, and can be shot. `protect_civilians` parses and does nothing.
+- Civilians wander, flee a nearby shot or blast, and do not shoot. `protect_civilians` loses the phase when one dies. A wound does not. `m04p03` does not list it.
 - One vehicle, the skidoo. Player drive and gun. Enemy driver, ram, and armed burst. Rockets and blasts kill it. MG fire does not.
 - The opening helicopter drops the squad and leaves. It is not a vehicle and does not fight.
 - Crates, barrels, mines, water, bridges, ice, cliffs, quicksand.
@@ -51,20 +51,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 ## Gaps, in order
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
-
-### 1. Protect civilians
-
-A phase that lists `protect_civilians` is lost when a civilian dies, including a wound that is later finished, a blast, a mine, quicksand, or a ram. The loss waits on the same in-flight shots as any other result. `kill_all_enemy` still ignores civilians.
-
-A civilian who is not escorting walks away from a blast or a shot inside about two tiles, then resumes the wander. He still does not shoot or chase.
-
-`m04p03` Village People already has civilians and does not list `protect_civilians`. Leave that phase until someone asks to turn the fail on.
-
-Editor. A civilian icon. The stamp writes `civilians` at that tile. Load the civilians already on a phase before the first save. Drag moves one. Delete removes one. H waits for chunk 4.
-
-Pictures. Keep `civilian/idle` (4 frames, 8 fps, loop), `civilian/walk` (6 frames, 12 fps, loop), `civilian/death`, and `civilian/corpse`. Cell 112×128, anchor 56,120. Fleeing plays walk. Add `civilian/swim` and `civilian/sink` at that same cell, five rows. One side pose copied across the rows is enough, as on the enemy swim. No shoot, kneel, or salute.
-
-Sound. A civilian death emits `CueCry` instead of `CueDeath`. One short higher cry, about 200 ms, synthesised. The phase-fail plaque stays the existing fail sting. Fleeing is silent.
 
 ### 2. Escort, hostages, rescue tent
 

@@ -144,7 +144,7 @@ func TestCrateChainBoomsForEachCrate(t *testing.T) {
 
 func TestKillEmitsOneDeathCue(t *testing.T) {
 	w := NewEmpty()
-	u := w.SpawnUnit(SideCivilian, Vec2{X: 10, Y: 20})
+	u := w.SpawnUnit(SideEnemy, Vec2{X: 10, Y: 20})
 	id := u.ID
 	w.kill(u)
 	cues := w.TakeCues()
@@ -202,8 +202,8 @@ func TestExplosionBoomsOnceAndYellsPerMan(t *testing.T) {
 	b := w.SpawnUnit(SideCivilian, Vec2{X: 8, Y: 0})
 	w.explode(4, 0, 0)
 	cues := w.TakeCues()
-	if len(cues) != 3 || cues[0].Kind != CueBoom || cues[1].Kind != CueDeath || cues[2].Kind != CueDeath {
-		t.Fatalf("cues=%v, want one boom and two yells", cues)
+	if len(cues) != 3 || cues[0].Kind != CueBoom || cues[1].Kind != CueDeath || cues[2].Kind != CueCry {
+		t.Fatalf("cues=%v, want a boom, a yell, and a cry", cues)
 	}
 	if cues[0].X != 4 || cues[1].ID != a.ID || cues[2].ID != b.ID {
 		t.Fatalf("cues=%v", cues)

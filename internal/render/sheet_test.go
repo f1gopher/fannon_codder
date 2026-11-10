@@ -341,6 +341,8 @@ func TestCivilianSheets(t *testing.T) {
 		{"civilian/walk", 6, 12, true},
 		{"civilian/death", 6, 15, false},
 		{"civilian/corpse", 1, 1, false},
+		{"civilian/swim", 1, 8, true},
+		{"civilian/sink", 1, 4, false},
 	}
 	for _, tc := range want {
 		sh := lib.Get(tc.key)

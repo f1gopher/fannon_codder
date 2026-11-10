@@ -6,6 +6,19 @@ import (
 	"testing"
 )
 
+func TestCryIsShortAndHigher(t *testing.T) {
+	c := Cry()
+	if len(c) != crySamples*4 {
+		t.Fatalf("len=%d, want %d", len(c), crySamples*4)
+	}
+	if crySamples > SampleRate/4 {
+		t.Fatal("a cry should stay under half a second")
+	}
+	if crossings(c) <= crossings(Yell()) {
+		t.Fatal("the cry should sit higher than the soldier yell")
+	}
+}
+
 func TestYellShape(t *testing.T) {
 	a := Yell()
 	b := Yell()

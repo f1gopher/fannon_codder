@@ -15,8 +15,7 @@ type Objective int
 const (
 	KillAllEnemy Objective = iota
 	DestroyEnemyBuildings
-	// ProtectCivilians is reserved for a later chunk. It parses so phase JSON
-	// can name it, and it does not fail or block a phase yet.
+	// ProtectCivilians loses the phase when a civilian dies. A wound does not.
 	ProtectCivilians
 )
 
@@ -62,10 +61,34 @@ func (w *World) HoldOutcome() bool {
 	if w == nil || w.Status != Playing || len(w.Objectives) == 0 || !w.unresolvedHarm() {
 		return false
 	}
-	if !w.anyLiving(SidePlayer) {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() {
 		return true
 	}
 	return w.objectivesMet()
+}
+
+// protectFailed is a dead civilian on a phase that must keep them alive.
+// A man who is only wounded has not failed it yet.
+func (w *World) protectFailed() bool {
+	if !w.hasObjective(ProtectCivilians) {
+		return false
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Side == SideCivilian && u.Dead() {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *World) hasObjective(o Objective) bool {
+	for _, have := range w.Objectives {
+		if have == o {
+			return true
+		}
+	}
+	return false
 }
 
 // unresolvedHarm is something already started that can still change who lives.
@@ -95,7 +118,9 @@ func (w *World) objectivesMet() bool {
 				return false
 			}
 		case ProtectCivilians:
-			// Unused. Killing civilians does not fail Village People.
+			if w.protectFailed() {
+				return false
+			}
 		}
 	}
 	return true
@@ -108,7 +133,7 @@ func (w *World) evaluateObjectives() {
 	if w.unresolvedHarm() {
 		return
 	}
-	if !w.anyLiving(SidePlayer) {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() {
 		w.Status = Lost
 		w.Firing = false
 		return

@@ -28,8 +28,8 @@ type propCel struct {
 }
 
 var propLib struct {
-	once                                 sync.Once
-	door, plain, grenade, rocket, barrel *propCel
+	once                                        sync.Once
+	door, plain, grenade, rocket, barrel, civil *propCel
 }
 
 func sheets() (door, plain, grenade, rocket, barrel *propCel) {
@@ -39,8 +39,14 @@ func sheets() (door, plain, grenade, rocket, barrel *propCel) {
 		propLib.grenade, _ = loadCel("crate/grenade")
 		propLib.rocket, _ = loadCel("crate/rocket")
 		propLib.barrel, _ = loadCel("barrel/drum")
+		propLib.civil, _ = loadCelRow("civilian/idle", 2)
 	})
 	return propLib.door, propLib.plain, propLib.grenade, propLib.rocket, propLib.barrel
+}
+
+func civilianCel() *propCel {
+	sheets()
+	return propLib.civil
 }
 
 type celManifest struct {
@@ -153,6 +159,17 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		}
 		drawPropShadow(dst, barrel, bx, by, s)
 		drawCel(dst, barrel, bx, by, s)
+	}
+	civil := civilianCel()
+	for _, c := range e.civilians {
+		p := sim.TileCenter(c.X, c.Y)
+		sx, sy := e.worldToScreen(p.X, p.Y)
+		if civil == nil || civil.img == nil {
+			fillRect(dst, int(sx-4*s), int(sy-8*s), int(8*s), int(10*s), color.RGBA{R: 0xe6, G: 0xd2, B: 0x3a, A: 0xff})
+			continue
+		}
+		drawPropShadow(dst, civil, sx, sy, s)
+		drawCel(dst, civil, sx, sy, s)
 	}
 	for _, p := range e.pickups {
 		c := sim.TileCenter(p.X, p.Y)

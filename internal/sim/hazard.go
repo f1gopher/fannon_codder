@@ -8,6 +8,10 @@ const (
 
 	CivilianSpeed = 14.0
 	civilianPause = 0.8
+	// civilianFlee is about two tiles. A shot or a blast inside it
+	// sends a wandering civilian the other way.
+	civilianFlee     = 2 * float64(TileSize)
+	civilianFleeTime = 0.7
 )
 
 // trapQuicksand sticks anyone already standing in a pool so they cannot walk out.
@@ -108,6 +112,11 @@ func (w *World) stepCivilians(dt float64) {
 		if u.Side != SideCivilian || !u.Living() || u.Sinking {
 			continue
 		}
+		if !u.Escorting {
+			if tx, ty, ok := w.civilianThreat(u); ok {
+				w.fleeCivilian(u, tx, ty)
+			}
+		}
 		u.WanderT -= dt
 		if u.WanderT <= 0 {
 			w.pickWander(u)
@@ -116,27 +125,71 @@ func (w *World) stepCivilians(dt float64) {
 	}
 }
 
+// civilianThreat is the nearest live round or blast inside civilianFlee.
+func (w *World) civilianThreat(u *Unit) (float64, float64, bool) {
+	best := civilianFlee
+	var x, y float64
+	found := false
+	note := func(px, py float64) {
+		d := hypot(px-u.X, py-u.Y)
+		if d < best {
+			best = d
+			x, y = px, py
+			found = true
+		}
+	}
+	for i := range w.Projectiles {
+		p := &w.Projectiles[i]
+		if p.Alive {
+			note(p.X, p.Y)
+		}
+	}
+	for i := range w.Explosions {
+		note(w.Explosions[i].X, w.Explosions[i].Y)
+	}
+	return x, y, found
+}
+
+func (w *World) fleeCivilian(u *Unit, tx, ty float64) {
+	dx, dy := u.X-tx, u.Y-ty
+	d := hypot(dx, dy)
+	if d < 1 {
+		ang := w.rng.Float64() * 2 * math.Pi
+		dx, dy = math.Cos(ang), math.Sin(ang)
+		d = 1
+	}
+	x := u.X + dx/d*civilianFlee
+	y := u.Y + dy/d*civilianFlee
+	u.WanderX, u.WanderY = clampStroll(w, x, y)
+	u.WanderT = civilianFleeTime
+}
+
 func (w *World) pickWander(u *Unit) {
 	ang := w.rng.Float64() * 2 * math.Pi
 	dist := 24 + w.rng.Float64()*40
 	x := u.X + math.Cos(ang)*dist
 	y := u.Y + math.Sin(ang)*dist
-	if w.Map.active() {
-		mw, mh := w.Map.PixelSize()
-		margin := float64(TileSize)
-		if x < margin {
-			x = margin
-		}
-		if y < margin {
-			y = margin
-		}
-		if x > mw-margin {
-			x = mw - margin
-		}
-		if y > mh-margin {
-			y = mh - margin
-		}
-	}
-	u.WanderX, u.WanderY = x, y
+	u.WanderX, u.WanderY = clampStroll(w, x, y)
 	u.WanderT = civilianPause + w.rng.Float64()*1.6
+}
+
+func clampStroll(w *World, x, y float64) (float64, float64) {
+	if w == nil || !w.Map.active() {
+		return x, y
+	}
+	mw, mh := w.Map.PixelSize()
+	margin := float64(TileSize)
+	if x < margin {
+		x = margin
+	}
+	if y < margin {
+		y = margin
+	}
+	if x > mw-margin {
+		x = mw - margin
+	}
+	if y > mh-margin {
+		y = mh - margin
+	}
+	return x, y
 }

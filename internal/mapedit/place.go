@@ -18,6 +18,7 @@ const (
 	pickBarrel
 	pickHut
 	pickCrate
+	pickCivilian
 )
 
 type pick struct {
@@ -40,6 +41,7 @@ const (
 	stampDoor      = "door"
 	stampGrenades  = "grenades"
 	stampRockets   = "rockets"
+	stampCivilian  = "civilian"
 )
 
 func stampName(s string) string {
@@ -60,13 +62,15 @@ func stampName(s string) string {
 		return "grenade crate"
 	case stampRockets:
 		return "rocket crate"
+	case stampCivilian:
+		return "civilian"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    S saves"
+	return "left-click places    drag moves    Del removes    W patrol point    Shift+1 civilian    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -113,6 +117,10 @@ func (e *Editor) pickAt(wx, wy float64) pick {
 			c = sim.TileCenter(pt[0], pt[1])
 			take(c.X, c.Y, pick{kind: pickLine, i: i, j: j})
 		}
+	}
+	for i, c := range e.civilians {
+		p := sim.TileCenter(c.X, c.Y)
+		take(p.X, p.Y, pick{kind: pickCivilian, i: i})
 	}
 	for i, b := range e.barrels {
 		c := sim.TileCenter(b.X, b.Y)
@@ -168,6 +176,8 @@ func (e *Editor) beginGrab(p pick, wx, wy float64) {
 		e.homeHut = e.buildings[p.i]
 	case pickCrate:
 		e.homeCrate = e.pickups[p.i]
+	case pickCivilian:
+		e.homeCivilian = e.civilians[p.i]
 	}
 }
 
@@ -238,6 +248,14 @@ func (e *Editor) dragGrab(wx, wy float64) {
 			e.dirty = true
 			e.status = ""
 		}
+	case pickCivilian:
+		i := e.grab.i
+		nx, ny := e.clampTile(e.homeCivilian.X+dx, e.homeCivilian.Y+dy)
+		if e.civilians[i].X != nx || e.civilians[i].Y != ny {
+			e.civilians[i].X, e.civilians[i].Y = nx, ny
+			e.dirty = true
+			e.status = ""
+		}
 	}
 }
 
@@ -271,6 +289,9 @@ func (e *Editor) placeAt(wx, wy float64) {
 		}
 		e.buildings = append(e.buildings, b)
 		e.sel = pick{kind: pickHut, i: len(e.buildings) - 1}
+	case stampCivilian:
+		e.civilians = append(e.civilians, data.Enemy{X: tx, Y: ty})
+		e.sel = pick{kind: pickCivilian, i: len(e.civilians) - 1}
 	case stampGrenades, stampRockets:
 		kind := "grenades"
 		if e.stamp == stampRockets {
@@ -321,6 +342,8 @@ func (e *Editor) removeSelected() {
 		e.buildings = append(e.buildings[:p.i], e.buildings[p.i+1:]...)
 	case pickCrate:
 		e.pickups = append(e.pickups[:p.i], e.pickups[p.i+1:]...)
+	case pickCivilian:
+		e.civilians = append(e.civilians[:p.i], e.civilians[p.i+1:]...)
 	}
 	e.sel = pick{}
 	e.grabbing = false

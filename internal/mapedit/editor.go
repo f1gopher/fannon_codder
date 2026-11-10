@@ -45,6 +45,7 @@ type Editor struct {
 	buildings              []data.BuildingSpec
 	pickups                []data.PickupSpec
 	barrels                []data.BarrelSpec
+	civilians              []data.Enemy
 	phase                  *data.Phase
 	memos                  map[int]memo
 	dirty                  bool
@@ -61,6 +62,7 @@ type Editor struct {
 	homeBarrel             data.BarrelSpec
 	homeHut                data.BuildingSpec
 	homeCrate              data.PickupSpec
+	homeCivilian           data.Enemy
 	armPlace               bool
 	armX, armY             float64
 	armWX, armWY           float64
@@ -142,6 +144,7 @@ func (e *Editor) load(i int) {
 	e.buildings = nil
 	e.pickups = nil
 	e.barrels = nil
+	e.civilians = nil
 	e.phase = nil
 	e.dirty = false
 	if m, ok := e.memos[i]; ok && m.phase != nil {
@@ -208,6 +211,7 @@ func (e *Editor) load(i int) {
 	e.buildings = append([]data.BuildingSpec(nil), p.Buildings...)
 	e.pickups = append([]data.PickupSpec(nil), p.Pickups...)
 	e.barrels = append([]data.BarrelSpec(nil), p.Barrels...)
+	e.civilians = append([]data.Enemy(nil), p.Civilians...)
 	e.phase = p
 	e.dirty = false
 }
@@ -288,7 +292,7 @@ func (e *Editor) pointer() {
 	down := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	if onBar && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if i, ok := ToolHit(cx, cy, e.scale); ok {
-			e.stamp = barStamps[i]
+			e.stamp = allStamps()[i]
 			e.status = ""
 		}
 	}
@@ -755,6 +759,13 @@ func (e *Editor) drawSelection(dst *ebiten.Image) {
 		pk := e.pickups[e.sel.i]
 		x, y = e.markAt(pk.X, pk.Y)
 		r = 6 * s
+	case pickCivilian:
+		if e.sel.i >= len(e.civilians) {
+			return
+		}
+		c := e.civilians[e.sel.i]
+		x, y = e.markAt(c.X, c.Y)
+		r = 6 * s
 	case pickHut:
 		if e.sel.i >= len(e.buildings) {
 			return
@@ -772,26 +783,39 @@ func (e *Editor) drawSelection(dst *ebiten.Image) {
 }
 
 func (e *Editor) stampKey() {
+	shift := ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight)
+	n := 0
 	switch {
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit1), inpututil.IsKeyJustPressed(ebiten.KeyNumpad1):
-		e.stamp = stampGrunt
+		n = 1
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit2), inpututil.IsKeyJustPressed(ebiten.KeyNumpad2):
-		e.stamp = stampGrenadier
+		n = 2
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit3), inpututil.IsKeyJustPressed(ebiten.KeyNumpad3):
-		e.stamp = stampRocketeer
+		n = 3
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit4), inpututil.IsKeyJustPressed(ebiten.KeyNumpad4):
-		e.stamp = stampPatrol
+		n = 4
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit5), inpututil.IsKeyJustPressed(ebiten.KeyNumpad5):
-		e.stamp = stampBarrel
+		n = 5
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit6), inpututil.IsKeyJustPressed(ebiten.KeyNumpad6):
-		e.stamp = stampHut
+		n = 6
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit7), inpututil.IsKeyJustPressed(ebiten.KeyNumpad7):
-		e.stamp = stampDoor
+		n = 7
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit8), inpututil.IsKeyJustPressed(ebiten.KeyNumpad8):
-		e.stamp = stampGrenades
+		n = 8
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit9), inpututil.IsKeyJustPressed(ebiten.KeyNumpad9):
-		e.stamp = stampRockets
+		n = 9
 	}
+	if n == 0 {
+		return
+	}
+	row := barStamps
+	if shift {
+		row = barRow2
+	}
+	if n-1 >= len(row) {
+		return
+	}
+	e.stamp = row[n-1]
 }
 
 // drawPatrol strokes the curve the level gave this soldier.

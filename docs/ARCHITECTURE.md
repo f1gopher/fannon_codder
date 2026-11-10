@@ -39,7 +39,7 @@ Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, m
 
 `go run ./cmd/mapedit` from the repo root. It lists `campaign.json` in order. A left rail picks the phase. Under the list, the rail shows the selected phase's terrain and its size. The rest of the window is that whole map at the game's picture scale. It opens on the painted terrain. Escape closes it. A gold diamond marks the player start tile. A red diamond marks each placed enemy. A patrol's curve is drawn in that same red. A hut draws from `hut/door` or `hut/plain` on its footprint, and a crate draws from `crate/grenade` or `crate/rocket` on its tile. A mine cell draws a red drum. An exploding barrel draws `barrel/drum`. Birds are not drawn. Wheel and the arrow keys scroll in every view. A left drag on empty ground scrolls too, except in the regions view.
 
-A menu bar across the top shows an icon for each thing you can place: grunt, grenadier, rocketeer, patrol, barrel, hut, door hut, grenade crate, rocket crate. The chosen name sits to the right of the icons. A click on an icon selects it, and resting on an icon shows its name. Keys 1–9 select the same tools, in that order. A left drag on the start, an enemy, a patrol point, a barrel, a hut, or a crate moves that thing by whole tiles. The window title grows a * until you save. A left click on empty ground places the current tool. A left drag on empty ground still scrolls, and in the regions view it still draws a tree ring. W adds a point to the selected patrol. Delete removes the selection. The player start cannot be removed. S writes that phase file: `playerStart`, `enemies`, `buildings`, `pickups`, and `barrels`, and leaves the rest of the file as it was loaded. A tree ring drawn in the regions view is still session-only. Switching phase keeps unsaved placements until you quit.
+A menu bar across the top shows an icon for each thing you can place. The first row is grunt, grenadier, rocketeer, patrol, barrel, hut, door hut, grenade crate, and rocket crate. The second row starts with the civilian. The chosen name sits to the right of the first row. A click on an icon selects it, and resting on an icon shows its name. Keys 1–9 select the first row. Shift+1 selects the civilian. A left drag on the start, an enemy, a patrol point, a barrel, a hut, a crate, or a civilian moves that thing by whole tiles. The window title grows a * until you save. A left click on empty ground places the current tool. A left drag on empty ground still scrolls, and in the regions view it still draws a tree ring. W adds a point to the selected patrol. Delete removes the selection. The player start cannot be removed. S writes that phase file: `playerStart`, `enemies`, `buildings`, `pickups`, `barrels`, and `civilians`, and leaves the rest of the file as it was loaded. A tree ring drawn in the regions view is still session-only. Switching phase keeps unsaved placements until you quit.
 
 A phase is either a tile grid or freeform regions. Regions are a closed ring of world-pixel points. The map starts as that terrain's open ground, and each region paints over it. A later region wins on the overlap. A tree region is a canopy. Water, ice, sand, rock, a ramp, a timber bridge, and mines paint as those materials. `PrepareChart` in `internal/terrain` does that paint. The battle calls it for a region phase.
 
@@ -75,7 +75,7 @@ The only vehicle is the skidoo. A jeep would be the same struct with another ski
 
 A battle opens with the player squad still aboard a helicopter. It flies in from the north-west along the nose of `chopper/fly`. One rope hangs straight down from the door, or two side by side when more than one soldier is aboard. They slide down those ropes, walk out into a wedge north of the leader, and kneel facing north. The leader stays on the player start. A spot in water, a tree, or a cliff keeps that man's spawn instead. They stay kneeling in that wedge until the squad is given a move. A shot, from that wedge or from any other kneeling squad, keeps the kneel. Orders, guns, and `World.Step` wait until the arrival kneel is done. The ropes reel in and the aircraft leaves to the south-east while the phase plays. Pause holds the arrival. The rotor is a mixer loop until the aircraft is gone, and a scene change stops it. The helicopter is not a vehicle: nothing boards it, and it does not fight.
 
-Objectives in use are `kill_all_enemy` and `destroy_enemy_buildings`. `protect_civilians` parses and does not change the phase.
+Objectives in use are `kill_all_enemy`, `destroy_enemy_buildings`, and `protect_civilians`. A phase that lists `protect_civilians` is lost when a civilian dies. A wound does not lose it. The loss waits while a round, grenade, blast, or flying roof is still in the air. `kill_all_enemy` still ignores civilians. Mission 4 phase 3 has civilians and does not list `protect_civilians`.
 
 ## Combat
 
@@ -159,7 +159,7 @@ Boot Hill opens the table with H (`drawHeroes`). While it is open, click or Ente
 
 ## Hazards and water
 
-Civilians wander and do not shoot. Killing one does not fail the phase. Quicksand traps on entry and kills after `SinkTime` (2 s). A mine explodes like a grenade when a living unit's centre steps on it, then the tile is grass.
+Civilians wander and do not shoot. A shot or a blast inside about two tiles sends one who is not escorting the other way, then he wanders again. Fleeing is silent. Quicksand traps on entry and kills after `SinkTime` (2 s). A mine explodes like a grenade when a living unit's centre steps on it, then the tile is grass.
 
 Shallow water is `ShallowSpeedMul` (0.5) and can still fire. Deep water is `DeepSpeedMul` (1/3). Swimmers cannot fire or throw. A bridge is land. Ice is grass speed on foot. The skidoo skids.
 
@@ -185,7 +185,8 @@ PCM is 16-bit stereo at 44100 Hz. One mixer per process. A second `NewMixer` pan
 | --- | --- |
 | `CueGun` | `addMG`, on foot and mounted |
 | `CueBoom` | once at the top of `explode` |
-| `CueDeath` | `kill`, and only on the living-to-dead step. Pitch is `id % 3` |
+| `CueDeath` | `kill` of a soldier, and only on the living-to-dead step. Pitch is `id % 3` |
+| `CueCry` | `kill` of a civilian. One higher cry, about 200 ms |
 | `CueThrow` | `launchGrenade` |
 | `CueRocket` | `launchRocket`, at the tube |
 | `CueSplash` | on-foot `InWater` goes false to true, and the unit was already sampled. Standing in water, shallow to deep, and leaving are silent |

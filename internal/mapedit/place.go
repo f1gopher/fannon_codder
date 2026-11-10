@@ -45,6 +45,8 @@ const (
 	stampCivilian  = "civilian"
 	stampHostage   = "hostage"
 	stampTent      = "tent"
+	stampLeader    = "leader"
+	stampHandover  = "handover"
 )
 
 func stampName(s string) string {
@@ -71,13 +73,17 @@ func stampName(s string) string {
 		return "hostage"
 	case stampTent:
 		return "tent"
+	case stampLeader:
+		return "leader"
+	case stampHandover:
+		return "handover"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    S saves"
+	return "left-click places    drag moves    Del removes    W patrol point    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -292,7 +298,7 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampBarrel:
 		e.barrels = append(e.barrels, data.BarrelSpec{X: tx, Y: ty})
 		e.sel = pick{kind: pickBarrel, i: len(e.barrels) - 1}
-	case stampHut, stampDoor, stampTent:
+	case stampHut, stampDoor, stampTent, stampHandover:
 		tw, th := 2, 2
 		if tx > e.grid.W-tw {
 			tx = e.grid.W - tw
@@ -311,6 +317,9 @@ func (e *Editor) placeAt(wx, wy float64) {
 		if e.stamp == stampTent {
 			b.Kind = "tent"
 		}
+		if e.stamp == stampHandover {
+			b.Kind = "handover"
+		}
 		e.buildings = append(e.buildings, b)
 		e.sel = pick{kind: pickHut, i: len(e.buildings) - 1}
 	case stampCivilian:
@@ -319,6 +328,9 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampHostage:
 		e.hostages = append(e.hostages, data.Enemy{X: tx, Y: ty})
 		e.sel = pick{kind: pickHostage, i: len(e.hostages) - 1}
+	case stampLeader:
+		e.enemies = append(e.enemies, data.Enemy{X: tx, Y: ty, Kind: "leader"})
+		e.sel = pick{kind: pickEnemy, i: len(e.enemies) - 1}
 	case stampGrenades, stampRockets:
 		kind := "grenades"
 		if e.stamp == stampRockets {

@@ -15,7 +15,7 @@ var barStamps = []string{
 }
 
 // barRow2 is the second menu row. Shift+1 selects the first icon, and so on.
-var barRow2 = []string{stampCivilian, stampHostage, stampTent}
+var barRow2 = []string{stampCivilian, stampHostage, stampTent, stampLeader, stampHandover}
 
 func menuRows() [][]string {
 	return [][]string{barStamps, barRow2}
@@ -102,7 +102,7 @@ func iconCels() []*propCel {
 		_, plain, grenade, rockets, barrel := sheets()
 		door, _, _, _, _ := sheets()
 		civil := civilianCel()
-		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel()}
+		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel(), leaderCel(), handoverCel()}
 	})
 	return iconLib.cels
 }
@@ -132,6 +132,10 @@ func (e *Editor) drawBar(screen *ebiten.Image) {
 			} else if stamp == stampTent {
 				fillRect(screen, int(x+4), int(y+size*0.35), int(size-8), int(size*0.45), color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 255})
 				fillRect(screen, int(x+size/2-1), int(y+size*0.42), 2, int(size*0.3), color.RGBA{R: 0xc8, G: 0x28, B: 0x28, A: 255})
+			} else if stamp == stampLeader {
+				fillRect(screen, int(x+size*0.28), int(y+size*0.28), int(size*0.44), int(size*0.5), color.RGBA{R: 0x2a, G: 0x32, B: 0x48, A: 255})
+			} else if stamp == stampHandover {
+				fillRect(screen, int(x+6), int(y+size*0.4), int(size-12), int(size*0.35), color.RGBA{R: 0xc4, G: 0xb4, B: 0x88, A: 255})
 			}
 			if stamp == stampPatrol {
 				drawPatrolIcon(screen, x, y, size)
@@ -181,6 +185,10 @@ func stampTip(stamp string) string {
 		return "Hostage — left click places"
 	case stampTent:
 		return "Tent — left click places"
+	case stampLeader:
+		return "Leader — left click places"
+	case stampHandover:
+		return "Handover — left click places"
 	default:
 		return "Left click places"
 	}

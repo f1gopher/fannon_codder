@@ -731,6 +731,41 @@ func TestPatrolLineMustBeOpen(t *testing.T) {
 	}
 }
 
+func TestLeaderStaysPosted(t *testing.T) {
+	rows := make([]string, 4)
+	for i := range rows {
+		rows[i] = "...."
+	}
+	p := &Phase{
+		Mission:     2,
+		Deploy:      1,
+		PlayerStart: [2]int{0, 0},
+		Map:         Tilemap{W: 4, H: 4, Tiles: rows},
+		Enemies:     []Enemy{{X: 2, Y: 2, Kind: "leader"}},
+		Buildings:   []BuildingSpec{{X: 0, Y: 2, W: 2, H: 2, Kind: "handover"}},
+		Objectives:  []string{"kidnap_leader"},
+	}
+	w, err := p.World()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var leader *sim.Unit
+	for i := range w.Units {
+		if w.Units[i].Kind == sim.KindLeader {
+			leader = &w.Units[i]
+		}
+	}
+	if leader == nil || leader.Aggressive || leader.Side != sim.SideEnemy {
+		t.Fatalf("leader=%v", leader)
+	}
+	if len(w.Buildings) != 1 || w.Buildings[0].Kind != sim.HutHandover {
+		t.Fatalf("buildings=%v", w.Buildings)
+	}
+	if o, ok := sim.ParseObjective("kidnap_leader"); !ok || o != sim.KidnapLeader {
+		t.Fatal("objective")
+	}
+}
+
 func TestUnknownEnemyKind(t *testing.T) {
 	rows := make([]string, 4)
 	for i := range rows {

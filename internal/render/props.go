@@ -9,13 +9,14 @@ import (
 )
 
 var (
-	hutFill   = color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff}
-	tentFill  = color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 0xff}
-	crossFill = color.RGBA{R: 0xc8, G: 0x28, B: 0x28, A: 0xff}
-	doorFill  = color.RGBA{R: 0x12, G: 0x12, B: 0x12, A: 0xff}
-	crateFill = color.RGBA{R: 0x8a, G: 0x8a, B: 0x8a, A: 0xff}
-	bombFill  = color.RGBA{R: 0x22, G: 0x22, B: 0x22, A: 0xff}
-	blastFill = color.RGBA{R: 0xe0, G: 0x70, B: 0x20, A: 0xff}
+	hutFill      = color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff}
+	tentFill     = color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 0xff}
+	handoverFill = color.RGBA{R: 0xc4, G: 0xb4, B: 0x88, A: 0xff}
+	crossFill    = color.RGBA{R: 0xc8, G: 0x28, B: 0x28, A: 0xff}
+	doorFill     = color.RGBA{R: 0x12, G: 0x12, B: 0x12, A: 0xff}
+	crateFill    = color.RGBA{R: 0x8a, G: 0x8a, B: 0x8a, A: 0xff}
+	bombFill     = color.RGBA{R: 0x22, G: 0x22, B: 0x22, A: 0xff}
+	blastFill    = color.RGBA{R: 0xe0, G: 0x70, B: 0x20, A: 0xff}
 )
 
 var (
@@ -33,6 +34,9 @@ func drawBuildingRect(dst *ebiten.Image, cam sim.Camera, b sim.Building) {
 	fill := hutFill
 	if b.Kind == sim.HutTent {
 		fill = tentFill
+	}
+	if b.Kind == sim.HutHandover {
+		fill = handoverFill
 	}
 	fillRectF(dst, x, y, b.W, b.H, fill)
 	if b.Kind == sim.HutTent {

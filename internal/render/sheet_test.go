@@ -435,6 +435,70 @@ func TestHostageAndTentSheets(t *testing.T) {
 	}
 }
 
+func TestLeaderAndHandoverSheets(t *testing.T) {
+	lib, err := Load(art.Files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []struct {
+		key    string
+		frames int
+		fps    float64
+		loop   bool
+		fw, fh int
+	}{
+		{"leader/idle", 1, 8, true, 104, 124},
+		{"leader/walk", 6, 12, true, 104, 124},
+		{"leader/shoot", 2, 16.67, false, 150, 124},
+		{"leader/death", 6, 15, false, 180, 124},
+		{"leader/corpse", 1, 1, false, 180, 124},
+		{"leader/swim", 1, 8, true, 150, 80},
+		{"leader/sink", 1, 4, false, 104, 124},
+	}
+	for _, tc := range want {
+		sh := lib.Get(tc.key)
+		if sh == nil {
+			t.Fatalf("missing %s", tc.key)
+		}
+		if sh.Frames != tc.frames || sh.FPS != tc.fps || sh.Loop != tc.loop || sh.FrameW != tc.fw || sh.FrameH != tc.fh {
+			t.Fatalf("%s frames=%d fps=%v loop=%v cell=%dx%d", tc.key, sh.Frames, sh.FPS, sh.Loop, sh.FrameW, sh.FrameH)
+		}
+	}
+	idle := decodeArtPNG(t, "leader/idle.png")
+	if opaqueCount(idle, 0, 2, 104, 124) < 200 {
+		t.Fatal("leader south idle is empty")
+	}
+	// The coat is navy, not the grunt's brown.
+	r, g, b, _ := idle.At(52, 2*124+70).RGBA()
+	if b>>8+15 < r>>8 || b>>8+15 < g>>8 {
+		t.Fatalf("leader coat is not darker blue %d %d %d", r>>8, g>>8, b>>8)
+	}
+	walk := decodeArtPNG(t, "leader/walk.png")
+	if frameDelta(walk, 104, 0, 3) < 0.01 {
+		t.Fatal("leader walk does not stride")
+	}
+	post := lib.Get("hut/handover")
+	if post == nil || post.Frames != 1 || post.FrameW != 256 || post.FrameH != 320 || post.AnchorX != 128 || post.AnchorY != 312 {
+		t.Fatalf("hut/handover %+v", post)
+	}
+	img := decodeArtPNG(t, "hut/handover.png")
+	red := 0
+	for y := 0; y < img.Bounds().Dy(); y++ {
+		for x := 0; x < img.Bounds().Dx(); x++ {
+			pr, pg, pb, pa := img.At(x, y).RGBA()
+			if pa>>8 < 20 {
+				continue
+			}
+			if pr>>8 > 150 && pg>>8 < 80 && pb>>8 < 80 {
+				red++
+			}
+		}
+	}
+	if red > 40 {
+		t.Fatalf("handover still has a red mark (%d px)", red)
+	}
+}
+
 func TestGroundSheets(t *testing.T) {
 	lib, err := Load(art.Files)
 	if err != nil {

@@ -113,6 +113,9 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 		if b.Kind == sim.HutTent {
 			col = color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 0xff}
 		}
+		if b.Kind == sim.HutHandover {
+			col = color.RGBA{R: 0xc4, G: 0xb4, B: 0x88, A: 0xff}
+		}
 		fillRect(dst, x, y, bw, bh, col)
 	}
 	for i := range w.Barrels {
@@ -276,6 +279,9 @@ func ringHoldsMine(r ground.ChartRegion, m sim.Map) bool {
 }
 
 func overviewUnit(u *sim.Unit) color.RGBA {
+	if u.Kind == sim.KindLeader {
+		return color.RGBA{R: 0x2a, G: 0x32, B: 0x48, A: 0xff}
+	}
 	if u.Side == sim.SideEnemy {
 		if u.Kind == sim.KindGrenadier {
 			return color.RGBA{R: 0xe0, G: 0x60, B: 0x18, A: 0xff}

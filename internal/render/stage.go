@@ -97,7 +97,7 @@ func unitPose(u *sim.Unit, deathAge, deathDur float64) pose {
 	}
 	// A kneeling player fires from the kneel. The standing shoot sheet
 	// would pop him up.
-	if u.SinceShot < shotWindow && !playerKneeling(u) {
+	if u.SinceShot < shotWindow && !playerKneeling(u) && !u.Captured {
 		return poseShoot
 	}
 	if math.Hypot(u.VX, u.VY) > walkMin {
@@ -161,6 +161,9 @@ func sheetForPose(u *sim.Unit, p pose) *Sheet {
 }
 
 func actorKey(u *sim.Unit) string {
+	if u.Kind == sim.KindLeader {
+		return "leader"
+	}
 	switch u.Side {
 	case sim.SideCivilian:
 		return "civilian"
@@ -237,7 +240,7 @@ func poseFrame(p pose, u *sim.Unit, sh *Sheet) int {
 	case poseIdle:
 		// Idle frames grow the helmet. Soldiers hold the standing cel and
 		// glance instead. Civilians still play the cycle.
-		if u.Side == sim.SidePlayer || u.Side == sim.SideEnemy {
+		if u.Side == sim.SidePlayer || u.Side == sim.SideEnemy || u.Kind == sim.KindLeader {
 			return 0
 		}
 		return FrameAt(animTime, sh.FPS, sh.Frames, sh.Loop)
@@ -595,6 +598,8 @@ func buildingBody(cam sim.Camera, b sim.Building) body {
 	key := "hut/plain"
 	if b.Kind == sim.HutTent {
 		key = "hut/tent"
+	} else if b.Kind == sim.HutHandover {
+		key = "hut/handover"
 	} else if b.HasDoor {
 		key = "hut/door"
 	}

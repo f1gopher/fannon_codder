@@ -20,6 +20,9 @@ const (
 	// RescueHostages is met when every hostage has entered a tent.
 	// A hostage who dies first loses the phase.
 	RescueHostages
+	// KidnapLeader is met when the captured leader enters a handover.
+	// His death before that loses the phase.
+	KidnapLeader
 )
 
 func ParseObjective(s string) (Objective, bool) {
@@ -32,6 +35,8 @@ func ParseObjective(s string) (Objective, bool) {
 		return ProtectCivilians, true
 	case "rescue_hostages":
 		return RescueHostages, true
+	case "kidnap_leader":
+		return KidnapLeader, true
 	default:
 		return 0, false
 	}
@@ -66,7 +71,7 @@ func (w *World) HoldOutcome() bool {
 	if w == nil || w.Status != Playing || len(w.Objectives) == 0 || !w.unresolvedHarm() {
 		return false
 	}
-	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() || w.kidnapFailed() {
 		return true
 	}
 	return w.objectivesMet()
@@ -99,6 +104,37 @@ func (w *World) rescueFailed() bool {
 		}
 	}
 	return false
+}
+
+// kidnapFailed is a dead leader on a phase that must deliver him.
+func (w *World) kidnapFailed() bool {
+	if !w.hasObjective(KidnapLeader) {
+		return false
+	}
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Kind == KindLeader && u.Dead() && !u.Saved {
+			return true
+		}
+	}
+	return false
+}
+
+// leaderOutstanding is a leader who has not entered the handover.
+// A listed objective with no leader is never met.
+func (w *World) leaderOutstanding() bool {
+	saw := false
+	for i := range w.Units {
+		u := &w.Units[i]
+		if u.Kind != KindLeader {
+			continue
+		}
+		saw = true
+		if !u.Dead() && !u.Saved {
+			return true
+		}
+	}
+	return !saw
 }
 
 // hostagesOutstanding is a hostage still on the field.
@@ -155,6 +191,10 @@ func (w *World) objectivesMet() bool {
 			if w.rescueFailed() || w.hostagesOutstanding() {
 				return false
 			}
+		case KidnapLeader:
+			if w.kidnapFailed() || w.leaderOutstanding() {
+				return false
+			}
 		}
 	}
 	return true
@@ -167,7 +207,7 @@ func (w *World) evaluateObjectives() {
 	if w.unresolvedHarm() {
 		return
 	}
-	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() {
+	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() || w.kidnapFailed() {
 		w.Status = Lost
 		w.Firing = false
 		return

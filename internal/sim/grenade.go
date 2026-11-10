@@ -276,7 +276,7 @@ func (w *World) explode(x, y float64, ownerID int) {
 	}
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if !b.Alive || b.Kind == HutTent {
+		if !b.Alive || b.marker() {
 			continue
 		}
 		if circleHitsRect(x, y, GrenadeRadius, b.X, b.Y, b.W, b.H) {

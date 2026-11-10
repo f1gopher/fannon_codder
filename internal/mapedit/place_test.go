@@ -260,6 +260,63 @@ func TestHostageAndTentRoundTrip(t *testing.T) {
 	}
 }
 
+func TestLeaderAndHandoverRoundTrip(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := len(ed.enemies)
+	ed.stamp = stampLeader
+	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
+	i := len(ed.enemies) - 1
+	if i < before || ed.enemies[i].Kind != "leader" || ed.sel.kind != pickEnemy {
+		t.Fatalf("placed %+v enemies=%+v", ed.sel, ed.enemies)
+	}
+	c := sim.TileCenter(ed.enemies[i].X, ed.enemies[i].Y)
+	ed.beginGrab(ed.pickAt(c.X, c.Y), c.X, c.Y)
+	ed.dragGrab(c.X+sim.TileSize, c.Y)
+	if ed.enemies[i].X != 4 || ed.enemies[i].Y != 4 {
+		t.Fatalf("moved = %+v", ed.enemies[i])
+	}
+	ed.stamp = stampHandover
+	ed.placeAt(8*sim.TileSize, 4*sim.TileSize)
+	if len(ed.buildings) != 1 || ed.buildings[0].Kind != "handover" {
+		t.Fatalf("handover = %+v", ed.buildings)
+	}
+	ed.sel = pick{kind: pickEnemy, i: i}
+	ed.removeSelected()
+	if len(ed.enemies) != before || len(ed.buildings) != 1 || ed.buildings[0].Kind != "handover" {
+		t.Fatal("deleting the leader removed the handover")
+	}
+	ed.stamp = stampLeader
+	ed.placeAt(2*sim.TileSize, 2*sim.TileSize)
+	ed.dirty = true
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(b, p); err != nil {
+		t.Fatal(err)
+	}
+	var leaders int
+	for _, en := range p.Enemies {
+		if en.Kind == "leader" && en.X == 2 && en.Y == 2 {
+			leaders++
+		}
+	}
+	if leaders != 1 {
+		t.Fatalf("saved leader = %+v", p.Enemies)
+	}
+	if len(p.Buildings) != 1 || p.Buildings[0].Kind != "handover" {
+		t.Fatalf("saved handover = %+v", p.Buildings)
+	}
+}
+
 func TestSaveWritesPlacementsAndKeepsTheMap(t *testing.T) {
 	ed, err := New()
 	if err != nil {

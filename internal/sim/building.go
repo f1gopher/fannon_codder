@@ -20,6 +20,8 @@ const (
 	HutDoor
 	// HutTent is the rescue marker. It does not spawn, block, or take damage.
 	HutTent
+	// HutHandover is where a captured leader is delivered. Same rules as the tent.
+	HutHandover
 )
 
 // Building is a hut or a rescue tent.
@@ -102,6 +104,32 @@ func (w *World) AddTent(tx, ty, tw, th int) int {
 	}
 	w.Buildings = append(w.Buildings, b)
 	return len(w.Buildings) - 1
+}
+
+// AddHandover places the post a captured leader walks into. It does not burn.
+func (w *World) AddHandover(tx, ty, tw, th int) int {
+	if tw < 1 {
+		tw = 2
+	}
+	if th < 1 {
+		th = 2
+	}
+	b := Building{
+		X:     float64(tx * TileSize),
+		Y:     float64(ty * TileSize),
+		W:     float64(tw * TileSize),
+		H:     float64(th * TileSize),
+		Kind:  HutHandover,
+		HP:    buildingHP,
+		Alive: true,
+	}
+	w.Buildings = append(w.Buildings, b)
+	return len(w.Buildings) - 1
+}
+
+// marker is a tent or a handover. Neither blocks, burns, nor hides a shot.
+func (b *Building) marker() bool {
+	return b != nil && (b.Kind == HutTent || b.Kind == HutHandover)
 }
 
 // Holds is true when (x, y) is inside a standing building.
@@ -190,7 +218,7 @@ func (w *World) anyDoorBuilding() bool {
 func (w *World) pointInBuilding(x, y float64) bool {
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if b.Kind == HutTent {
+		if b.marker() {
 			continue
 		}
 		if b.Holds(x, y) {
@@ -205,7 +233,7 @@ func (w *World) unitHitsBuilding(x, y, half float64) bool {
 	aw, ah := half*2, half*2
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if !b.Alive || b.Kind == HutTent {
+		if !b.Alive || b.marker() {
 			continue
 		}
 		if ax < b.X+b.W && ax+aw > b.X && ay < b.Y+b.H && ay+ah > b.Y {

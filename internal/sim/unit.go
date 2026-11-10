@@ -9,6 +9,9 @@ const (
 	SideCivilian
 	// SideHostage waits to be touched, then walks behind the squad.
 	SideHostage
+	// SideCaptured is an enemy leader after a player on foot has touched him.
+	// He escorts and no longer counts as an enemy.
+	SideCaptured
 )
 
 // HP is the coarse health state. An MG round kills a standing man or drops him
@@ -28,6 +31,8 @@ const (
 	KindInfantry UnitKind = iota
 	KindGrenadier
 	KindRocketeer
+	// KindLeader fights as a posted grunt until captured, then escorts.
+	KindLeader
 )
 
 // Unit is one trooper (or later, a corpse still drawn on the map).
@@ -52,7 +57,8 @@ type Unit struct {
 	WanderY     float64
 	WanderT     float64 // seconds until the next stroll pick
 	Escorting   bool    // walking behind the squad; he does not flee a shot
-	Saved       bool    // entered the rescue tent; no longer on the field
+	Saved       bool    // entered the tent or the handover; no longer on the field
+	Captured    bool    // a leader who has been touched and left the enemy side
 	Bombs       int     // grenades a grenadier still carries
 	GrenadeWind float64 // seconds left in the throw telegraph; the bomb leaves at 0
 	GrenadeCD   float64 // seconds until the next windup may start

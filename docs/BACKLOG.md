@@ -52,22 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 3. Enemy leader
-
-`enemies[].kind` of `leader`. He fights as a posted grunt until a living player on foot touches him. Touch captures him: he stops shooting, leaves the enemy side, and escorts. He no longer blocks `kill_all_enemy`.
-
-`kidnap_leader` is met when he enters a building `kind` of `handover`. The handover is the tent rule with a different kind. His death before that loses the phase. A phase with no leader does not list this objective.
-
-No second weapon.
-
-Editor. A leader icon writes `enemies[].kind` of `leader`. A handover icon writes a building `kind` of `handover`. Drag and delete use the enemy and building paths already in the editor. Deleting the leader does not delete the handover.
-
-Pictures. New actor `leader`, grunt cell sizes so the pose code can share: idle and walk 104×124, anchor 52,116. Walk is 6 frames at 12 fps. Shoot is 150×124, anchor 60,116, two frames, 16.67 fps, not looping. Death is 180×124, anchor 90,116, six frames at 15 fps, then corpse. Swim and sink use the grunt cell and may repeat one side pose on every row. Peaked cap, darker coat, rifle. He is not a recolor of the grunt helmet. After capture he plays idle and walk only.
-
-`hut/handover` is the tent sheet layout: a small open-sided post, not a red cross. It does not burn.
-
-Sound. While he is still an enemy, shots are `CueGun` and death is `CueDeath`. Capture is silent. Delivery emits `CueSave`. Death after capture is still `CueDeath`.
-
 ### 4. Get a civilian home
 
 `get_civilian_home` uses escort. A listed civilian stands until touched, then escorts. He is met when he enters a building `kind` of `home`. That building is indestructible, like the tent.

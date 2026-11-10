@@ -56,7 +56,7 @@ type BuildingSpec struct {
 	H     int     `json:"h"`
 	Door  bool    `json:"door"`
 	Spawn float64 `json:"spawn"`
-	// Kind is empty for a hut. "tent" is the rescue marker.
+	// Kind is empty for a hut. "tent" is the rescue marker. "handover" is the leader post.
 	Kind string `json:"kind,omitempty"`
 }
 
@@ -234,6 +234,8 @@ func (p *Phase) World() (*sim.World, error) {
 		case "rocketeer":
 			u.Kind = sim.KindRocketeer
 			u.RocketCD = sim.RocketeerFirstDelay
+		case "leader":
+			u.Kind = sim.KindLeader
 		case "patrol":
 		default:
 			return nil, fmt.Errorf("unknown enemy %q", e.Kind)
@@ -254,8 +256,8 @@ func (p *Phase) World() (*sim.World, error) {
 			}
 		}
 		// Mission 1 grunts stay on their tile. Later grunts, patrols, and
-		// grenadiers close. Rocketeers stay put on every phase.
-		if p.Mission >= 2 && u.Kind != sim.KindRocketeer {
+		// grenadiers close. Rocketeers and the leader stay put on every phase.
+		if p.Mission >= 2 && u.Kind != sim.KindRocketeer && u.Kind != sim.KindLeader {
 			u.Aggressive = true
 		}
 	}
@@ -271,6 +273,8 @@ func (p *Phase) World() (*sim.World, error) {
 			w.AddBuilding(b.X, b.Y, b.W, b.H, b.Door, b.Spawn)
 		case "tent":
 			w.AddTent(b.X, b.Y, b.W, b.H)
+		case "handover":
+			w.AddHandover(b.X, b.Y, b.W, b.H)
 		default:
 			return nil, fmt.Errorf("unknown building %q", b.Kind)
 		}

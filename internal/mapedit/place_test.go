@@ -56,7 +56,7 @@ func TestDragMovesStartEnemyBarrelHutAndCrate(t *testing.T) {
 	}
 	ed.beginGrab(pick{kind: pickStart}, start.X, start.Y)
 	ed.dragGrab(start.X+sim.TileSize, start.Y)
-	if ed.start != [2]int{13, 13} {
+	if ed.start != [2]int{31, 37} {
 		t.Fatalf("start = %v", ed.start)
 	}
 
@@ -145,8 +145,9 @@ func TestPlaceAddsEnemiesHutsBarrelsAndCrates(t *testing.T) {
 	if ed.pickups[len(ed.pickups)-1].Kind != "rockets" {
 		t.Fatalf("crate = %+v", ed.pickups[len(ed.pickups)-1])
 	}
+	nPick := len(ed.pickups)
 	ed.removeSelected()
-	if ed.pickups[len(ed.pickups)-1].Kind == "rockets" {
+	if len(ed.pickups) != nPick-1 {
 		t.Fatal("rocket crate still there")
 	}
 }
@@ -212,6 +213,8 @@ func TestHostageAndTentRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ed.hostages = nil
+	ed.buildings = nil
 	ed.stamp = stampHostage
 	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
 	if len(ed.hostages) != 1 || ed.sel.kind != pickHostage {
@@ -265,6 +268,8 @@ func TestHomePlaceDragDeleteAndSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ed.civilians = nil
+	ed.buildings = nil
 	ed.stamp = stampCivilian
 	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
 	ed.flipHome()
@@ -336,6 +341,7 @@ func TestLeaderAndHandoverRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ed.buildings = nil
 	before := len(ed.enemies)
 	ed.stamp = stampLeader
 	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
@@ -393,6 +399,7 @@ func TestReinforcedPlaceDragDeleteAndSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ed.buildings = nil
 	ed.stamp = stampReinforced
 	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
 	i := len(ed.buildings) - 1
@@ -554,6 +561,7 @@ func TestTurretPlaceDragDeleteAndSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ed.vehicles = nil
 	ed.stamp = stampTurret
 	ed.placeAt(5*sim.TileSize, 5*sim.TileSize)
 	i := len(ed.vehicles) - 1
@@ -608,6 +616,7 @@ func TestChopperPlaceRouteArmedAndSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ed.vehicles = nil
 	ed.stamp = stampChopper
 	ed.placeAt(4*sim.TileSize, 4*sim.TileSize)
 	i := len(ed.vehicles) - 1
@@ -673,6 +682,7 @@ func TestFactoryAndComputerPlaceDragDeleteAndSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ed.buildings = nil
 	ed.stamp = stampFactory
 	ed.placeAt(20*sim.TileSize, 14*sim.TileSize)
 	i := len(ed.buildings) - 1
@@ -742,10 +752,10 @@ func TestSaveWritesPlacementsAndKeepsTheMap(t *testing.T) {
 	if err := json.Unmarshal(b, &p); err != nil {
 		t.Fatal(err)
 	}
-	if p.PlayerStart != [2]int{4, 5} || p.Title != "It's a Jungle Out There" || len(p.Map.Regions) != 4 {
+	if p.PlayerStart != [2]int{4, 5} || p.Title != "It's a Jungle Out There" || len(p.Map.Regions) != 26 {
 		t.Fatalf("saved start=%v title=%q regions=%d", p.PlayerStart, p.Title, len(p.Map.Regions))
 	}
-	if len(p.Enemies) != 4 || len(p.Barrels) != 3 || len(p.Pickups) != 1 {
+	if len(p.Enemies) != 9 || len(p.Barrels) != 3 || len(p.Pickups) != 2 {
 		t.Fatalf("lists enemies=%d barrels=%d pickups=%d", len(p.Enemies), len(p.Barrels), len(p.Pickups))
 	}
 	if !ed.dirty {

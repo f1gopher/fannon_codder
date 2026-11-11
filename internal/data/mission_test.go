@@ -15,8 +15,24 @@ func TestLoadMission1(t *testing.T) {
 	if p.Deploy != 2 {
 		t.Fatalf("deploy=%d, want 2", p.Deploy)
 	}
-	if len(p.Enemies) != 4 {
-		t.Fatalf("enemies=%d, want 4", len(p.Enemies))
+	if len(p.Enemies) != 9 {
+		t.Fatalf("enemies=%d, want 9", len(p.Enemies))
+	}
+	if p.Map.W != 64 || p.Map.H != 40 {
+		t.Fatalf("map %dx%d", p.Map.W, p.Map.H)
+	}
+	wantObj := []string{
+		"kill_all_enemy", "destroy_enemy_buildings", "protect_civilians",
+		"rescue_hostages", "kidnap_leader", "get_civilian_home",
+		"destroy_factory", "destroy_computer",
+	}
+	if len(p.Objectives) != len(wantObj) {
+		t.Fatalf("objectives %v", p.Objectives)
+	}
+	for i, s := range wantObj {
+		if p.Objectives[i] != s {
+			t.Fatalf("objectives %v", p.Objectives)
+		}
 	}
 	w, err := p.World()
 	if err != nil {
@@ -26,7 +42,7 @@ func TestLoadMission1(t *testing.T) {
 	if !w.Map.Walkable(sx, sy, 4) {
 		t.Fatal("player start should be walkable")
 	}
-	tx, ty := sim.TileCenter(13, 1).X, sim.TileCenter(13, 1).Y
+	tx, ty := sim.TileCenter(14, 2).X, sim.TileCenter(14, 2).Y
 	if w.Map.Walkable(tx, ty, 4) {
 		t.Fatal("tree tile should block")
 	}
@@ -42,11 +58,11 @@ func TestLoadMission1(t *testing.T) {
 			nE++
 		}
 	}
-	if nP != 2 || nE != 4 {
-		t.Fatalf("units player=%d enemy=%d, want 2 and 4", nP, nE)
+	if nP != 2 || nE != 11 {
+		t.Fatalf("units player=%d enemy=%d, want 2 and 11", nP, nE)
 	}
-	if len(w.Pickups) != 1 || w.Pickups[0].Kind != sim.PickupGrenades || w.Pickups[0].Amount != sim.CrateAmount {
-		t.Fatalf("pickups=%+v, want one grenade crate", w.Pickups)
+	if len(w.Pickups) != 2 || w.Pickups[0].Kind != sim.PickupGrenades || w.Pickups[0].Amount != sim.CrateAmount {
+		t.Fatalf("pickups=%+v, want a grenade crate and a rocket crate", w.Pickups)
 	}
 	if len(w.Barrels) != 3 || !w.Barrels[0].Alive {
 		t.Fatalf("barrels=%+v, want three live drums", w.Barrels)
@@ -76,13 +92,16 @@ func TestMission1GruntsHoldAtSpawn(t *testing.T) {
 			patrols++
 			continue
 		}
+		if u.VehicleID != 0 {
+			continue
+		}
 		if u.Facing != 0 {
 			t.Fatalf("grunt facing %v, want east", u.Facing)
 		}
 		posts = append(posts, post{u.X, u.Y})
 	}
-	if len(posts) != 3 || patrols != 1 {
-		t.Fatalf("posted=%d patrols=%d, want 3 and 1", len(posts), patrols)
+	if len(posts) != 8 || patrols != 1 {
+		t.Fatalf("posted=%d patrols=%d, want 8 and 1", len(posts), patrols)
 	}
 	w.Step(1)
 	if len(w.Projectiles) != 0 {
@@ -91,7 +110,7 @@ func TestMission1GruntsHoldAtSpawn(t *testing.T) {
 	n := 0
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Side != sim.SideEnemy || !u.Living() || len(u.Patrol) >= 2 {
+		if u.Side != sim.SideEnemy || !u.Living() || len(u.Patrol) >= 2 || u.VehicleID != 0 {
 			continue
 		}
 		if u.X != posts[n].x || u.Y != posts[n].y || u.VX != 0 || u.VY != 0 {
@@ -588,7 +607,7 @@ func TestPatrolKindLoadsALine(t *testing.T) {
 		spec = e
 		n++
 	}
-	if n != 1 || spec.X != 1 || spec.Y != 1 || len(spec.Line) != 2 || spec.Line[0] != [2]int{4, 2} || spec.Line[1] != [2]int{1, 5} {
+	if n != 1 || spec.X != 4 || spec.Y != 2 || len(spec.Line) != 2 || spec.Line[0] != [2]int{10, 0} || spec.Line[1] != [2]int{4, 0} {
 		t.Fatalf("patrol spec %+v count %d", spec, n)
 	}
 	w := mustWorld(t, p)
@@ -612,8 +631,8 @@ func TestPatrolKindLoadsALine(t *testing.T) {
 		if u.Aggressive {
 			t.Fatal("a mission 1 patrol is not marked aggressive")
 		}
-		a := sim.TileCenter(1, 1)
-		b := sim.TileCenter(1, 5)
+		a := sim.TileCenter(4, 2)
+		b := sim.TileCenter(4, 0)
 		last := u.Patrol[len(u.Patrol)-1]
 		if u.Patrol[0] != a || last != b || len(u.Patrol) < 8 || u.PatrolDir != 1 {
 			t.Fatalf("route ends (%v)->(%v) points=%d dir=%d", u.Patrol[0], last, len(u.Patrol), u.PatrolDir)
@@ -637,7 +656,7 @@ func TestPatrolKindLoadsALine(t *testing.T) {
 			t.Fatal("the mission 1 route should bow off the straight north-south line")
 		}
 	}
-	if !found || posted != 3 {
+	if !found || posted != 10 {
 		t.Fatalf("posted=%d found=%v", posted, found)
 	}
 	x0 := w.Unit(id).X

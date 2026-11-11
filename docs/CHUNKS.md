@@ -74,7 +74,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 
 - Enemy soldiers play a walk. Grunt, grenadier, and rocketeer each have a six-frame loop at 12 fps, in the same cell as their idle. A missing walk still draws idle.
 - A patrol walks a phase route back and forth at 16 px/s. Two points are straight. More points are a curve. At either end he pauses for a random 1.5–4 s and looks around. A sighting or a heard shot takes him off the route to attack or to walk in, then he returns. Mission 1 curves through (1, 1), (4, 2), and (1, 5). Mission 2 phase 1 is straight on (1, 0)–(8, 0).
-- Exploding barrels. A shot from either side, or a nearby blast, sets off a painted drum (`barrel/drum`). The blast chains. Walking past does not. Mission 1 has three on tiles (5, 10), (6, 10), and (7, 10).
+- Exploding barrels. A shot from either side, or a nearby blast, sets off a painted drum (`barrel/drum`). The blast chains. Walking past does not. Mission 1 has three on tiles (22, 35), (23, 35), and (24, 35).
 - Enemy acquire matches the original troop check: 200 px on a clear walk, 40 px if it is blocked. A heard shot does not pull him in.
 - Mission 2 and later grunts and grenadiers close in. Mission 1 and sandboxes stay posted. Rocketeers stay put. No pathfinding. `a37048e`
 - A missing walk sheet draws idle, so a walking enemy is not a rectangle. `409fabd`
@@ -112,7 +112,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - The active squad shares one gun, Cannon Fodder style: one round every 0.36 s for ranks 0–3, every 0.30 s from rank 4 up, rotating through the file.
 - The gunshot is a street report: a muzzle crack, a low thump, and three returning slaps.
 - A helicopter flies the squad in at the start of a battle. At most two ropes hang straight down. The squad walks out into a wedge and stays kneeling until it is ordered to move. The aircraft is not a vehicle.
-- The map editor paints freeform regions. Mission 1 is jungle ground plus four tree regions. The other phases stay tile grids. The battle still walks a tile grid.
+- The map editor paints freeform regions. That first Mission 1 file was jungle ground plus four tree regions. The battle still walks a tile grid.
 - In the map editor's regions view, a left drag adds a tree region. Releasing closes it with a straight line. The file is not written.
 - Every campaign phase is stored as freeform regions. The battle still receives the same cells.
 - The battle paints those region rings. Movement, fire, and mines still use the cells. A spent mine drops its mark. Sandboxes stay tile grids.
@@ -138,4 +138,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A tank is slower than the skidoo, does not skid, and fires a shell on right click. A grenade clanks. A rocket or a shell kills it. The wreck stays. `CueShell` is the launch. The editor places it with Ctrl+3.
 - A turret is a fixed enemy big gun. It turns and fires the tank shell. A grenade clanks. A rocket or a shell kills it. The wreck stays. It has no engine. The editor places it with Ctrl+4. F and A do nothing.
 - A combat chopper flies a route or holds its tile. An armed one fires a homing rocket. A low pass kills. A rocket or a shell drops the wreck, then the boom. The editor places it with Ctrl+5. A flips armed. W adds a route point.
+- Mission 1 is a new 64×40 jungle route. It uses every objective from the gap list, with crates before the doors, the tank, the turret, the factory, and the chopper. No new sheets.
 

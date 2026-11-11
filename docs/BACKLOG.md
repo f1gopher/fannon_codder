@@ -14,7 +14,7 @@ Sheets are one PNG and one JSON. Eight source pixels make one world pixel. Store
 
 The sim only emits a `Cue`. Clips are original synthesis in `internal/audio`. No sampled audio. A launch cue is not the impact. Impacts stay `CueBoom`, and `fx/blast` stays the only explosion painting. `CueDeath` stays the soldier yell. `CueRocket` stays the bazooka. `CueBoard` and `CueExit` stay the mount and dismount for every vehicle a soldier can enter. The skidoo hum stays the skidoo.
 
-No pathfinding. Vehicles and escorts use the axis slide already in `steerToward`. Do not retune grunt sight, hearing, or Mission 1 aggression. The last chunk replaces the Mission 1 map. It does not change those numbers.
+No pathfinding. Vehicles and escorts use the axis slide already in `steerToward`. Do not retune grunt sight, hearing, or Mission 1 aggression. The Mission 1 map is the 64×40 jungle route. Do not retune those numbers to make that map easier.
 
 The place bar is full (`barStamps`, keys 1–9). The first new placeable adds a second row. Later chunks add an icon on that row. Shift+1 onward selects that row in the order the icons were added. Clicking an icon still selects it.
 
@@ -50,48 +50,7 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 ## Gaps, in order
 
-Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
-
-### 11. Replace Mission 1
-
-Do this only after chunks 1–10 are in the game.
-
-Replace `data/missions/m01p01.json` with a new jungle phase. Keep mission 1, phase 1, deploy 2, and the campaign slot. Keep the title "It's a Jungle Out There". Rewrite the briefing in our own words so it names the objectives. Start grenades and start rockets stay 0. The map supplies crates.
-
-Size is 64×40 tiles (1024×640 world pixels), regions only, no `tiles`. One terrain, jungle. No ice, snow, cliffs, or skidoo. The jeep is the jungle skidoo.
-
-The phase requires every objective those chunks added, plus the two that already work:
-
-- `kill_all_enemy`
-- `destroy_enemy_buildings`
-- `protect_civilians`
-- `rescue_hostages`
-- `kidnap_leader`
-- `get_civilian_home`
-- `destroy_factory`
-- `destroy_computer`
-
-Lay the route out so two privates meet each toy after they can deal with it:
-
-1. South start. Grenade crate, a barrel chain, posted grunts, a stream and a bridge.
-2. A village with wandering civilians, one civilian who must be taken home, and plain huts.
-3. Hostages, guards, and a rescue tent.
-4. Door huts, then a rocket crate, then a reinforced door.
-5. A player jeep and an enemy jeep on a long open run.
-6. The leader and a handover.
-7. An enemy tank and a big gun. Shells from the tank, or rockets, are the way through.
-8. The factory and the computer past that gun.
-9. An armed chopper over the north end, plus a grenadier, a rocketeer, a patrol, mines, and one quicksand pool.
-
-Spread them. Do not pile every object on the start.
-
-No new sheets and no new cues. Draw what chunks 1–10 added. The drop still uses `chopper/fly` and `SetRotor`. The briefing stays text on the existing painting.
-
-Build this phase in the editor with the tools from the chunks above. Add, drag, and delete until the route is right, then S. Do not hand-write the placements the editor can save. Regions are still not written by S. Paint the rings in the file as the other region phases are stored.
-
-The overview marks each new thing, as small shapes on the diagram, not the battle sprites: tent, handover, home, reinforced door, factory, computer, jeep, tank, turret, chopper, hostage, and leader. A wreck stays marked until the phase ends.
-
-Update the tests and docs that lock the old 24×16 phase: `internal/data/mission_test.go`, `internal/data/region_test.go`, `internal/data/region_cells_test.go`, `internal/mapedit/editor_test.go`, `internal/mapedit/place_test.go`, and the Mission 1 lines in `docs/ARCHITECTURE.md`. `TestPhasesFillTheScreen` is a minimum and still holds.
+The eleven gap chunks are in the game. Mission 1 is the 64×40 jungle route.
 
 ## Still later
 

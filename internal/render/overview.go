@@ -96,9 +96,6 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	}
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if !b.Alive {
-			continue
-		}
 		x := ox + int(b.X/pw*float64(drawW))
 		y := oy + int(b.Y/ph*float64(drawH))
 		bw := int(b.W / pw * float64(drawW))
@@ -124,6 +121,12 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 		}
 		if b.Kind == sim.HutComputer {
 			col = color.RGBA{R: 0x3a, G: 0xc0, B: 0x88, A: 0xff}
+		}
+		if b.Kind == sim.HutReinforced {
+			col = color.RGBA{R: 0x6a, G: 0x38, B: 0x28, A: 0xff}
+		}
+		if !b.Alive {
+			col.R, col.G, col.B = col.R/2, col.G/2, col.B/2
 		}
 		fillRect(dst, x, y, bw, bh, col)
 	}
@@ -163,17 +166,26 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	}
 	for i := range w.Vehicles {
 		v := &w.Vehicles[i]
-		if !v.Alive && v.Kind != sim.KindChopper {
-			continue
-		}
 		c := color.RGBA{R: 0xd8, G: 0xd8, B: 0xdc, A: 0xff}
 		if v.Side == sim.SideEnemy {
 			c = color.RGBA{R: 0xe0, G: 0x30, B: 0x30, A: 0xff}
 		}
-		fillRect(dst,
-			ox+int(v.X/pw*float64(drawW))-dot/2,
-			oy+int(v.Y/ph*float64(drawH))-dot/2,
-			dot, dot, c)
+		if !v.Alive {
+			c.R, c.G, c.B = c.R/2, c.G/2, c.B/2
+		}
+		vx := ox + int(v.X/pw*float64(drawW))
+		vy := oy + int(v.Y/ph*float64(drawH))
+		switch v.Kind {
+		case sim.KindTank:
+			fillRect(dst, vx-dot, vy-dot/2, dot*2, dot, c)
+		case sim.KindTurret:
+			fillRect(dst, vx-dot/2, vy-dot/2, dot, dot, c)
+		case sim.KindChopper:
+			fillRect(dst, vx-dot, vy-1, dot*2, 2, c)
+			fillRect(dst, vx-1, vy-dot, 2, dot*2, c)
+		default:
+			fillRect(dst, vx-dot, vy-1, dot*2, 2, c)
+		}
 	}
 	strokeView(dst, ox, oy, drawW, drawH, pw, ph, w.Camera)
 }

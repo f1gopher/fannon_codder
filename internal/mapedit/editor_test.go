@@ -21,17 +21,17 @@ func TestOpensTheFirstPhase(t *testing.T) {
 	if ed.err != nil {
 		t.Fatal(ed.err)
 	}
-	if ed.grid.W != 24 || ed.grid.H != 16 {
+	if ed.grid.W != 64 || ed.grid.H != 40 {
 		t.Fatalf("grid = %dx%d", ed.grid.W, ed.grid.H)
 	}
 	if ed.biome != "jungle" {
 		t.Fatalf("terrain = %q", ed.biome)
 	}
 	terrain, size := ed.infoLines()
-	if terrain != "jungle" || size != "384 × 256" {
+	if terrain != "jungle" || size != "1024 × 640" {
 		t.Fatalf("info = %q %q", terrain, size)
 	}
-	if !ed.freeform || len(ed.chart.Regions) != 4 {
+	if !ed.freeform || len(ed.chart.Regions) != 26 {
 		t.Fatalf("regions = %v %d", ed.freeform, len(ed.chart.Regions))
 	}
 	if ed.gridView || ed.viewName() != "terrain" {
@@ -66,7 +66,7 @@ func TestShowsHutsCratesAndMines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ed.buildings) != 0 || len(ed.pickups) != 1 || ed.pickups[0].Kind != "grenades" || len(ed.barrels) != 3 {
+	if len(ed.buildings) != 10 || len(ed.pickups) != 2 || ed.pickups[0].Kind != "grenades" || len(ed.barrels) != 3 {
 		t.Fatalf("m01 props buildings=%d pickups=%+v barrels=%d", len(ed.buildings), ed.pickups, len(ed.barrels))
 	}
 	found := false
@@ -98,14 +98,14 @@ func TestMarksStartAndEnemies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ed.hasStart || ed.start != [2]int{12, 13} {
+	if !ed.hasStart || ed.start != [2]int{30, 37} {
 		t.Fatalf("start = %v %v", ed.hasStart, ed.start)
 	}
-	if len(ed.enemies) != 4 || ed.enemies[0].X != 19 || ed.enemies[0].Y != 3 {
+	if len(ed.enemies) != 9 || ed.enemies[0].X != 16 || ed.enemies[0].Y != 36 {
 		t.Fatalf("enemies = %+v", ed.enemies)
 	}
-	last := ed.enemies[3]
-	if last.Kind != "patrol" || last.X != 1 || last.Y != 1 || len(last.Line) != 2 || last.Line[0] != [2]int{4, 2} || last.Line[1] != [2]int{1, 5} {
+	last := ed.enemies[8]
+	if last.Kind != "patrol" || last.X != 4 || last.Y != 2 || len(last.Line) != 2 || last.Line[0] != [2]int{10, 0} || last.Line[1] != [2]int{4, 0} {
 		t.Fatalf("patrol = %+v", last)
 	}
 	ed.scale = 2

@@ -24,10 +24,10 @@ func TestStrokeAddsATreeInTheRegionsView(t *testing.T) {
 	if !ed.endStroke() {
 		t.Fatal("square was dropped")
 	}
-	if len(ed.chart.Regions) != 5 {
+	if len(ed.chart.Regions) != 27 {
 		t.Fatalf("regions = %d", len(ed.chart.Regions))
 	}
-	got := ed.chart.Regions[4]
+	got := ed.chart.Regions[26]
 	if got.Name != "tree" || got.Tile != sim.TileTree {
 		t.Fatalf("region = %q %v", got.Name, got.Tile)
 	}
@@ -41,10 +41,10 @@ func TestStrokeAddsATreeInTheRegionsView(t *testing.T) {
 	}
 	ed.load(3)
 	ed.load(0)
-	if !ed.gridView || len(ed.chart.Regions) != 5 {
+	if !ed.gridView || len(ed.chart.Regions) != 27 {
 		t.Fatalf("restored view=%v regions=%d", ed.gridView, len(ed.chart.Regions))
 	}
-	if ed.chart.Regions[4].Points[1] != [2]float64{80, 10} {
+	if ed.chart.Regions[26].Points[1] != [2]float64{80, 10} {
 		t.Fatalf("restored = %v", ed.chart.Regions[4].Points)
 	}
 }
@@ -66,7 +66,7 @@ func TestShortStrokeIsDropped(t *testing.T) {
 	if ed.endStroke() {
 		t.Fatal("speck became a region")
 	}
-	if len(ed.chart.Regions) != 4 || len(ed.stroke) != 0 {
+	if len(ed.chart.Regions) != 26 || len(ed.stroke) != 0 {
 		t.Fatalf("regions=%d stroke=%d", len(ed.chart.Regions), len(ed.stroke))
 	}
 }

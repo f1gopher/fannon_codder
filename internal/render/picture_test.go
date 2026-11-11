@@ -5,12 +5,36 @@ import (
 	"image"
 	"image/png"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"fannon-codder/assets/art"
 )
+
+func TestWrapTextFitsTheBriefingPanel(t *testing.T) {
+	SetPictureScale(1)
+	const inner = 204.0 // briefing shade is 220 wide with 8 px of padding each side
+	body := "Two privates. Take the grenades, cross the stream, and keep the civilians alive. Walk one of them home. Free the hostages. Capture the leader and hand him over. Rockets open the reinforced door, then the factory and the computer. Kill every enemy and level their buildings."
+	got := WrapText(body, inner)
+	if !strings.Contains(got, "\n") {
+		t.Fatal("the mission 1 briefing should wrap")
+	}
+	for _, line := range strings.Split(got, "\n") {
+		if w := TextWidth(line); w > inner+0.01 {
+			t.Fatalf("%q is %v wide, panel is %v", line, w, inner)
+		}
+	}
+	short := WrapText("Kill all enemy", inner)
+	if short != "Kill all enemy" {
+		t.Fatalf("a short line changed: %q", short)
+	}
+	kept := WrapText("Title\n\nBody stays", inner)
+	if kept != "Title\n\nBody stays" {
+		t.Fatalf("blank line lost: %q", kept)
+	}
+}
 
 func TestTextPixels(t *testing.T) {
 	if got := TextPixels(3); got != 14 {

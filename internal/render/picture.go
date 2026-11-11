@@ -3,6 +3,7 @@ package render
 import (
 	"bytes"
 	"image/color"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -62,6 +63,60 @@ func Text(dst *ebiten.Image, str string, x, y float64) {
 	op.GeoM.Translate(x*s, y*s)
 	op.ColorScale.ScaleWithColor(color.White)
 	text.Draw(dst, str, face, op)
+}
+
+// WrapText breaks str on spaces so each line fits maxW world pixels in the
+// HUD face. Newlines already in str stay. A single word wider than maxW
+// stays on its own line.
+func WrapText(str string, maxW float64) string {
+	if str == "" || maxW <= 0 {
+		return str
+	}
+	s := pictureScale
+	if s <= 0 {
+		s = 1
+	}
+	face := &text.GoTextFace{Source: uiFont, Size: TextPixels(s)}
+	limit := maxW * s
+	var b strings.Builder
+	paras := strings.Split(str, "\n")
+	for i, para := range paras {
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		words := strings.Fields(para)
+		if len(words) == 0 {
+			continue
+		}
+		line := words[0]
+		for _, word := range words[1:] {
+			trial := line + " " + word
+			width, _ := text.Measure(trial, face, face.Size)
+			if width <= limit {
+				line = trial
+				continue
+			}
+			b.WriteString(line)
+			b.WriteByte('\n')
+			line = word
+		}
+		b.WriteString(line)
+	}
+	return b.String()
+}
+
+// TextWidth is the world-pixel width of one line in the HUD face.
+func TextWidth(str string) float64 {
+	if str == "" {
+		return 0
+	}
+	s := pictureScale
+	if s <= 0 {
+		s = 1
+	}
+	face := &text.GoTextFace{Source: uiFont, Size: TextPixels(s)}
+	width, _ := text.Measure(str, face, face.Size)
+	return width / s
 }
 
 // TextCenter draws str so its middle sits on x,y in world-frame pixels.

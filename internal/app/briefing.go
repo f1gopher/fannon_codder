@@ -52,18 +52,22 @@ func (b *Briefing) Draw(screen *ebiten.Image) {
 		fw /= s
 	}
 	const boxW, boxH = 220, 108
+	const pad = 8
 	x := int((fw - boxW) / 2)
-	if x < 8 {
-		x = 8
+	if x < pad {
+		x = pad
 	}
 	render.Rect(screen, x, 100, boxW, boxH, color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xaa})
+	inner := float64(boxW - 2*pad)
+	title = render.WrapText(title, inner)
+	body = render.WrapText(body, inner)
 	render.Text(screen, fmt.Sprintf(
 		"BRIEFING\nMission %d  Phase %d\n\n%s\n%s\n\nClick or Enter to deploy",
 		b.prog.MissionNumber(),
 		phaseNum(b.prog),
 		title,
 		body,
-	), float64(x+8), 104)
+	), float64(x+pad), 104)
 }
 
 func phaseNum(p *Progress) int {

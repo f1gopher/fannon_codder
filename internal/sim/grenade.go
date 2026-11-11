@@ -250,6 +250,15 @@ func (w *World) stepBlasts(dt float64) {
 // explode kills every man in the radius, standing or wounded, and destroys huts, crates, and barrels.
 // Grenades do not spare friendlies. A destroyed crate or barrel explodes too.
 func (w *World) explode(x, y float64, ownerID int) {
+	w.blastAt(x, y, ownerID, false)
+}
+
+// explodeRocket is a bazooka impact. It opens a reinforced door. A grenade does not.
+func (w *World) explodeRocket(x, y float64, ownerID int) {
+	w.blastAt(x, y, ownerID, true)
+}
+
+func (w *World) blastAt(x, y float64, ownerID int, rocket bool) {
 	w.emit(CueBoom, x, y)
 	w.Explosions = append(w.Explosions, Explosion{X: x, Y: y, R: GrenadeRadius})
 	for i := range w.Units {
@@ -274,16 +283,25 @@ func (w *World) explode(x, y float64, ownerID int) {
 		}
 		w.destroyVehicle(v)
 	}
+	clank := false
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
 		if !b.Alive || b.marker() {
 			continue
 		}
-		if circleHitsRect(x, y, GrenadeRadius, b.X, b.Y, b.W, b.H) {
-			b.Alive = false
-			b.HP = 0
-			w.launchRoof(b, x, y, ownerID)
+		if !circleHitsRect(x, y, GrenadeRadius, b.X, b.Y, b.W, b.H) {
+			continue
 		}
+		if b.Kind == HutReinforced && !rocket {
+			clank = true
+			continue
+		}
+		b.Alive = false
+		b.HP = 0
+		w.launchRoof(b, x, y, ownerID)
+	}
+	if clank {
+		w.emit(CueClank, x, y)
 	}
 	// A blast sets off a barrel whoever fired it. Crates stay for the player.
 	for i := range w.Barrels {

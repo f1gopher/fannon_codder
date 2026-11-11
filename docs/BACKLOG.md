@@ -52,16 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 5. Reinforced door
-
-A building `kind` of `reinforced` is a door hut. It spawns grunts the same way and counts for `destroy_enemy_buildings`. A grenade or barrel does not hurt it. A rocket does. MG fire still does not.
-
-Editor. A reinforced-door icon writes a 2×2 building `kind` of `reinforced`, with a door and spawn 2.5. Drag and delete match the other huts.
-
-Pictures. `hut/reinforced` matches `hut/door`: 256×320, anchor 128,312, four frames at 5 fps, one east row, looping. Steel jamb and a slotted plate over the door. The roof cut for the flight comes from this sheet, not from `hut/door`. Destruction reuses `fx/blast`, the drifting hut fire, and the roof tumble.
-
-Sound. A grenade or a barrel that overlaps it and does nothing emits `CueClank` once: a short dull metal tick, about 80 ms. A rocket that destroys it emits `CueBoom` only. Spawning stays silent.
-
 ### 6. Factory and computer
 
 Two objective structures. They do not spawn troops.

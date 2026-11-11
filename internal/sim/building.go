@@ -24,6 +24,8 @@ const (
 	HutHandover
 	// HutHome is where a marked civilian is delivered. Same rules as the tent.
 	HutHome
+	// HutReinforced is a door hut. Only a rocket destroys it.
+	HutReinforced
 )
 
 // Building is a hut or a rescue tent.
@@ -53,6 +55,13 @@ func (w *World) AddDoorHut(tx, ty int) int {
 // AddBuilding places a hut from mission data. w/h are tile counts (default 2).
 func (w *World) AddBuilding(tx, ty, tw, th int, door bool, spawn float64) int {
 	return w.addBuilding(tx, ty, tw, th, door, spawn)
+}
+
+// AddReinforced places a 2×2 door hut that only a rocket destroys.
+func (w *World) AddReinforced(tx, ty, tw, th int, spawn float64) int {
+	id := w.addBuilding(tx, ty, tw, th, true, spawn)
+	w.Buildings[id].Kind = HutReinforced
+	return id
 }
 
 func (w *World) addBuilding(tx, ty, tw, th int, door bool, spawn float64) int {

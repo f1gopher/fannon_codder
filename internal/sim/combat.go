@@ -351,7 +351,7 @@ func (w *World) stepProjectiles(dt float64) {
 				if !hit {
 					hx, hy = p.X, p.Y
 				}
-				w.explode(hx, hy, p.OwnerID)
+				w.explodeRocket(hx, hy, p.OwnerID)
 				continue
 			}
 			out = append(out, *p)

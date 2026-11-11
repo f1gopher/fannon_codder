@@ -10,6 +10,7 @@ import (
 
 var (
 	hutFill      = color.RGBA{R: 0x6a, G: 0x42, B: 0x28, A: 0xff}
+	steelFill    = color.RGBA{R: 0x6a, G: 0x72, B: 0x78, A: 0xff}
 	tentFill     = color.RGBA{R: 0xe8, G: 0xdc, B: 0xc0, A: 0xff}
 	handoverFill = color.RGBA{R: 0xc4, G: 0xb4, B: 0x88, A: 0xff}
 	homeFill     = color.RGBA{R: 0xf0, G: 0xe6, B: 0xc8, A: 0xff}
@@ -42,6 +43,9 @@ func drawBuildingRect(dst *ebiten.Image, cam sim.Camera, b sim.Building) {
 	}
 	if b.Kind == sim.HutHome {
 		fill = homeFill
+	}
+	if b.Kind == sim.HutReinforced {
+		fill = steelFill
 	}
 	fillRectF(dst, x, y, b.W, b.H, fill)
 	if b.Kind == sim.HutTent {

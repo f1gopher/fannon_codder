@@ -612,7 +612,7 @@ func TestHutCrateAndSkidooSheets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"hut/door", "hut/plain"} {
+	for _, key := range []string{"hut/door", "hut/plain", "hut/reinforced"} {
 		sh := lib.Get(key)
 		if sh == nil || sh.Frames != 4 || sh.FPS != 5 || !sh.Loop || sh.FrameW != 256 || sh.FrameH != 320 {
 			t.Fatalf("%s %+v", key, sh)

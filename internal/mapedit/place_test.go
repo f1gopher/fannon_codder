@@ -388,6 +388,59 @@ func TestLeaderAndHandoverRoundTrip(t *testing.T) {
 	}
 }
 
+func TestReinforcedPlaceDragDeleteAndSave(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed.stamp = stampReinforced
+	ed.placeAt(3*sim.TileSize, 4*sim.TileSize)
+	i := len(ed.buildings) - 1
+	b := ed.buildings[i]
+	if b.Kind != "reinforced" || !b.Door || b.Spawn != 2.5 || b.W != 2 || b.H != 2 || ed.sel.kind != pickHut {
+		t.Fatalf("placed %+v sel %+v", b, ed.sel)
+	}
+	c := sim.TileCenter(b.X, b.Y+b.H-1)
+	ed.beginGrab(pick{kind: pickHut, i: i}, c.X, c.Y)
+	ed.dragGrab(c.X+sim.TileSize, c.Y)
+	if ed.buildings[i].X != b.X+1 || ed.buildings[i].Kind != "reinforced" {
+		t.Fatalf("moved %+v", ed.buildings[i])
+	}
+	ed.removeSelected()
+	for _, spec := range ed.buildings {
+		if spec.Kind == "reinforced" {
+			t.Fatal("reinforced door stayed after delete")
+		}
+	}
+	ed.stamp = stampReinforced
+	ed.placeAt(6*sim.TileSize, 4*sim.TileSize)
+	ed.dirty = true
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(raw, p); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, spec := range p.Buildings {
+		if spec.Kind == "reinforced" && spec.Door && spec.Spawn == 2.5 && spec.W == 2 {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("saved %+v", p.Buildings)
+	}
+	if allStamps()[len(allStamps())-1] != stampReinforced {
+		t.Fatal("reinforced door is not the last second-row icon")
+	}
+}
+
 func TestSaveWritesPlacementsAndKeepsTheMap(t *testing.T) {
 	ed, err := New()
 	if err != nil {

@@ -281,6 +281,12 @@ func (p *Phase) World() (*sim.World, error) {
 			w.AddHandover(b.X, b.Y, b.W, b.H)
 		case "home":
 			w.AddHome(b.X, b.Y, b.W, b.H)
+		case "reinforced":
+			spawn := b.Spawn
+			if spawn <= 0 {
+				spawn = sim.SpawnEvery
+			}
+			w.AddReinforced(b.X, b.Y, b.W, b.H, spawn)
 		default:
 			return nil, fmt.Errorf("unknown building %q", b.Kind)
 		}

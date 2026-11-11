@@ -71,7 +71,7 @@ type Library struct {
 // Ground uses ground/grass, ground/snow, ground/water-shallow,
 // ground/water-deep, ground/quicksand, ground/ice, ground/bridge,
 // ground/cliff, ground/ramp, ground/mine.
-// Props use tree/sway, hut/door, hut/plain, crate/grenade, crate/rocket,
+// Props use tree/sway, hut/door, hut/plain, hut/reinforced, crate/grenade, crate/rocket,
 // barrel/drum,
 // skidoo/idle, skidoo/move, chopper/fly, prop/snowman, prop/igloo.
 // chopper/fly is the opening aircraft, one south-east frame. The rotor

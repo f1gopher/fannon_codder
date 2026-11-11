@@ -31,6 +31,7 @@ type Roof struct {
 	Angle   float64
 	T       float64
 	Door    bool
+	Kind    BuildingKind
 	Flying  bool
 	OwnerID int
 	risen   bool
@@ -46,6 +47,7 @@ func (w *World) launchRoof(b *Building, blastX, blastY float64, ownerID int) {
 		SX: cx, SY: footY,
 		TX: tx, TY: ty,
 		Door:    b.HasDoor,
+		Kind:    b.Kind,
 		Flying:  true,
 		OwnerID: ownerID,
 	})

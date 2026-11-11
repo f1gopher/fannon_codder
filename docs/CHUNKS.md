@@ -132,4 +132,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A hostage stands until a player on foot touches him, then walks behind the active squad and stops when it stops. A tent saves him with `CueSave`. His death is `CueCry` and fails `rescue_hostages`. The editor places both and draws `hostage/idle` and `hut/tent`.
 - An enemy leader fights as a posted grunt until a player on foot touches him, then escorts. A handover saves him with `CueSave`. His death is `CueDeath` and fails `kidnap_leader`. The editor places both and draws `leader/idle` and `hut/handover`.
 - A civilian with `home` true stands until touched, then escorts. A home cottage saves him with `CueSave`. His death is `CueCry` and fails `get_civilian_home`. The editor places the cottage and H flips the flag. It draws `hut/home`.
+- A `reinforced` door hut spawns grunts and counts for `destroy_enemy_buildings`. Grenades and barrels clank off it. A rocket destroys it. The editor places it with Shift+7. It draws `hut/reinforced`, and the blown roof is cut from that sheet.
 

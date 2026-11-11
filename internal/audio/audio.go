@@ -83,6 +83,7 @@ func NewMixer() *Mixer {
 	m.Load(sim.CueSave, Save(), 2, 0.55)
 	m.Load(sim.CueThrow, Throw(), throwVoices, throwVolume)
 	m.Load(sim.CueRocket, Rocket(), rocketVoices, rocketVolume)
+	m.Load(sim.CueClank, Clank(), 3, 0.7)
 	m.Load(sim.CueSplash, Splash(), 1, splashVolume)
 	m.Load(sim.CueSink, Sink(), 1, sinkVolume)
 	m.Load(sim.CuePickup, Pickup(), 1, pickupVolume)

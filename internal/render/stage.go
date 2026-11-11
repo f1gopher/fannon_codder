@@ -602,6 +602,8 @@ func buildingBody(cam sim.Camera, b sim.Building) body {
 		key = "hut/handover"
 	} else if b.Kind == sim.HutHome {
 		key = "hut/home"
+	} else if b.Kind == sim.HutReinforced {
+		key = "hut/reinforced"
 	} else if b.HasDoor {
 		key = "hut/door"
 	}
@@ -642,7 +644,9 @@ func roofBody(cam sim.Camera, r sim.Roof) body {
 	sx := cam.ScreenX(r.X)
 	sy := cam.ScreenY(groundY)
 	key := "hut/plain"
-	if r.Door {
+	if r.Kind == sim.HutReinforced {
+		key = "hut/reinforced"
+	} else if r.Door {
 		key = "hut/door"
 	}
 	sh := activeSheets().Get(key)

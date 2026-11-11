@@ -139,12 +139,13 @@ func (g *Game) SetListener(x, y float64) {
 	g.sound.SetListener(x, y)
 }
 
-// SetEngine starts or stops the skidoo hum and sets its pitch.
-func (g *Game) SetEngine(run bool, pitch float64) {
+// SetEngine starts or stops one vehicle hum and sets its pitch.
+// voice is sim.KindJeep or the skidoo loop.
+func (g *Game) SetEngine(run bool, pitch float64, voice string) {
 	if g.sound == nil {
 		return
 	}
-	g.sound.SetEngine(run, pitch)
+	g.sound.SetEngine(run, pitch, voice)
 }
 
 // SetRotor starts or stops the helicopter rotor. The arrival plays it
@@ -209,7 +210,7 @@ func (g *Game) Update() error {
 		// The hum belongs to the battle. A new scene starts it again if it
 		// still has a skidoo to hear. A march or a menu loop fades unless
 		// the screen being entered starts its own bed.
-		g.SetEngine(false, 0)
+		g.SetEngine(false, 0, "")
 		g.SetRotor(false)
 		if g.scene != nil {
 			g.scene.Leave()

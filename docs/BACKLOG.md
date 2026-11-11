@@ -41,7 +41,7 @@ Do not rebuild these.
 - Grunts: posted, patrol, Mission 2+ chase, burst fire, short hearing.
 - Grenadiers and rocketeers. Door huts spawn grunts only. Plain huts are scenery.
 - Civilians wander, flee a nearby shot or blast, and do not shoot. `protect_civilians` loses the phase when one dies. A wound does not. `m04p03` does not list it.
-- One vehicle, the skidoo. Player drive and gun. Enemy driver, ram, and armed burst. Rockets and blasts kill it. MG fire does not.
+- The skidoo, and the jeep as that same vehicle with another sheet and a four-stroke hum. Player drive and gun. Enemy driver, ram, and armed burst. Rockets and blasts kill it. MG fire does not.
 - The opening helicopter drops the squad and leaves. It is not a vehicle and does not fight.
 - Crates, barrels, mines, water, bridges, ice, cliffs, quicksand.
 - Objectives that change the phase: `kill_all_enemy`, `destroy_enemy_buildings`.
@@ -51,16 +51,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 ## Gaps, in order
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
-
-### 7. Jeep
-
-`vehicles[].kind` of `jeep` is the skidoo struct, speeds, gun, ram, and enemy AI, with another sheet. `skidoo` stays the snow vehicle. Armed and unarmed, player and enemy, already work. Snow phases keep their skidoos.
-
-Editor. A jeep icon writes `vehicles[].kind` of `jeep`, side player, armed true. A skidoo icon writes `skidoo` with the same defaults, so snow phases can be edited too. Load the vehicles already on a phase, including Mission 5, before the first save. Drag moves one. Delete removes one. F flips side. A flips armed. An unarmed jeep is the plain sheet.
-
-Pictures. Match the skidoo cell: 240×176, anchor 120,88, five stored rows. `jeep/idle` is one frame per row at 4 fps, looping, a slight body rock. `jeep/move` is four frames at 8 fps, wheels turning. Armed and plain are two pairs: `jeep/idle` and `jeep/move` have a pintle gun, `jeep/plain-idle` and `jeep/plain-move` do not. The gun is painted in the cel. No muzzle flash. It vanishes when destroyed, as the skidoo does. The blast is the wreck.
-
-Sound. A new engine loop, not the skidoo clip. Four-stroke hum, pitched from idle to full by `VehicleMaxSpeed`, same rule as `SetEngine`. The skidoo keeps its own loop. The mounted gun stays `CueGun`. Board and leave stay `CueBoard` and `CueExit`. A ram stays silent. Destruction stays `CueBoom`.
 
 ### 8. Tank and shell
 

@@ -41,7 +41,7 @@ func (h *switchHost) Switch(s Scene)               { h.next = s }
 func (h *switchHost) Progress() *Progress          { return nil }
 func (h *switchHost) PlayCues([]sim.Cue)           {}
 func (h *switchHost) SetListener(float64, float64) {}
-func (h *switchHost) SetEngine(bool, float64)      {}
+func (h *switchHost) SetEngine(bool, float64, string) {}
 func (h *switchHost) SetRotor(bool)                {}
 func (h *switchHost) PlayKind(sim.CueKind)         {}
 func (h *switchHost) Frame() (float64, float64)    { return 320, 256 }

@@ -24,13 +24,21 @@ const (
 	HoverExit
 )
 
-// Vehicle is a skidoo. Jeeps later reuse this with a different skin.
+// KindSkidoo is the snow vehicle. KindJeep uses the same movement, gun, ram,
+// and enemy AI with another sheet and another engine.
+const (
+	KindSkidoo = "skidoo"
+	KindJeep   = "jeep"
+)
+
+// Vehicle is a skidoo or a jeep. Kind selects the sheet and the engine loop.
 type Vehicle struct {
 	ID        int
 	X, Y      float64
 	VX, VY    float64
 	Facing    float64
 	Side      Side
+	Kind      string
 	Armed     bool
 	Alive     bool
 	Capacity  int
@@ -50,6 +58,7 @@ func (w *World) AddSkidoo(p Vec2, side Side, armed bool) *Vehicle {
 		X:        p.X,
 		Y:        p.Y,
 		Side:     side,
+		Kind:     KindSkidoo,
 		Armed:    armed,
 		Alive:    true,
 		Capacity: VehicleCapacity,
@@ -63,6 +72,14 @@ func (w *World) AddSkidoo(p Vec2, side Side, armed bool) *Vehicle {
 		out.Occupants = []int{u.ID}
 	}
 	return out
+}
+
+// AddJeep parks a jeep. It drives, shoots, and rams like a skidoo.
+// An enemy jeep starts with a driver aboard.
+func (w *World) AddJeep(p Vec2, side Side, armed bool) *Vehicle {
+	v := w.AddSkidoo(p, side, armed)
+	v.Kind = KindJeep
+	return v
 }
 
 func (w *World) vehicleByID(id int) *Vehicle {

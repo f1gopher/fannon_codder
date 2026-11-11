@@ -50,7 +50,10 @@ type Mixer struct {
 	lx, ly       float64
 	engine       *loopReader
 	enginePlayer *audio.Player
+	jeep         *loopReader
+	jeepPlayer   *audio.Player
 	engineOn     bool
+	engineVoice  string
 	rotor        *loopReader
 	rotorPlayer  *audio.Player
 	rotorOn      bool

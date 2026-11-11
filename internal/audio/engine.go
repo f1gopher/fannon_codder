@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 	"sync"
+
+	"fannon-codder/internal/sim"
 )
 
 const (
@@ -27,6 +29,29 @@ func EnginePCM() []byte {
 			math.Sin(cycle*engineHz*2)*0.2 +
 			math.Sin(cycle*engineHz*3)*0.07
 		putStereo(out, i, s*am)
+	}
+	return out
+}
+
+// JeepPCM is one cycle of a four-stroke hum, lower than the skidoo.
+// A power stroke is loud; the next revolution is the quiet half.
+// The clip is 0.2 s so 40 Hz wraps on a sample boundary.
+func JeepPCM() []byte {
+	const hz = 40.0
+	out := make([]byte, engineFrames*4)
+	for i := 0; i < engineFrames; i++ {
+		t := float64(i) / SampleRate
+		cycle := 2 * math.Pi * t
+		// Positive on the firing revolution, negative on the exhausted one.
+		stroke := math.Sin(cycle * hz / 2)
+		gain := 0.42
+		if stroke > 0 {
+			gain = 1
+		}
+		s := math.Sin(cycle*hz)*0.55 +
+			math.Sin(cycle*hz*2)*0.22 +
+			math.Sin(cycle*hz*3)*0.06
+		putStereo(out, i, s*gain*0.9)
 	}
 	return out
 }
@@ -113,25 +138,57 @@ func (m *Mixer) initEngine() {
 	p.SetVolume(engineVolume)
 	m.engine = src
 	m.enginePlayer = p
+	js := newLoopReader(JeepPCM())
+	jp, err := m.ctx.NewPlayer(js)
+	if err != nil {
+		return
+	}
+	jp.SetVolume(engineVolume)
+	m.jeep = js
+	m.jeepPlayer = jp
 }
 
-// SetEngine starts or stops the one skidoo loop and sets its playback rate.
+// SetEngine starts or stops one vehicle loop and sets its playback rate.
+// voice is sim.KindJeep or the skidoo. The other loop stays paused.
 // pitch is EngineIdlePitch at rest and EngineTopPitch at full speed.
 // Calling it every frame does not restart the loop.
-func (m *Mixer) SetEngine(run bool, pitch float64) {
+func (m *Mixer) SetEngine(run bool, pitch float64, voice string) {
 	if m == nil || m.engine == nil || m.enginePlayer == nil {
 		return
 	}
-	if run {
-		m.engine.setRate(pitch)
+	if voice != sim.KindJeep {
+		voice = sim.KindSkidoo
 	}
-	if run == m.engineOn {
+	reader := m.engine
+	player := m.enginePlayer
+	other := m.jeepPlayer
+	if voice == sim.KindJeep {
+		if m.jeep == nil || m.jeepPlayer == nil {
+			return
+		}
+		reader = m.jeep
+		player = m.jeepPlayer
+		other = m.enginePlayer
+	}
+	if !run {
+		if m.engineOn {
+			m.enginePlayer.Pause()
+			if m.jeepPlayer != nil {
+				m.jeepPlayer.Pause()
+			}
+		}
+		m.engineOn = false
+		m.engineVoice = ""
 		return
 	}
-	m.engineOn = run
-	if run {
-		m.enginePlayer.Play()
+	reader.setRate(pitch)
+	if m.engineOn && m.engineVoice == voice {
 		return
 	}
-	m.enginePlayer.Pause()
+	if other != nil {
+		other.Pause()
+	}
+	m.engineOn = true
+	m.engineVoice = voice
+	player.Play()
 }

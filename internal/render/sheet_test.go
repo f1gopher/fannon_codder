@@ -671,6 +671,35 @@ func TestHutCrateAndSkidooSheets(t *testing.T) {
 	if frameDelta(cropRow(moveImg, 240, 176, 0), 240, 0, 1) < 0.05 {
 		t.Fatal("skidoo track frames do not move")
 	}
+	for _, key := range []string{"jeep/idle", "jeep/plain-idle"} {
+		sh := lib.Get(key)
+		if sh == nil || sh.Frames != 1 || sh.FrameW != 240 || sh.FrameH != 176 || sh.AnchorX != 120 || sh.AnchorY != 88 || sh.FPS != 4 || !sh.Loop || sh.RowCount() != 5 {
+			t.Fatalf("%s %+v", key, sh)
+		}
+	}
+	for _, key := range []string{"jeep/move", "jeep/plain-move"} {
+		sh := lib.Get(key)
+		if sh == nil || sh.Frames != 4 || sh.FPS != 8 || !sh.Loop || sh.RowCount() != 5 {
+			t.Fatalf("%s %+v", key, sh)
+		}
+		img := decodeArtPNG(t, key+".png")
+		if frameDelta(cropRow(img, 240, 176, 0), 240, 0, 1) < 0.01 {
+			t.Fatalf("%s wheels do not turn", key)
+		}
+	}
+	armed := decodeArtPNG(t, "jeep/idle.png")
+	plain := decodeArtPNG(t, "jeep/plain-idle.png")
+	var diff float64
+	for y := 0; y < 176; y += 2 {
+		for x := 0; x < 240; x += 2 {
+			r0, g0, b0, _ := armed.At(x, y).RGBA()
+			r1, g1, b1, _ := plain.At(x, y).RGBA()
+			diff += math.Abs(float64(r0)-float64(r1)) + math.Abs(float64(g0)-float64(g1)) + math.Abs(float64(b0)-float64(b1))
+		}
+	}
+	if diff == 0 {
+		t.Fatal("armed and plain jeep idle match")
+	}
 }
 
 func TestFireAndBlastSheets(t *testing.T) {

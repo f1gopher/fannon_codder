@@ -47,6 +47,7 @@ type Editor struct {
 	barrels                []data.BarrelSpec
 	civilians              []data.Enemy
 	hostages               []data.Enemy
+	vehicles               []data.VehicleSpec
 	phase                  *data.Phase
 	memos                  map[int]memo
 	dirty                  bool
@@ -65,6 +66,7 @@ type Editor struct {
 	homeCrate              data.PickupSpec
 	homeCivilian           data.Enemy
 	homeHostage            data.Enemy
+	homeVehicle            data.VehicleSpec
 	armPlace               bool
 	armX, armY             float64
 	armWX, armWY           float64
@@ -148,6 +150,7 @@ func (e *Editor) load(i int) {
 	e.barrels = nil
 	e.civilians = nil
 	e.hostages = nil
+	e.vehicles = nil
 	e.phase = nil
 	e.dirty = false
 	if m, ok := e.memos[i]; ok && m.phase != nil {
@@ -216,6 +219,7 @@ func (e *Editor) load(i int) {
 	e.barrels = append([]data.BarrelSpec(nil), p.Barrels...)
 	e.civilians = append([]data.Enemy(nil), p.Civilians...)
 	e.hostages = append([]data.Enemy(nil), p.Hostages...)
+	e.vehicles = append([]data.VehicleSpec(nil), p.Vehicles...)
 	e.phase = p
 	e.dirty = false
 }
@@ -253,6 +257,12 @@ func (e *Editor) Update() error {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
 		e.flipHome()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		e.flipSide()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyA) {
+		e.flipArmed()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyW) {
 		cx, cy := e.cursor()
@@ -780,6 +790,13 @@ func (e *Editor) drawSelection(dst *ebiten.Image) {
 		h := e.hostages[e.sel.i]
 		x, y = e.markAt(h.X, h.Y)
 		r = 6 * s
+	case pickVehicle:
+		if e.sel.i >= len(e.vehicles) {
+			return
+		}
+		v := e.vehicles[e.sel.i]
+		x, y = e.markAt(v.X, v.Y)
+		r = 8 * s
 	case pickHut:
 		if e.sel.i >= len(e.buildings) {
 			return
@@ -798,6 +815,7 @@ func (e *Editor) drawSelection(dst *ebiten.Image) {
 
 func (e *Editor) stampKey() {
 	shift := ebiten.IsKeyPressed(ebiten.KeyShiftLeft) || ebiten.IsKeyPressed(ebiten.KeyShiftRight)
+	ctrl := ebiten.IsKeyPressed(ebiten.KeyControlLeft) || ebiten.IsKeyPressed(ebiten.KeyControlRight)
 	n := 0
 	switch {
 	case inpututil.IsKeyJustPressed(ebiten.KeyDigit1), inpututil.IsKeyJustPressed(ebiten.KeyNumpad1):
@@ -823,7 +841,9 @@ func (e *Editor) stampKey() {
 		return
 	}
 	row := barStamps
-	if shift {
+	if ctrl {
+		row = barRow3
+	} else if shift {
 		row = barRow2
 	}
 	if n-1 >= len(row) {

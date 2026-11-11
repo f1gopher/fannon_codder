@@ -436,8 +436,91 @@ func TestReinforcedPlaceDragDeleteAndSave(t *testing.T) {
 	if !found {
 		t.Fatalf("saved %+v", p.Buildings)
 	}
-	if allStamps()[len(allStamps())-1] != stampComputer {
+	if barRow2[len(barRow2)-1] != stampComputer {
 		t.Fatal("the computer is not the last second-row icon")
+	}
+}
+
+func TestJeepPlaceDragDeleteAndSaveKeepsMission5(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	idx := -1
+	for i, row := range ed.phases {
+		if row.name == "m05p03" {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		t.Fatal("m05p03 missing")
+	}
+	ed.load(idx)
+	if len(ed.vehicles) != 2 || ed.vehicles[0].Kind != "skidoo" || ed.vehicles[1].Side != "enemy" {
+		t.Fatalf("loaded %+v", ed.vehicles)
+	}
+	ed.stamp = stampJeep
+	ed.placeAt(8*sim.TileSize, 8*sim.TileSize)
+	i := len(ed.vehicles) - 1
+	v := ed.vehicles[i]
+	if v.Kind != "jeep" || v.Side != "player" || !v.Armed || ed.sel.kind != pickVehicle {
+		t.Fatalf("placed %+v sel %+v", v, ed.sel)
+	}
+	ed.flipSide()
+	if ed.vehicles[i].Side != "enemy" {
+		t.Fatal("F should flip side")
+	}
+	ed.flipArmed()
+	if ed.vehicles[i].Armed {
+		t.Fatal("A should clear the gun")
+	}
+	c := sim.TileCenter(v.X, v.Y)
+	ed.beginGrab(pick{kind: pickVehicle, i: i}, c.X, c.Y)
+	ed.dragGrab(c.X+sim.TileSize, c.Y)
+	if ed.vehicles[i].X != v.X+1 || ed.vehicles[i].Kind != "jeep" {
+		t.Fatalf("moved %+v", ed.vehicles[i])
+	}
+	ed.removeSelected()
+	for _, spec := range ed.vehicles {
+		if spec.Kind == "jeep" {
+			t.Fatal("jeep stayed after delete")
+		}
+	}
+	if len(ed.vehicles) != 2 {
+		t.Fatalf("skidoos = %+v", ed.vehicles)
+	}
+	ed.stamp = stampSkidoo
+	ed.placeAt(4*sim.TileSize, 4*sim.TileSize)
+	if ed.vehicles[len(ed.vehicles)-1].Kind != "skidoo" || ed.vehicles[len(ed.vehicles)-1].Side != "player" {
+		t.Fatal("skidoo icon should write a player skidoo")
+	}
+	ed.dirty = true
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(raw, p); err != nil {
+		t.Fatal(err)
+	}
+	skis, jeeps := 0, 0
+	for _, spec := range p.Vehicles {
+		if spec.Kind == "skidoo" {
+			skis++
+		}
+		if spec.Kind == "jeep" {
+			jeeps++
+		}
+	}
+	if skis != 3 || jeeps != 0 {
+		t.Fatalf("saved %+v", p.Vehicles)
+	}
+	if _, ok := ToolHit(8+2, barRowHeight(3)*2+8, 3); !ok {
+		t.Fatal("third row should hit the jeep icon")
 	}
 }
 

@@ -8,11 +8,13 @@ const (
 	EngineTopPitch  = 1.45
 )
 
-// EngineHum is the one skidoo loop the mixer should play.
+// EngineHum is the one vehicle loop the mixer should play.
 // Pitch is EngineIdlePitch at rest and EngineTopPitch at VehicleMaxSpeed.
+// Voice is KindSkidoo or KindJeep. A jeep does not use the skidoo clip.
 type EngineHum struct {
 	Run   bool
 	Pitch float64
+	Voice string
 }
 
 // HearEngine decides the loop from the listener's own skidoo and the nearest
@@ -56,6 +58,7 @@ func (w *World) EngineHumAt(lx, ly, radius float64) EngineHum {
 	}
 	nearAlive, nearOccupied := false, false
 	nearSpeed, nearDist := 0.0, 0.0
+	nearVoice := ""
 	best := 0.0
 	found := false
 	for i := range w.Vehicles {
@@ -79,6 +82,23 @@ func (w *World) EngineHumAt(lx, ly, radius float64) EngineHum {
 		nearOccupied = true
 		nearSpeed = hypot(v.VX, v.VY)
 		nearDist = d
+		nearVoice = engineVoice(v.Kind)
 	}
-	return HearEngine(ownAlive, ownOccupied, ownSpeed, nearAlive, nearOccupied, nearSpeed, nearDist, radius)
+	h := HearEngine(ownAlive, ownOccupied, ownSpeed, nearAlive, nearOccupied, nearSpeed, nearDist, radius)
+	if !h.Run {
+		return h
+	}
+	if ownAlive && ownOccupied && own != nil {
+		h.Voice = engineVoice(own.Kind)
+		return h
+	}
+	h.Voice = nearVoice
+	return h
+}
+
+func engineVoice(kind string) string {
+	if kind == KindJeep {
+		return KindJeep
+	}
+	return KindSkidoo
 }

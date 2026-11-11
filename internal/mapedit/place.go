@@ -20,6 +20,7 @@ const (
 	pickCrate
 	pickCivilian
 	pickHostage
+	pickVehicle
 )
 
 type pick struct {
@@ -51,6 +52,8 @@ const (
 	stampReinforced = "reinforced"
 	stampFactory    = "factory"
 	stampComputer   = "computer"
+	stampJeep       = "jeep"
+	stampSkidoo     = "skidoo"
 )
 
 func stampName(s string) string {
@@ -89,13 +92,17 @@ func stampName(s string) string {
 		return "factory"
 	case stampComputer:
 		return "computer"
+	case stampJeep:
+		return "jeep"
+	case stampSkidoo:
+		return "skidoo"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    H home flag    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    S saves"
+	return "left-click places    drag moves    Del removes    W patrol point    H home flag    F side    A armed    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    Ctrl+1 jeep    Ctrl+2 skidoo    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -150,6 +157,10 @@ func (e *Editor) pickAt(wx, wy float64) pick {
 	for i, h := range e.hostages {
 		p := sim.TileCenter(h.X, h.Y)
 		take(p.X, p.Y, pick{kind: pickHostage, i: i})
+	}
+	for i, v := range e.vehicles {
+		p := sim.TileCenter(v.X, v.Y)
+		take(p.X, p.Y, pick{kind: pickVehicle, i: i})
 	}
 	for i, b := range e.barrels {
 		c := sim.TileCenter(b.X, b.Y)
@@ -209,6 +220,8 @@ func (e *Editor) beginGrab(p pick, wx, wy float64) {
 		e.homeCivilian = e.civilians[p.i]
 	case pickHostage:
 		e.homeHostage = e.hostages[p.i]
+	case pickVehicle:
+		e.homeVehicle = e.vehicles[p.i]
 	}
 }
 
@@ -295,6 +308,14 @@ func (e *Editor) dragGrab(wx, wy float64) {
 			e.dirty = true
 			e.status = ""
 		}
+	case pickVehicle:
+		i := e.grab.i
+		nx, ny := e.clampTile(e.homeVehicle.X+dx, e.homeVehicle.Y+dy)
+		if e.vehicles[i].X != nx || e.vehicles[i].Y != ny {
+			e.vehicles[i].X, e.vehicles[i].Y = nx, ny
+			e.dirty = true
+			e.status = ""
+		}
 	}
 }
 
@@ -363,6 +384,13 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampLeader:
 		e.enemies = append(e.enemies, data.Enemy{X: tx, Y: ty, Kind: "leader"})
 		e.sel = pick{kind: pickEnemy, i: len(e.enemies) - 1}
+	case stampJeep, stampSkidoo:
+		kind := sim.KindJeep
+		if e.stamp == stampSkidoo {
+			kind = sim.KindSkidoo
+		}
+		e.vehicles = append(e.vehicles, data.VehicleSpec{X: tx, Y: ty, Kind: kind, Side: "player", Armed: true})
+		e.sel = pick{kind: pickVehicle, i: len(e.vehicles) - 1}
 	case stampGrenades, stampRockets:
 		kind := "grenades"
 		if e.stamp == stampRockets {
@@ -391,6 +419,46 @@ func (e *Editor) flipHome() {
 	} else {
 		e.status = "civilian wanders"
 	}
+}
+
+// flipSide toggles player and enemy on a jeep or a skidoo.
+func (e *Editor) flipSide() {
+	v := e.selectedVehicle()
+	if v == nil {
+		e.status = "select a jeep or a skidoo first"
+		return
+	}
+	if v.Side == "enemy" {
+		v.Side = "player"
+		e.status = "player"
+	} else {
+		v.Side = "enemy"
+		e.status = "enemy"
+	}
+	e.dirty = true
+}
+
+// flipArmed toggles the pintle gun. An unarmed jeep draws the plain sheet.
+func (e *Editor) flipArmed() {
+	v := e.selectedVehicle()
+	if v == nil {
+		e.status = "select a jeep or a skidoo first"
+		return
+	}
+	v.Armed = !v.Armed
+	e.dirty = true
+	if v.Armed {
+		e.status = "armed"
+	} else {
+		e.status = "unarmed"
+	}
+}
+
+func (e *Editor) selectedVehicle() *data.VehicleSpec {
+	if e.sel.kind != pickVehicle || e.sel.i < 0 || e.sel.i >= len(e.vehicles) {
+		return nil
+	}
+	return &e.vehicles[e.sel.i]
 }
 
 func (e *Editor) addPatrolPoint(wx, wy float64) {
@@ -432,6 +500,8 @@ func (e *Editor) removeSelected() {
 		e.civilians = append(e.civilians[:p.i], e.civilians[p.i+1:]...)
 	case pickHostage:
 		e.hostages = append(e.hostages[:p.i], e.hostages[p.i+1:]...)
+	case pickVehicle:
+		e.vehicles = append(e.vehicles[:p.i], e.vehicles[p.i+1:]...)
 	}
 	e.sel = pick{}
 	e.grabbing = false

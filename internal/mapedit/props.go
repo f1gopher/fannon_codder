@@ -97,6 +97,43 @@ func computerCel() *propCel {
 	return propLib.computer
 }
 
+func jeepCel() *propCel {
+	return cachedCel("jeep/idle")
+}
+
+func skidooCel() *propCel {
+	return cachedCel("skidoo/idle")
+}
+
+var celCache struct {
+	mu sync.Mutex
+	m  map[string]*propCel
+}
+
+func cachedCel(key string) *propCel {
+	celCache.mu.Lock()
+	defer celCache.mu.Unlock()
+	if celCache.m == nil {
+		celCache.m = map[string]*propCel{}
+	}
+	if c, ok := celCache.m[key]; ok {
+		return c
+	}
+	c, _ := loadCel(key)
+	celCache.m[key] = c
+	return c
+}
+
+func vehicleCel(v data.VehicleSpec) *propCel {
+	if v.Kind == sim.KindJeep {
+		if !v.Armed {
+			return cachedCel("jeep/plain-idle")
+		}
+		return cachedCel("jeep/idle")
+	}
+	return cachedCel("skidoo/idle")
+}
+
 type celManifest struct {
 	FrameW  int `json:"frameW"`
 	FrameH  int `json:"frameH"`
@@ -251,6 +288,21 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 		}
 		if cel == nil || cel.img == nil {
 			fillRect(dst, int(sx-6*s), int(sy-6*s), int(12*s), int(12*s), color.RGBA{R: 0x8a, G: 0x8a, B: 0x8a, A: 0xff})
+			continue
+		}
+		drawPropShadow(dst, cel, sx, sy, s)
+		drawCel(dst, cel, sx, sy, s)
+	}
+	for _, v := range e.vehicles {
+		c := sim.TileCenter(v.X, v.Y)
+		sx, sy := e.worldToScreen(c.X, c.Y)
+		cel := vehicleCel(v)
+		if cel == nil || cel.img == nil {
+			col := color.RGBA{R: 0xd0, G: 0xd4, B: 0xd8, A: 0xff}
+			if v.Kind == sim.KindJeep {
+				col = color.RGBA{R: 0x4a, G: 0x6a, B: 0x28, A: 0xff}
+			}
+			fillRect(dst, int(sx-10*s), int(sy-5*s), int(20*s), int(10*s), col)
 			continue
 		}
 		drawPropShadow(dst, cel, sx, sy, s)

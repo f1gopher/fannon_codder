@@ -134,4 +134,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A civilian with `home` true stands until touched, then escorts. A home cottage saves him with `CueSave`. His death is `CueCry` and fails `get_civilian_home`. The editor places the cottage and H flips the flag. It draws `hut/home`.
 - A `reinforced` door hut spawns grunts and counts for `destroy_enemy_buildings`. Grenades and barrels clank off it. A rocket destroys it. The editor places it with Shift+7. It draws `hut/reinforced`, and the blown roof is cut from that sheet.
 - A factory and a computer take only a rocket. Grenades clank. They are `destroy_factory` and `destroy_computer`, not door targets. The factory throws its roof. The computer does not. Wrecks stay. The editor places them with Shift+8 and Shift+9.
+- A jeep is the skidoo with `jeep/idle`, `jeep/move`, and the plain pair when the gun is off. It uses a four-stroke hum. The editor loads vehicles, places a jeep with Ctrl+1 and a skidoo with Ctrl+2, and F and A flip side and armed.
 

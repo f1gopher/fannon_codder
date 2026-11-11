@@ -32,7 +32,7 @@ type Host interface {
 	Progress() *Progress
 	PlayCues([]sim.Cue)
 	SetListener(x, y float64)
-	SetEngine(run bool, pitch float64)
+	SetEngine(run bool, pitch float64, voice string)
 	SetRotor(run bool)
 	PlayKind(sim.CueKind)
 	// Frame is the logical picture size. Menus and the battle both use it
@@ -311,7 +311,7 @@ func (b *Battle) CursorKind(p input.Pointer) int {
 func (b *Battle) Update(h Host) error {
 	defer func() {
 		if b.paused || b.world == nil {
-			h.SetEngine(false, 0)
+			h.SetEngine(false, 0, "")
 			h.SetRotor(false)
 			return
 		}
@@ -319,11 +319,11 @@ func (b *Battle) Update(h Host) error {
 		x, y := hearPoint(b.world)
 		h.SetListener(x, y)
 		if b.world.Status != sim.Playing {
-			h.SetEngine(false, 0)
+			h.SetEngine(false, 0, "")
 			h.SetRotor(false)
 		} else {
 			hum := b.world.EngineHumAt(x, y, audio.HearFar)
-			h.SetEngine(hum.Run, hum.Pitch)
+			h.SetEngine(hum.Run, hum.Pitch, hum.Voice)
 			h.SetRotor(b.insert != nil && !b.insert.Gone())
 		}
 		h.PlayCues(b.world.TakeCues())

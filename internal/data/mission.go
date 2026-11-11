@@ -309,9 +309,6 @@ func (p *Phase) World() (*sim.World, error) {
 		w.AddBarrel(sim.TileCenter(b.X, b.Y))
 	}
 	for _, v := range p.Vehicles {
-		if v.Kind != "" && v.Kind != "skidoo" {
-			return nil, fmt.Errorf("unknown vehicle %q", v.Kind)
-		}
 		side := sim.SidePlayer
 		switch v.Side {
 		case "", "player":
@@ -320,7 +317,14 @@ func (p *Phase) World() (*sim.World, error) {
 		default:
 			return nil, fmt.Errorf("unknown vehicle side %q", v.Side)
 		}
-		w.AddSkidoo(sim.TileCenter(v.X, v.Y), side, v.Armed)
+		switch v.Kind {
+		case "", sim.KindSkidoo:
+			w.AddSkidoo(sim.TileCenter(v.X, v.Y), side, v.Armed)
+		case sim.KindJeep:
+			w.AddJeep(sim.TileCenter(v.X, v.Y), side, v.Armed)
+		default:
+			return nil, fmt.Errorf("unknown vehicle %q", v.Kind)
+		}
 	}
 	return w, nil
 }

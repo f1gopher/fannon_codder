@@ -17,8 +17,11 @@ var barStamps = []string{
 // barRow2 is the second menu row. Shift+1 selects the first icon, and so on.
 var barRow2 = []string{stampCivilian, stampHostage, stampTent, stampLeader, stampHandover, stampHome, stampReinforced, stampFactory, stampComputer}
 
+// barRow3 is the third menu row. Ctrl+1 selects the jeep, Ctrl+2 the skidoo.
+var barRow3 = []string{stampJeep, stampSkidoo}
+
 func menuRows() [][]string {
-	return [][]string{barStamps, barRow2}
+	return [][]string{barStamps, barRow2, barRow3}
 }
 
 func allStamps() []string {
@@ -102,7 +105,7 @@ func iconCels() []*propCel {
 		_, plain, grenade, rockets, barrel := sheets()
 		door, _, _, _, _ := sheets()
 		civil := civilianCel()
-		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel(), leaderCel(), handoverCel(), homeCel(), reinforcedCel(), factoryCel(), computerCel()}
+		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel(), leaderCel(), handoverCel(), homeCel(), reinforcedCel(), factoryCel(), computerCel(), jeepCel(), skidooCel()}
 	})
 	return iconLib.cels
 }
@@ -143,6 +146,10 @@ func (e *Editor) drawBar(screen *ebiten.Image) {
 				fillRect(screen, int(x+4), int(y+size*0.35), int(size-8), int(size*0.4), color.RGBA{R: 0x8a, G: 0x6a, B: 0x3a, A: 255})
 			} else if stamp == stampComputer {
 				fillRect(screen, int(x+size*0.3), int(y+size*0.22), int(size*0.4), int(size*0.55), color.RGBA{R: 0x3a, G: 0xc0, B: 0x88, A: 255})
+			} else if stamp == stampJeep {
+				fillRect(screen, int(x+4), int(y+size*0.38), int(size-8), int(size*0.28), color.RGBA{R: 0x4a, G: 0x6a, B: 0x28, A: 255})
+			} else if stamp == stampSkidoo {
+				fillRect(screen, int(x+4), int(y+size*0.4), int(size-8), int(size*0.24), color.RGBA{R: 0xd0, G: 0xd4, B: 0xd8, A: 255})
 			} else if stamp == stampReinforced {
 				fillRect(screen, int(x+6), int(y+size*0.28), int(size-12), int(size*0.52), color.RGBA{R: 0x6a, G: 0x72, B: 0x78, A: 255})
 				fillRect(screen, int(x+size*0.38), int(y+size*0.48), int(size*0.24), int(size*0.28), color.RGBA{R: 0x22, G: 0x26, B: 0x28, A: 255})
@@ -160,9 +167,14 @@ func (e *Editor) drawBar(screen *ebiten.Image) {
 		stamps := allStamps()
 		col := i
 		row := 0
-		if i >= len(barStamps) {
-			col = i - len(barStamps)
-			row = 1
+		base := 0
+		for r, rowStamps := range menuRows() {
+			if i < base+len(rowStamps) {
+				row = r
+				col = i - base
+				break
+			}
+			base += len(rowStamps)
 		}
 		x := x0 + float64(col)*(size+gap)
 		e.drawTip(screen, stampTip(stamps[i]), x, y0+float64(row)*rowH+size+4)
@@ -207,6 +219,10 @@ func stampTip(stamp string) string {
 		return "Factory — left click places"
 	case stampComputer:
 		return "Computer — left click places"
+	case stampJeep:
+		return "Jeep — left click places, F side, A armed"
+	case stampSkidoo:
+		return "Skidoo — left click places, F side, A armed"
 	default:
 		return "Left click places"
 	}

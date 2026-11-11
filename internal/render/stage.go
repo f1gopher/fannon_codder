@@ -873,10 +873,7 @@ func bodyShift(u *sim.Unit) (dx, dy float64) {
 func vehicleBody(cam sim.Camera, v sim.Vehicle) body {
 	sx := cam.ScreenX(v.X)
 	sy := cam.ScreenY(v.Y)
-	key := "skidoo/idle"
-	if math.Hypot(v.VX, v.VY) > walkMin {
-		key = "skidoo/move"
-	}
+	key := vehicleSheet(v, math.Hypot(v.VX, v.VY) > walkMin)
 	sh := activeSheets().Get(key)
 	var img *ebiten.Image
 	var mirror bool
@@ -901,6 +898,27 @@ func vehicleBody(cam sim.Camera, v sim.Vehicle) body {
 			drawEnemyLamp(dst, cam, &v)
 		},
 	}
+}
+
+// vehicleSheet is the painted body. A jeep with no gun uses the plain pair.
+// The skidoo sheet does not change when the gun is absent.
+func vehicleSheet(v sim.Vehicle, moving bool) string {
+	if v.Kind == sim.KindJeep {
+		if !v.Armed {
+			if moving {
+				return "jeep/plain-move"
+			}
+			return "jeep/plain-idle"
+		}
+		if moving {
+			return "jeep/move"
+		}
+		return "jeep/idle"
+	}
+	if moving {
+		return "skidoo/move"
+	}
+	return "skidoo/idle"
 }
 
 func spriteBody(y, x, sy float64, img *ebiten.Image, ax, ay int, mirror bool, fallback func(*ebiten.Image)) body {

@@ -17,6 +17,7 @@ type memo struct {
 	barrels   []data.BarrelSpec
 	civilians []data.Enemy
 	hostages  []data.Enemy
+	vehicles  []data.VehicleSpec
 	dirty     bool
 }
 
@@ -39,6 +40,7 @@ func (e *Editor) takeMemo() memo {
 		barrels:   append([]data.BarrelSpec(nil), e.barrels...),
 		civilians: append([]data.Enemy(nil), e.civilians...),
 		hostages:  append([]data.Enemy(nil), e.hostages...),
+		vehicles:  append([]data.VehicleSpec(nil), e.vehicles...),
 		dirty:     e.dirty,
 	}
 }
@@ -63,6 +65,7 @@ func (e *Editor) useMemo(m memo) {
 	e.barrels = append([]data.BarrelSpec(nil), m.barrels...)
 	e.civilians = append([]data.Enemy(nil), m.civilians...)
 	e.hostages = append([]data.Enemy(nil), m.hostages...)
+	e.vehicles = append([]data.VehicleSpec(nil), m.vehicles...)
 	e.dirty = m.dirty
 }
 
@@ -77,6 +80,7 @@ func (e *Editor) phaseForSave() *data.Phase {
 	p.Barrels = append([]data.BarrelSpec(nil), e.barrels...)
 	p.Civilians = append([]data.Enemy(nil), e.civilians...)
 	p.Hostages = append([]data.Enemy(nil), e.hostages...)
+	p.Vehicles = append([]data.VehicleSpec(nil), e.vehicles...)
 	return &p
 }
 

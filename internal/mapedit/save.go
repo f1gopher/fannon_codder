@@ -29,6 +29,14 @@ func cloneEnemies(in []data.Enemy) []data.Enemy {
 	return out
 }
 
+func cloneVehicles(in []data.VehicleSpec) []data.VehicleSpec {
+	out := append([]data.VehicleSpec(nil), in...)
+	for i := range out {
+		out[i].Line = append([][2]int(nil), in[i].Line...)
+	}
+	return out
+}
+
 func (e *Editor) takeMemo() memo {
 	return memo{
 		phase:     e.phase,
@@ -40,7 +48,7 @@ func (e *Editor) takeMemo() memo {
 		barrels:   append([]data.BarrelSpec(nil), e.barrels...),
 		civilians: append([]data.Enemy(nil), e.civilians...),
 		hostages:  append([]data.Enemy(nil), e.hostages...),
-		vehicles:  append([]data.VehicleSpec(nil), e.vehicles...),
+		vehicles:  cloneVehicles(e.vehicles),
 		dirty:     e.dirty,
 	}
 }
@@ -65,7 +73,7 @@ func (e *Editor) useMemo(m memo) {
 	e.barrels = append([]data.BarrelSpec(nil), m.barrels...)
 	e.civilians = append([]data.Enemy(nil), m.civilians...)
 	e.hostages = append([]data.Enemy(nil), m.hostages...)
-	e.vehicles = append([]data.VehicleSpec(nil), m.vehicles...)
+	e.vehicles = cloneVehicles(m.vehicles)
 	e.dirty = m.dirty
 }
 
@@ -80,7 +88,7 @@ func (e *Editor) phaseForSave() *data.Phase {
 	p.Barrels = append([]data.BarrelSpec(nil), e.barrels...)
 	p.Civilians = append([]data.Enemy(nil), e.civilians...)
 	p.Hostages = append([]data.Enemy(nil), e.hostages...)
-	p.Vehicles = append([]data.VehicleSpec(nil), e.vehicles...)
+	p.Vehicles = cloneVehicles(e.vehicles)
 	return &p
 }
 

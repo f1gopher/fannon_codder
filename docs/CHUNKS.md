@@ -137,4 +137,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A jeep is the skidoo with `jeep/idle`, `jeep/move`, and the plain pair when the gun is off. It uses a four-stroke hum. The editor loads vehicles, places a jeep with Ctrl+1 and a skidoo with Ctrl+2, and F and A flip side and armed.
 - A tank is slower than the skidoo, does not skid, and fires a shell on right click. A grenade clanks. A rocket or a shell kills it. The wreck stays. `CueShell` is the launch. The editor places it with Ctrl+3.
 - A turret is a fixed enemy big gun. It turns and fires the tank shell. A grenade clanks. A rocket or a shell kills it. The wreck stays. It has no engine. The editor places it with Ctrl+4. F and A do nothing.
+- A combat chopper flies a route or holds its tile. An armed one fires a homing rocket. A low pass kills. A rocket or a shell drops the wreck, then the boom. The editor places it with Ctrl+5. A flips armed. W adds a route point.
 

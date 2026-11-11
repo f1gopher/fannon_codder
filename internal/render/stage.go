@@ -525,6 +525,7 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 	for i := range bodies {
 		bodies[i].draw(dst)
 	}
+	drawChoppers(dst, w)
 	drawBirds(dst, w)
 	Bombs(dst, w)
 	Projectiles(dst, w)
@@ -586,6 +587,10 @@ func collectBodies(w *sim.World, terrain string) []body {
 	}
 	for i := range w.Vehicles {
 		v := w.Vehicles[i]
+		if v.Kind == sim.KindChopper {
+			bodies = append(bodies, chopperShadow(cam, v))
+			continue
+		}
 		if !v.Alive && v.Kind != sim.KindTank && v.Kind != sim.KindTurret {
 			continue
 		}

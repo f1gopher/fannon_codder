@@ -163,7 +163,7 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 	}
 	for i := range w.Vehicles {
 		v := &w.Vehicles[i]
-		if !v.Alive {
+		if !v.Alive && v.Kind != sim.KindChopper {
 			continue
 		}
 		c := color.RGBA{R: 0xd8, G: 0xd8, B: 0xdc, A: 0xff}

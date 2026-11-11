@@ -59,8 +59,13 @@ type Vehicle struct {
 	FireCD    float64
 	Blink     float64
 	// SpotT and ReactAt are the turret's one grunt reaction. A tank uses its driver.
-	SpotT   float64
-	ReactAt float64
+	// A chopper uses them too. Alt is how far a wreck still has to fall.
+	SpotT    float64
+	ReactAt  float64
+	Alt      float64
+	Route    []Vec2
+	RouteTo  int
+	RouteDir int
 }
 
 // AddSkidoo parks a vehicle. An enemy skidoo starts with a driver aboard.
@@ -170,7 +175,7 @@ func (w *World) VehicleHover(x, y float64) (Hover, *Vehicle) {
 	bestD := VehicleBoardR
 	for i := range w.Vehicles {
 		v := &w.Vehicles[i]
-		if !v.Alive || v.Kind == KindTurret {
+		if !v.Alive || v.Kind == KindTurret || v.Kind == KindChopper {
 			continue
 		}
 		d := hypot(v.X-x, v.Y-y)
@@ -204,7 +209,7 @@ func (w *World) SetDrive(x, y float64, holding bool) {
 func (w *World) CommandBoard(id int) bool {
 	v := w.vehicleByID(id)
 	s := w.ActiveSquad()
-	if v == nil || s == nil || !v.Alive || v.Kind == KindTurret || w.vehicleOccupied(v) {
+	if v == nil || s == nil || !v.Alive || v.Kind == KindTurret || v.Kind == KindChopper || w.vehicleOccupied(v) {
 		return false
 	}
 	leader := w.Unit(s.LeaderID)
@@ -256,7 +261,7 @@ func (w *World) tryCompleteBoard() {
 
 func (w *World) enterVehicle(v *Vehicle) bool {
 	s := w.ActiveSquad()
-	if s == nil || v == nil || !v.Alive || v.Kind == KindTurret || w.vehicleOccupied(v) {
+	if s == nil || v == nil || !v.Alive || v.Kind == KindTurret || v.Kind == KindChopper || w.vehicleOccupied(v) {
 		return false
 	}
 	capn := v.Capacity
@@ -329,6 +334,12 @@ func (w *World) destroyVehicle(v *Vehicle) {
 	}
 	v.Alive = false
 	v.VX, v.VY = 0, 0
+	if v.Kind == KindChopper {
+		v.Alt = ChopperFall
+		v.Occupants = nil
+		w.emit(CueCrash, v.X, v.Y)
+		return
+	}
 	for _, id := range v.Occupants {
 		if u := w.Unit(id); u != nil {
 			w.kill(u)
@@ -340,10 +351,16 @@ func (w *World) destroyVehicle(v *Vehicle) {
 func (w *World) stepVehicles(dt float64) {
 	for i := range w.Vehicles {
 		v := &w.Vehicles[i]
-		if !v.Alive {
+		if v.Alt > 0 || !v.Alive {
 			continue
 		}
 		v.Blink += dt
+		if v.Kind == KindChopper {
+			if v.Side == SideEnemy && w.AI {
+				w.stepChopper(v, dt)
+			}
+			continue
+		}
 		if v.Kind == KindTurret {
 			if v.Side == SideEnemy && w.AI {
 				w.stepEnemyTurret(v, dt)
@@ -686,7 +703,7 @@ func (w *World) vehicleDriver(v *Vehicle) int {
 }
 
 func (w *World) ram(v *Vehicle) {
-	if v.Kind == KindTank || v.Kind == KindTurret || !v.Alive || hypot(v.VX, v.VY) < 8 {
+	if v.Kind == KindTank || v.Kind == KindTurret || v.Kind == KindChopper || !v.Alive || hypot(v.VX, v.VY) < 8 {
 		return
 	}
 	for i := range w.Units {

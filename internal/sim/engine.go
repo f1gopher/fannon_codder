@@ -73,7 +73,7 @@ func (w *World) EngineHumAt(lx, ly, radius float64) EngineHum {
 		if own != nil && v.ID == own.ID {
 			continue
 		}
-		if !v.Alive || v.Kind == KindTurret || !w.vehicleOccupied(v) {
+		if !v.Alive || v.Kind == KindTurret || v.Kind == KindChopper || !w.vehicleOccupied(v) {
 			continue
 		}
 		d := hypot(v.X-lx, v.Y-ly)

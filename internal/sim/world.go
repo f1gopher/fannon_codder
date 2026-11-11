@@ -344,6 +344,7 @@ func (w *World) Step(dt float64) {
 		// and only then does the phase become a win or a wipe.
 		w.Firing = false
 		w.finishWindups(dt)
+		w.stepChopperFalls(dt)
 		w.stepProjectiles(dt)
 		w.stepGrenades(dt)
 		w.stepRoofs(dt)
@@ -370,6 +371,7 @@ func (w *World) Step(dt float64) {
 	w.stepLeaders(dt)
 	w.stepAI(dt)
 	w.stepVehicles(dt)
+	w.stepChopperFalls(dt)
 	w.stepMines()
 	w.stepQuicksand(dt)
 	w.stepFire(dt)

@@ -76,6 +76,9 @@ type Library struct {
 // barrel/drum,
 // skidoo/idle, skidoo/move, tank/idle, tank/move, tank/wreck, chopper/fly, prop/snowman, prop/igloo.
 // fx/shell is the tank round, one east cel spun along its velocity.
+// fx/homing is the chopper rocket, one east cel, two frames, spun along its velocity.
+// chopper/attack and chopper/plain are the combat aircraft. chopper/wreck is the crash.
+// The rotor is drawn in code, as on the drop.
 // chopper/fly is the opening aircraft, one south-east frame. The rotor
 // is drawn on top of it.
 // prop/scrub stays on disk and is not drawn.

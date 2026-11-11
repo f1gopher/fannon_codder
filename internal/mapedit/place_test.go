@@ -603,6 +603,71 @@ func TestTurretPlaceDragDeleteAndSave(t *testing.T) {
 	}
 }
 
+func TestChopperPlaceRouteArmedAndSave(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed.stamp = stampChopper
+	ed.placeAt(4*sim.TileSize, 4*sim.TileSize)
+	i := len(ed.vehicles) - 1
+	v := ed.vehicles[i]
+	if v.Kind != "chopper" || v.Side != "enemy" || !v.Armed || ed.sel.kind != pickVehicle {
+		t.Fatalf("placed %+v sel %v", v, ed.sel.kind)
+	}
+	ed.flipSide()
+	if ed.vehicles[i].Side != "enemy" || ed.status != "a chopper stays enemy" {
+		t.Fatalf("F should leave it enemy, status %q side %s", ed.status, ed.vehicles[i].Side)
+	}
+	ed.flipArmed()
+	if ed.vehicles[i].Armed {
+		t.Fatal("A should clear armed")
+	}
+	ed.flipArmed()
+	ed.addPatrolPoint(8*sim.TileSize, 4*sim.TileSize)
+	if len(ed.vehicles[i].Line) != 1 || ed.sel.kind != pickRoute {
+		t.Fatalf("route %+v sel %v", ed.vehicles[i].Line, ed.sel)
+	}
+	ed.beginGrab(pick{kind: pickRoute, i: i, j: 0}, 8*sim.TileSize, 4*sim.TileSize)
+	ed.dragGrab(9*sim.TileSize, 5*sim.TileSize)
+	if ed.vehicles[i].Line[0] != [2]int{9, 5} {
+		t.Fatalf("point %+v", ed.vehicles[i].Line)
+	}
+	ed.removeSelected()
+	if len(ed.vehicles[i].Line) != 0 || ed.sel.kind != pickVehicle {
+		t.Fatal("deleting the point should keep the chopper")
+	}
+	ed.beginGrab(pick{kind: pickVehicle, i: i}, 4*sim.TileSize, 4*sim.TileSize)
+	ed.dragGrab(5*sim.TileSize, 4*sim.TileSize)
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(raw, p); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, spec := range p.Vehicles {
+		if spec.Kind == "chopper" && spec.Side == "enemy" && spec.Armed && spec.X == 5 {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("saved %+v", p.Vehicles)
+	}
+	ed.removeSelected()
+	for _, spec := range ed.vehicles {
+		if spec.Kind == "chopper" {
+			t.Fatal("chopper stayed after delete")
+		}
+	}
+}
+
 func TestFactoryAndComputerPlaceDragDeleteAndSave(t *testing.T) {
 	ed, err := New()
 	if err != nil {

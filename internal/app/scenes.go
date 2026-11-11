@@ -324,7 +324,8 @@ func (b *Battle) Update(h Host) error {
 		} else {
 			hum := b.world.EngineHumAt(x, y, audio.HearFar)
 			h.SetEngine(hum.Run, hum.Pitch, hum.Voice)
-			h.SetRotor(b.insert != nil && !b.insert.Gone())
+			drop := b.insert != nil && !b.insert.Gone()
+			h.SetRotor(drop || b.world.ChopperNear(x, y, audio.HearFar))
 		}
 		h.PlayCues(b.world.TakeCues())
 	}()

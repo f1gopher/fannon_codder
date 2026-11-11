@@ -67,6 +67,7 @@ type Editor struct {
 	homeCivilian           data.Enemy
 	homeHostage            data.Enemy
 	homeVehicle            data.VehicleSpec
+	homeRoute              [2]int
 	armPlace               bool
 	armX, armY             float64
 	armWX, armWY           float64
@@ -219,7 +220,7 @@ func (e *Editor) load(i int) {
 	e.barrels = append([]data.BarrelSpec(nil), p.Barrels...)
 	e.civilians = append([]data.Enemy(nil), p.Civilians...)
 	e.hostages = append([]data.Enemy(nil), p.Hostages...)
-	e.vehicles = append([]data.VehicleSpec(nil), p.Vehicles...)
+	e.vehicles = cloneVehicles(p.Vehicles)
 	e.phase = p
 	e.dirty = false
 }
@@ -711,6 +712,11 @@ func (e *Editor) drawMarks(dst *ebiten.Image) {
 	if s <= 0 {
 		s = 1
 	}
+	for _, v := range e.vehicles {
+		if v.Kind == sim.KindChopper && len(v.Line) > 0 {
+			e.drawChopperRoute(dst, v)
+		}
+	}
 	for _, en := range e.enemies {
 		if en.Kind == "patrol" {
 			e.drawPatrol(dst, en)
@@ -797,6 +803,13 @@ func (e *Editor) drawSelection(dst *ebiten.Image) {
 		v := e.vehicles[e.sel.i]
 		x, y = e.markAt(v.X, v.Y)
 		r = 8 * s
+	case pickRoute:
+		if e.sel.i >= len(e.vehicles) || e.sel.j >= len(e.vehicles[e.sel.i].Line) {
+			return
+		}
+		pt := e.vehicles[e.sel.i].Line[e.sel.j]
+		x, y = e.markAt(pt[0], pt[1])
+		r = 4 * s
 	case pickHut:
 		if e.sel.i >= len(e.buildings) {
 			return
@@ -854,6 +867,11 @@ func (e *Editor) stampKey() {
 
 // drawPatrol strokes the curve the level gave this soldier.
 // The spawn diamond is drawn by the caller. Extra control points get a smaller mark.
+func (e *Editor) drawChopperRoute(dst *ebiten.Image, v data.VehicleSpec) {
+	en := data.Enemy{X: v.X, Y: v.Y, Line: v.Line}
+	e.drawPatrol(dst, en)
+}
+
 func (e *Editor) drawPatrol(dst *ebiten.Image, en data.Enemy) {
 	if len(en.Line) == 0 {
 		return

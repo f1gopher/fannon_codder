@@ -51,6 +51,52 @@ func Rocket() []byte {
 	return out
 }
 
+// homingSamples is about 200 ms. A thin rising whistle, one shot.
+const homingSamples = SampleRate * 200 / 1000
+
+// crashSamples is the wreck's descending whine. The boom is separate.
+const crashSamples = SampleRate * 450 / 1000
+
+// Homing is the chopper rocket leaving the pylon.
+func Homing() []byte {
+	out := make([]byte, homingSamples*4)
+	var phase float64
+	dur := float64(homingSamples-1) / SampleRate
+	for i := 0; i < homingSamples; i++ {
+		t := float64(i) / SampleRate
+		u := t / dur
+		freq := 700 + 1800*u
+		phase += freq / SampleRate
+		env := math.Sin(math.Pi*u) * 0.45
+		tone := math.Sin(2*math.Pi*phase) * 0.7
+		over := math.Sin(2*math.Pi*phase*2) * 0.18
+		putStereo(out, i, (tone+over)*env)
+	}
+	return out
+}
+
+// Crash is the falling aircraft. Pitch drops. It does not include the impact.
+func Crash() []byte {
+	out := make([]byte, crashSamples*4)
+	var phase float64
+	var noise lcg = 0xC4A5
+	dur := float64(crashSamples-1) / SampleRate
+	for i := 0; i < crashSamples; i++ {
+		t := float64(i) / SampleRate
+		u := t / dur
+		freq := 520 - 420*u
+		if freq < 70 {
+			freq = 70
+		}
+		phase += freq / SampleRate
+		white := noise.signed()
+		env := math.Sin(math.Pi*u) * (1 - 0.35*u)
+		tone := math.Sin(2*math.Pi*phase)*0.55 + white*0.08
+		putStereo(out, i, tone*env)
+	}
+	return out
+}
+
 // Shell is the tank gun's launch. Low, short, and duller than Rocket.
 func Shell() []byte {
 	out := make([]byte, shellSamples*4)

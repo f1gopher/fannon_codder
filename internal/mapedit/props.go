@@ -113,6 +113,14 @@ func turretCel() *propCel {
 	return cachedCel("turret/idle")
 }
 
+func chopperCel() *propCel {
+	c, err := loadCelRow("chopper/attack", 2)
+	if err != nil {
+		return nil
+	}
+	return c
+}
+
 var celCache struct {
 	mu sync.Mutex
 	m  map[string]*propCel
@@ -144,6 +152,17 @@ func vehicleCel(v data.VehicleSpec) *propCel {
 	}
 	if v.Kind == sim.KindTurret {
 		return cachedCel("turret/idle")
+	}
+	if v.Kind == sim.KindChopper {
+		key := "chopper/attack"
+		if !v.Armed {
+			key = "chopper/plain"
+		}
+		c, err := loadCelRow(key, 2)
+		if err != nil {
+			return nil
+		}
+		return c
 	}
 	return cachedCel("skidoo/idle")
 }

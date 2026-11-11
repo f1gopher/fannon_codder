@@ -7,6 +7,7 @@ const (
 	ProjMG ProjKind = iota
 	ProjRocket
 	ProjShell
+	ProjHoming
 )
 
 // Projectile is a machine-gun round or a bazooka rocket.
@@ -16,6 +17,8 @@ type Projectile struct {
 	VX, VY    float64
 	OwnerID   int
 	OwnerSide Side
-	Left      float64 // remaining travel in px
-	Alive     bool
+	// TargetID is the man a homing rocket is turning toward.
+	TargetID int
+	Left     float64 // remaining travel in px
+	Alive    bool
 }

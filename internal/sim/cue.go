@@ -33,6 +33,10 @@ const (
 	CueFail
 	CueBrief
 	CueHill
+	// CueHoming is the chopper rocket's launch whistle. The impact stays CueBoom.
+	CueHoming
+	// CueCrash is the falling wreck's whine. The boom plays when it hits.
+	CueCrash
 )
 
 // maxCues bounds the queue when a frame is not drained. The newest shots

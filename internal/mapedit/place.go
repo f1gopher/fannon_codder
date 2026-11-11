@@ -21,6 +21,7 @@ const (
 	pickCivilian
 	pickHostage
 	pickVehicle
+	pickRoute
 )
 
 type pick struct {
@@ -34,20 +35,20 @@ const pickRadius = 10 // world pixels
 
 // stamp is what a left click on empty ground adds.
 const (
-	stampGrunt     = "grunt"
-	stampGrenadier = "grenadier"
-	stampRocketeer = "rocketeer"
-	stampPatrol    = "patrol"
-	stampBarrel    = "barrel"
-	stampHut       = "hut"
-	stampDoor      = "door"
-	stampGrenades  = "grenades"
-	stampRockets   = "rockets"
-	stampCivilian  = "civilian"
-	stampHostage   = "hostage"
-	stampTent      = "tent"
-	stampLeader    = "leader"
-	stampHandover  = "handover"
+	stampGrunt      = "grunt"
+	stampGrenadier  = "grenadier"
+	stampRocketeer  = "rocketeer"
+	stampPatrol     = "patrol"
+	stampBarrel     = "barrel"
+	stampHut        = "hut"
+	stampDoor       = "door"
+	stampGrenades   = "grenades"
+	stampRockets    = "rockets"
+	stampCivilian   = "civilian"
+	stampHostage    = "hostage"
+	stampTent       = "tent"
+	stampLeader     = "leader"
+	stampHandover   = "handover"
 	stampHome       = "home"
 	stampReinforced = "reinforced"
 	stampFactory    = "factory"
@@ -56,6 +57,7 @@ const (
 	stampSkidoo     = "skidoo"
 	stampTank       = "tank"
 	stampTurret     = "turret"
+	stampChopper    = "chopper"
 )
 
 func stampName(s string) string {
@@ -102,13 +104,15 @@ func stampName(s string) string {
 		return "tank"
 	case stampTurret:
 		return "turret"
+	case stampChopper:
+		return "chopper"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    H home flag    F side    A armed    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    Ctrl+1 jeep    Ctrl+2 skidoo    Ctrl+3 tank    Ctrl+4 turret    S saves"
+	return "left-click places    drag moves    Del removes    W patrol or chopper point    H home flag    F side    A armed    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    Ctrl+1 jeep    Ctrl+2 skidoo    Ctrl+3 tank    Ctrl+4 turret    Ctrl+5 chopper    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -167,6 +171,10 @@ func (e *Editor) pickAt(wx, wy float64) pick {
 	for i, v := range e.vehicles {
 		p := sim.TileCenter(v.X, v.Y)
 		take(p.X, p.Y, pick{kind: pickVehicle, i: i})
+		for j, pt := range v.Line {
+			c := sim.TileCenter(pt[0], pt[1])
+			take(c.X, c.Y, pick{kind: pickRoute, i: i, j: j})
+		}
 	}
 	for i, b := range e.barrels {
 		c := sim.TileCenter(b.X, b.Y)
@@ -228,6 +236,9 @@ func (e *Editor) beginGrab(p pick, wx, wy float64) {
 		e.homeHostage = e.hostages[p.i]
 	case pickVehicle:
 		e.homeVehicle = e.vehicles[p.i]
+		e.homeVehicle.Line = append([][2]int(nil), e.vehicles[p.i].Line...)
+	case pickRoute:
+		e.homeRoute = e.vehicles[p.i].Line[p.j]
 	}
 }
 
@@ -322,6 +333,14 @@ func (e *Editor) dragGrab(wx, wy float64) {
 			e.dirty = true
 			e.status = ""
 		}
+	case pickRoute:
+		i, j := e.grab.i, e.grab.j
+		nx, ny := e.clampTile(e.homeRoute[0]+dx, e.homeRoute[1]+dy)
+		if e.vehicles[i].Line[j] != [2]int{nx, ny} {
+			e.vehicles[i].Line[j] = [2]int{nx, ny}
+			e.dirty = true
+			e.status = ""
+		}
 	}
 }
 
@@ -390,7 +409,7 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampLeader:
 		e.enemies = append(e.enemies, data.Enemy{X: tx, Y: ty, Kind: "leader"})
 		e.sel = pick{kind: pickEnemy, i: len(e.enemies) - 1}
-	case stampJeep, stampSkidoo, stampTank, stampTurret:
+	case stampJeep, stampSkidoo, stampTank, stampTurret, stampChopper:
 		kind := sim.KindJeep
 		side := "player"
 		if e.stamp == stampSkidoo {
@@ -402,6 +421,10 @@ func (e *Editor) placeAt(wx, wy float64) {
 		}
 		if e.stamp == stampTurret {
 			kind = sim.KindTurret
+			side = "enemy"
+		}
+		if e.stamp == stampChopper {
+			kind = sim.KindChopper
 			side = "enemy"
 		}
 		e.vehicles = append(e.vehicles, data.VehicleSpec{X: tx, Y: ty, Kind: kind, Side: side, Armed: true})
@@ -447,6 +470,10 @@ func (e *Editor) flipSide() {
 		e.status = "a turret stays enemy and armed"
 		return
 	}
+	if v.Kind == sim.KindChopper {
+		e.status = "a chopper stays enemy"
+		return
+	}
 	if v.Side == "enemy" {
 		v.Side = "player"
 		e.status = "player"
@@ -485,6 +512,10 @@ func (e *Editor) selectedVehicle() *data.VehicleSpec {
 }
 
 func (e *Editor) addPatrolPoint(wx, wy float64) {
+	if e.sel.kind == pickVehicle || e.sel.kind == pickRoute {
+		e.addChopperPoint(wx, wy)
+		return
+	}
 	i := -1
 	if e.sel.kind == pickEnemy || e.sel.kind == pickLine {
 		i = e.sel.i
@@ -496,6 +527,19 @@ func (e *Editor) addPatrolPoint(wx, wy float64) {
 	tx, ty := e.tileAt(wx, wy)
 	e.enemies[i].Line = append(e.enemies[i].Line, [2]int{tx, ty})
 	e.sel = pick{kind: pickLine, i: i, j: len(e.enemies[i].Line) - 1}
+	e.dirty = true
+	e.status = ""
+}
+
+func (e *Editor) addChopperPoint(wx, wy float64) {
+	i := e.sel.i
+	if i < 0 || i >= len(e.vehicles) || e.vehicles[i].Kind != sim.KindChopper {
+		e.status = "select a chopper first"
+		return
+	}
+	tx, ty := e.tileAt(wx, wy)
+	e.vehicles[i].Line = append(e.vehicles[i].Line, [2]int{tx, ty})
+	e.sel = pick{kind: pickRoute, i: i, j: len(e.vehicles[i].Line) - 1}
 	e.dirty = true
 	e.status = ""
 }
@@ -525,6 +569,14 @@ func (e *Editor) removeSelected() {
 		e.hostages = append(e.hostages[:p.i], e.hostages[p.i+1:]...)
 	case pickVehicle:
 		e.vehicles = append(e.vehicles[:p.i], e.vehicles[p.i+1:]...)
+	case pickRoute:
+		v := &e.vehicles[p.i]
+		v.Line = append(v.Line[:p.j], v.Line[p.j+1:]...)
+		e.sel = pick{kind: pickVehicle, i: p.i}
+		e.grabbing = false
+		e.dirty = true
+		e.status = ""
+		return
 	}
 	e.sel = pick{}
 	e.grabbing = false

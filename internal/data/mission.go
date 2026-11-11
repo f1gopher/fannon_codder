@@ -46,6 +46,8 @@ type VehicleSpec struct {
 	Kind  string `json:"kind"`
 	Armed bool   `json:"armed"`
 	Side  string `json:"side"`
+	// Line is the chopper route after (x, y). Empty means it holds the tile.
+	Line [][2]int `json:"line,omitempty"`
 }
 
 // BuildingSpec is a hut in tile coordinates (top-left). Door huts spawn grunts.
@@ -326,6 +328,8 @@ func (p *Phase) World() (*sim.World, error) {
 			w.AddTank(sim.TileCenter(v.X, v.Y), side, v.Armed)
 		case sim.KindTurret:
 			w.AddTurret(sim.TileCenter(v.X, v.Y))
+		case sim.KindChopper:
+			w.AddChopper(sim.TileCenter(v.X, v.Y), v.Armed, v.Line)
 		default:
 			return nil, fmt.Errorf("unknown vehicle %q", v.Kind)
 		}

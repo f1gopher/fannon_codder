@@ -52,24 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 10. Combat helicopter
-
-This is not the opening drop. The drop stays as it is. Nothing boards this one.
-
-`kind` `chopper` flies. Ground, water, trees, and huts do not block it. It is drawn above the men. MG fire misses it. A rocket or a shell destroys it. On destruction the wreck falls and the blast can kill.
-
-`armed` true fires a homing rocket at the nearest living player in range. The rocket turns toward him and explodes on contact. `armed` false does not shoot and does not drop grenades. Either kind kills a man it passes low over.
-
-It flies a `line` of tiles when one is given, like a patrol, and turns to fire when a player is in range. With no line it holds its tile and turns.
-
-Enemy only.
-
-Editor. A chopper icon writes `vehicles[].kind` of `chopper`, side enemy, armed true. Drag and delete work. A flips armed. F does nothing. W adds a route point, and Delete on that point removes the point. No line means it holds its tile.
-
-Pictures. `chopper/attack` and `chopper/plain`, about 200×140, anchor on the belly, five stored rows, one frame each. Smaller than `chopper/fly`, which stays the drop only. The rotor is the same code disc as the drop, not frames in the sheet. Attack paints stub pylons. Plain does not. `fx/homing` is a small east missile, 40×16, two frames at 8 fps, looping, drawn along its velocity. `chopper/wreck` is one tilted body, same cell as the attack sheet. It falls with the crash and stays where it hits. No muzzle flash. The hit is `fx/blast`.
-
-Sound. Armed launch emits `CueHoming`, a thin rising whistle, one shot, about 200 ms. Impact emits `CueBoom`. The fall emits `CueCrash` once, a descending whine, and the boom plays when it hits, not at the start of the fall. An unarmed chopper has no launch cue. The rotor reuses `SetRotor`. The drop keeps that voice until the aircraft has left. After that, the nearest living combat chopper inside `HearFar` starts it. Pause stops it. A chopper does not use the jeep or tank hum.
-
 ### 11. Replace Mission 1
 
 Do this only after chunks 1–10 are in the game.

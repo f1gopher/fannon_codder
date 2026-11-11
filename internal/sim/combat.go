@@ -333,6 +333,13 @@ func (w *World) stepProjectiles(dt float64) {
 		if !p.Alive {
 			continue
 		}
+		if p.Kind == ProjHoming {
+			w.stepHoming(p, dt)
+			if p.Alive && p.Left > 0 {
+				out = append(out, *p)
+			}
+			continue
+		}
 		x0, y0 := p.X, p.Y
 		speed := hypot(p.VX, p.VY)
 		if speed < 1 {

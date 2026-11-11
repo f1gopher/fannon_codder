@@ -523,7 +523,9 @@ func Field(dst *ebiten.Image, w *sim.World, terrain string) {
 		}
 	}
 	for i := range bodies {
-		bodies[i].draw(dst)
+		if bodies[i].draw != nil {
+			bodies[i].draw(dst)
+		}
 	}
 	drawChoppers(dst, w)
 	drawBirds(dst, w)

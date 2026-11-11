@@ -32,3 +32,11 @@ func TestFieldPaintsTheRegionChart(t *testing.T) {
 	UseChart(ch)
 	Field(dst, w, "jungle")
 }
+
+func TestChopperOnTheFieldDoesNotCrash(t *testing.T) {
+	w := sim.NewEmpty()
+	w.Map = sim.Map{W: 8, H: 8, Tiles: make([]sim.Tile, 64)}
+	w.Camera.MapW, w.Camera.MapH = 128, 128
+	w.AddChopper(sim.TileCenter(3, 3), true, nil)
+	Field(ebiten.NewImage(64, 64), w, "jungle")
+}

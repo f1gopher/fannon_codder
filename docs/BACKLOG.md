@@ -52,20 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 9. Big gun
-
-`kind` `turret` does not move and cannot be boarded. It turns at `EnemyTurnRate` and fires the tank shell at a player in the open, using the grunt reaction once, then a steady reload. No ram.
-
-MG fire and grenades do not destroy it. A rocket or a shell does. That is the hardened big gun.
-
-Enemy only.
-
-Editor. A turret icon writes `vehicles[].kind` of `turret`, side enemy. Drag and delete work. F and A do nothing, and the status line says so. There is no player turret and no unarmed turret.
-
-Pictures. `turret/idle`, 192×192, anchor 96,168, five stored rows, one frame. A concrete ring and a barrel that points with facing. `turret/wreck` is the same cell with the barrel dropped, and it stays. The shell in flight is `fx/shell`. The impact is `fx/blast`. No muzzle flash.
-
-Sound. Launch emits `CueShell`. Impact emits `CueBoom`. A grenade that does nothing emits `CueClank`. No engine and no board cue. Turning is silent.
-
 ### 10. Combat helicopter
 
 This is not the opening drop. The drop stays as it is. Nothing boards this one.

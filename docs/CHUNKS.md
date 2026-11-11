@@ -136,4 +136,5 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A factory and a computer take only a rocket. Grenades clank. They are `destroy_factory` and `destroy_computer`, not door targets. The factory throws its roof. The computer does not. Wrecks stay. The editor places them with Shift+8 and Shift+9.
 - A jeep is the skidoo with `jeep/idle`, `jeep/move`, and the plain pair when the gun is off. It uses a four-stroke hum. The editor loads vehicles, places a jeep with Ctrl+1 and a skidoo with Ctrl+2, and F and A flip side and armed.
 - A tank is slower than the skidoo, does not skid, and fires a shell on right click. A grenade clanks. A rocket or a shell kills it. The wreck stays. `CueShell` is the launch. The editor places it with Ctrl+3.
+- A turret is a fixed enemy big gun. It turns and fires the tank shell. A grenade clanks. A rocket or a shell kills it. The wreck stays. It has no engine. The editor places it with Ctrl+4. F and A do nothing.
 

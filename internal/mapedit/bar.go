@@ -18,7 +18,7 @@ var barStamps = []string{
 var barRow2 = []string{stampCivilian, stampHostage, stampTent, stampLeader, stampHandover, stampHome, stampReinforced, stampFactory, stampComputer}
 
 // barRow3 is the third menu row. Ctrl+1 selects the jeep, Ctrl+2 the skidoo.
-var barRow3 = []string{stampJeep, stampSkidoo, stampTank}
+var barRow3 = []string{stampJeep, stampSkidoo, stampTank, stampTurret}
 
 func menuRows() [][]string {
 	return [][]string{barStamps, barRow2, barRow3}
@@ -105,7 +105,7 @@ func iconCels() []*propCel {
 		_, plain, grenade, rockets, barrel := sheets()
 		door, _, _, _, _ := sheets()
 		civil := civilianCel()
-		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel(), leaderCel(), handoverCel(), homeCel(), reinforcedCel(), factoryCel(), computerCel(), jeepCel(), skidooCel(), tankCel()}
+		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel(), leaderCel(), handoverCel(), homeCel(), reinforcedCel(), factoryCel(), computerCel(), jeepCel(), skidooCel(), tankCel(), turretCel()}
 	})
 	return iconLib.cels
 }
@@ -152,6 +152,8 @@ func (e *Editor) drawBar(screen *ebiten.Image) {
 				fillRect(screen, int(x+4), int(y+size*0.4), int(size-8), int(size*0.24), color.RGBA{R: 0xd0, G: 0xd4, B: 0xd8, A: 255})
 			} else if stamp == stampTank {
 				fillRect(screen, int(x+3), int(y+size*0.36), int(size-6), int(size*0.32), color.RGBA{R: 0x3a, G: 0x48, B: 0x28, A: 255})
+			} else if stamp == stampTurret {
+				fillRect(screen, int(x+size*0.22), int(y+size*0.28), int(size*0.56), int(size*0.44), color.RGBA{R: 0x6a, G: 0x6e, B: 0x64, A: 255})
 			} else if stamp == stampReinforced {
 				fillRect(screen, int(x+6), int(y+size*0.28), int(size-12), int(size*0.52), color.RGBA{R: 0x6a, G: 0x72, B: 0x78, A: 255})
 				fillRect(screen, int(x+size*0.38), int(y+size*0.48), int(size*0.24), int(size*0.28), color.RGBA{R: 0x22, G: 0x26, B: 0x28, A: 255})
@@ -227,6 +229,8 @@ func stampTip(stamp string) string {
 		return "Skidoo — left click places, F side, A armed"
 	case stampTank:
 		return "Tank — left click places, F side, A armed"
+	case stampTurret:
+		return "Turret — left click places an enemy gun"
 	default:
 		return "Left click places"
 	}

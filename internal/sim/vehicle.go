@@ -31,6 +31,8 @@ const (
 	KindSkidoo = "skidoo"
 	KindJeep   = "jeep"
 	KindTank   = "tank"
+	// KindTurret is a fixed big gun. It does not move and cannot be boarded.
+	KindTurret = "turret"
 )
 
 const (
@@ -56,6 +58,9 @@ type Vehicle struct {
 	Hold      float64
 	FireCD    float64
 	Blink     float64
+	// SpotT and ReactAt are the turret's one grunt reaction. A tank uses its driver.
+	SpotT   float64
+	ReactAt float64
 }
 
 // AddSkidoo parks a vehicle. An enemy skidoo starts with a driver aboard.
@@ -98,6 +103,27 @@ func (w *World) AddTank(p Vec2, side Side, armed bool) *Vehicle {
 	v := w.AddSkidoo(p, side, armed)
 	v.Kind = KindTank
 	return v
+}
+
+// AddTurret plants a fixed big gun. It is always enemy and armed.
+// Nobody boards it, and it has no driver.
+func (w *World) AddTurret(p Vec2) *Vehicle {
+	if w.nextVID == 0 {
+		w.nextVID = 1
+	}
+	v := Vehicle{
+		ID:     w.nextVID,
+		X:      p.X,
+		Y:      p.Y,
+		Side:   SideEnemy,
+		Kind:   KindTurret,
+		Armed:  true,
+		Alive:  true,
+		Facing: 0,
+	}
+	w.nextVID++
+	w.Vehicles = append(w.Vehicles, v)
+	return &w.Vehicles[len(w.Vehicles)-1]
 }
 
 func (w *World) vehicleByID(id int) *Vehicle {
@@ -144,7 +170,7 @@ func (w *World) VehicleHover(x, y float64) (Hover, *Vehicle) {
 	bestD := VehicleBoardR
 	for i := range w.Vehicles {
 		v := &w.Vehicles[i]
-		if !v.Alive {
+		if !v.Alive || v.Kind == KindTurret {
 			continue
 		}
 		d := hypot(v.X-x, v.Y-y)
@@ -178,7 +204,7 @@ func (w *World) SetDrive(x, y float64, holding bool) {
 func (w *World) CommandBoard(id int) bool {
 	v := w.vehicleByID(id)
 	s := w.ActiveSquad()
-	if v == nil || s == nil || !v.Alive || w.vehicleOccupied(v) {
+	if v == nil || s == nil || !v.Alive || v.Kind == KindTurret || w.vehicleOccupied(v) {
 		return false
 	}
 	leader := w.Unit(s.LeaderID)
@@ -230,7 +256,7 @@ func (w *World) tryCompleteBoard() {
 
 func (w *World) enterVehicle(v *Vehicle) bool {
 	s := w.ActiveSquad()
-	if s == nil || v == nil || !v.Alive || w.vehicleOccupied(v) {
+	if s == nil || v == nil || !v.Alive || v.Kind == KindTurret || w.vehicleOccupied(v) {
 		return false
 	}
 	capn := v.Capacity
@@ -318,6 +344,12 @@ func (w *World) stepVehicles(dt float64) {
 			continue
 		}
 		v.Blink += dt
+		if v.Kind == KindTurret {
+			if v.Side == SideEnemy && w.AI {
+				w.stepEnemyTurret(v, dt)
+			}
+			continue
+		}
 		if v.Side == SideEnemy && w.AI {
 			w.stepEnemyVehicle(v, dt)
 		} else if w.leaderVehicle() == v {
@@ -394,6 +426,47 @@ func turnVehicle(v *Vehicle, px, py, dt float64) {
 		d = -step
 	}
 	v.Facing = wrapAngle(v.Facing + d)
+}
+
+// stepEnemyTurret stays on its tile, turns at the grunt rate, and fires
+// the tank shell once a player is in the open inside shell range.
+// One grunt reaction, then the shell reload. No ram and no engine.
+func (w *World) stepEnemyTurret(v *Vehicle, dt float64) {
+	v.VX, v.VY = 0, 0
+	px, py, ok := w.nearestLiving(SidePlayer, v.X, v.Y)
+	if !ok {
+		w.idleTurret(v)
+		return
+	}
+	dist := hypot(px-v.X, py-v.Y)
+	if dist <= ShellRange {
+		turnVehicle(v, px, py, dt)
+	}
+	see := dist <= ShellRange && w.lineClear(v.X, v.Y, px, py)
+	if !see {
+		w.idleTurret(v)
+		return
+	}
+	if v.ReactAt == 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		v.ReactAt = EnemyReact + (w.rng.Float64()*2-1)*EnemyReactJitter
+	}
+	v.SpotT += dt
+	if v.SpotT+1e-9 < v.ReactAt {
+		return
+	}
+	if vehicleFacingError(v, px, py) > EnemyFaceTol {
+		return
+	}
+	w.vehicleShell(v, px, py, dt)
+}
+
+func (w *World) idleTurret(v *Vehicle) {
+	v.SpotT = 0
+	v.ReactAt = 0
+	v.FireCD = 0
 }
 
 // stepEnemyTank closes, then holds outside the ram and fires shells.
@@ -613,7 +686,7 @@ func (w *World) vehicleDriver(v *Vehicle) int {
 }
 
 func (w *World) ram(v *Vehicle) {
-	if v.Kind == KindTank || !v.Alive || hypot(v.VX, v.VY) < 8 {
+	if v.Kind == KindTank || v.Kind == KindTurret || !v.Alive || hypot(v.VX, v.VY) < 8 {
 		return
 	}
 	for i := range w.Units {
@@ -649,7 +722,7 @@ func (w *World) vehicleShoot(v *Vehicle, tx, ty, dt float64) {
 // vehicleShell is the tank's right-click, and the enemy tank's reload.
 // Grenades and rockets still do not fire from inside.
 func (w *World) vehicleShell(v *Vehicle, tx, ty, dt float64) {
-	if v == nil || !v.Alive || !v.Armed || v.Kind != KindTank {
+	if v == nil || !v.Alive || !v.Armed || (v.Kind != KindTank && v.Kind != KindTurret) {
 		return
 	}
 	v.FireCD -= dt

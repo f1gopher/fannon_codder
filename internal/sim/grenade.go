@@ -291,7 +291,7 @@ func (w *World) blastAt(x, y float64, ownerID int, hard bool, radius, scale floa
 		if hypot(v.X-x, v.Y-y) > radius+VehicleHitR {
 			continue
 		}
-		if v.Kind == KindTank && !hard {
+		if (v.Kind == KindTank || v.Kind == KindTurret) && !hard {
 			clank = true
 			continue
 		}

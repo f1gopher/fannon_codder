@@ -55,6 +55,7 @@ const (
 	stampJeep       = "jeep"
 	stampSkidoo     = "skidoo"
 	stampTank       = "tank"
+	stampTurret     = "turret"
 )
 
 func stampName(s string) string {
@@ -99,13 +100,15 @@ func stampName(s string) string {
 		return "skidoo"
 	case stampTank:
 		return "tank"
+	case stampTurret:
+		return "turret"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    H home flag    F side    A armed    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    Ctrl+1 jeep    Ctrl+2 skidoo    Ctrl+3 tank    S saves"
+	return "left-click places    drag moves    Del removes    W patrol point    H home flag    F side    A armed    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    Ctrl+1 jeep    Ctrl+2 skidoo    Ctrl+3 tank    Ctrl+4 turret    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -387,7 +390,7 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampLeader:
 		e.enemies = append(e.enemies, data.Enemy{X: tx, Y: ty, Kind: "leader"})
 		e.sel = pick{kind: pickEnemy, i: len(e.enemies) - 1}
-	case stampJeep, stampSkidoo, stampTank:
+	case stampJeep, stampSkidoo, stampTank, stampTurret:
 		kind := sim.KindJeep
 		side := "player"
 		if e.stamp == stampSkidoo {
@@ -395,6 +398,10 @@ func (e *Editor) placeAt(wx, wy float64) {
 		}
 		if e.stamp == stampTank {
 			kind = sim.KindTank
+			side = "enemy"
+		}
+		if e.stamp == stampTurret {
+			kind = sim.KindTurret
 			side = "enemy"
 		}
 		e.vehicles = append(e.vehicles, data.VehicleSpec{X: tx, Y: ty, Kind: kind, Side: side, Armed: true})
@@ -436,6 +443,10 @@ func (e *Editor) flipSide() {
 		e.status = "select a jeep, a skidoo, or a tank first"
 		return
 	}
+	if v.Kind == sim.KindTurret {
+		e.status = "a turret stays enemy and armed"
+		return
+	}
 	if v.Side == "enemy" {
 		v.Side = "player"
 		e.status = "player"
@@ -451,6 +462,10 @@ func (e *Editor) flipArmed() {
 	v := e.selectedVehicle()
 	if v == nil {
 		e.status = "select a jeep, a skidoo, or a tank first"
+		return
+	}
+	if v.Kind == sim.KindTurret {
+		e.status = "a turret stays enemy and armed"
 		return
 	}
 	v.Armed = !v.Armed

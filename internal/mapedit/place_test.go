@@ -549,6 +549,60 @@ func TestJeepPlaceDragDeleteAndSaveKeepsMission5(t *testing.T) {
 	}
 }
 
+func TestTurretPlaceDragDeleteAndSave(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed.stamp = stampTurret
+	ed.placeAt(5*sim.TileSize, 5*sim.TileSize)
+	i := len(ed.vehicles) - 1
+	v := ed.vehicles[i]
+	if v.Kind != "turret" || v.Side != "enemy" || !v.Armed {
+		t.Fatalf("placed %+v", v)
+	}
+	ed.flipSide()
+	ed.flipArmed()
+	if ed.vehicles[i].Side != "enemy" || !ed.vehicles[i].Armed {
+		t.Fatal("F and A should leave a turret")
+	}
+	if ed.status != "a turret stays enemy and armed" {
+		t.Fatalf("status %q", ed.status)
+	}
+	ed.beginGrab(pick{kind: pickVehicle, i: i}, 5*sim.TileSize, 5*sim.TileSize)
+	ed.dragGrab(6*sim.TileSize, 5*sim.TileSize)
+	if ed.vehicles[i].X != 6 {
+		t.Fatalf("drag %+v", ed.vehicles[i])
+	}
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(raw, p); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, spec := range p.Vehicles {
+		if spec.Kind == "turret" && spec.Side == "enemy" && spec.Armed && spec.X == 6 {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("saved %+v", p.Vehicles)
+	}
+	ed.removeSelected()
+	for _, spec := range ed.vehicles {
+		if spec.Kind == "turret" {
+			t.Fatal("turret stayed after delete")
+		}
+	}
+}
+
 func TestFactoryAndComputerPlaceDragDeleteAndSave(t *testing.T) {
 	ed, err := New()
 	if err != nil {

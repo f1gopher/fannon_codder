@@ -6,6 +6,10 @@ const (
 	RocketRange = 200.0
 	RocketSpeed = 280.0
 	VehicleHitR = 12.0
+	// ShellRange and ShellSpeed are a short, slower rocket.
+	ShellRange  = 160.0
+	ShellSpeed  = 180.0
+	ShellBlastR = GrenadeRadius * 0.72
 )
 
 // AddRocketCrate drops a crate of CrateAmount rockets.
@@ -82,6 +86,29 @@ func (w *World) launchRocket(owner int, side Side, x, y, tx, ty float64) {
 		Alive:     true,
 	})
 	w.emit(CueRocket, x+nx*muzzle, y+ny*muzzle)
+}
+
+// launchShell fires the tank round along ang. It detonates on impact or at max range.
+// The launch is CueShell. The impact is CueBoom and is not also CueShell.
+func (w *World) launchShell(owner int, side Side, x, y, ang float64) {
+	nx, ny := math.Cos(ang), math.Sin(ang)
+	muzzle := 18.0
+	travel := ShellRange - muzzle
+	if travel < 8 {
+		travel = 8
+	}
+	w.Projectiles = append(w.Projectiles, Projectile{
+		Kind:      ProjShell,
+		X:         x + nx*muzzle,
+		Y:         y + ny*muzzle,
+		VX:        nx * ShellSpeed,
+		VY:        ny * ShellSpeed,
+		OwnerID:   owner,
+		OwnerSide: side,
+		Left:      travel,
+		Alive:     true,
+	})
+	w.emit(CueShell, x+nx*muzzle, y+ny*muzzle)
 }
 
 // rocketHit is the first thing a bazooka round meets along the segment.

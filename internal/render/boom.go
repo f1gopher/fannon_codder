@@ -103,7 +103,24 @@ func noteGrenadeBooms(w *sim.World) {
 		if boomAlready(e.X, e.Y, e.Age) {
 			continue
 		}
-		booms = append(booms, makeBoom(w.Map, e.X, e.Y, e.Age))
+		b := makeBoom(w.Map, e.X, e.Y, e.Age)
+		if e.Scale > 0 && e.Scale < 1 {
+			shrinkBoom(&b, e.Scale)
+		}
+		booms = append(booms, b)
+	}
+}
+
+func shrinkBoom(b *boom, s float64) {
+	for i := range b.mote {
+		m := &b.mote[i]
+		m.x = b.x + (m.x-b.x)*s
+		m.y = b.y + (m.y-b.y)*s
+		m.vx *= s
+		m.vy *= s
+		m.vh *= s
+		m.r0 *= s
+		m.r1 *= s
 	}
 }
 

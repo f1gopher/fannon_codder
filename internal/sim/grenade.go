@@ -250,23 +250,33 @@ func (w *World) stepBlasts(dt float64) {
 // explode kills every man in the radius, standing or wounded, and destroys huts, crates, and barrels.
 // Grenades do not spare friendlies. A destroyed crate or barrel explodes too.
 func (w *World) explode(x, y float64, ownerID int) {
-	w.blastAt(x, y, ownerID, false)
+	w.blastAt(x, y, ownerID, false, GrenadeRadius, 0)
 }
 
 // explodeRocket is a bazooka impact. It opens a reinforced door. A grenade does not.
 func (w *World) explodeRocket(x, y float64, ownerID int) {
-	w.blastAt(x, y, ownerID, true)
+	w.blastAt(x, y, ownerID, true, GrenadeRadius, 0)
 }
 
-func (w *World) blastAt(x, y float64, ownerID int, rocket bool) {
+// explodeShell is a tank shell. It opens the same hard targets as a rocket,
+// in a smaller radius. The blast sheet and the particle cloud draw smaller.
+func (w *World) explodeShell(x, y float64, ownerID int) {
+	w.blastAt(x, y, ownerID, true, ShellBlastR, 0.72)
+}
+
+func (w *World) blastAt(x, y float64, ownerID int, hard bool, radius, scale float64) {
 	w.emit(CueBoom, x, y)
-	w.Explosions = append(w.Explosions, Explosion{X: x, Y: y, R: GrenadeRadius})
+	if radius <= 0 {
+		radius = GrenadeRadius
+	}
+	w.Explosions = append(w.Explosions, Explosion{X: x, Y: y, R: radius, Scale: scale})
+	clank := false
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Dead() || u.Saved {
 			continue
 		}
-		if hypot(u.X-x, u.Y-y) > GrenadeRadius {
+		if hypot(u.X-x, u.Y-y) > radius {
 			continue
 		}
 		w.kill(u)
@@ -278,21 +288,24 @@ func (w *World) blastAt(x, y float64, ownerID int, rocket bool) {
 		if !v.Alive {
 			continue
 		}
-		if hypot(v.X-x, v.Y-y) > GrenadeRadius+VehicleHitR {
+		if hypot(v.X-x, v.Y-y) > radius+VehicleHitR {
+			continue
+		}
+		if v.Kind == KindTank && !hard {
+			clank = true
 			continue
 		}
 		w.destroyVehicle(v)
 	}
-	clank := false
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
 		if !b.Alive || b.marker() {
 			continue
 		}
-		if !circleHitsRect(x, y, GrenadeRadius, b.X, b.Y, b.W, b.H) {
+		if !circleHitsRect(x, y, radius, b.X, b.Y, b.W, b.H) {
 			continue
 		}
-		if b.hardened() && !rocket {
+		if b.hardened() && !hard {
 			clank = true
 			continue
 		}
@@ -311,7 +324,7 @@ func (w *World) blastAt(x, y float64, ownerID int, rocket bool) {
 		if !b.Alive {
 			continue
 		}
-		if hypot(b.X-x, b.Y-y) > GrenadeRadius {
+		if hypot(b.X-x, b.Y-y) > radius {
 			continue
 		}
 		b.Alive = false

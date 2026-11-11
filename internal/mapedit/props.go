@@ -105,6 +105,10 @@ func skidooCel() *propCel {
 	return cachedCel("skidoo/idle")
 }
 
+func tankCel() *propCel {
+	return cachedCel("tank/idle")
+}
+
 var celCache struct {
 	mu sync.Mutex
 	m  map[string]*propCel
@@ -130,6 +134,9 @@ func vehicleCel(v data.VehicleSpec) *propCel {
 			return cachedCel("jeep/plain-idle")
 		}
 		return cachedCel("jeep/idle")
+	}
+	if v.Kind == sim.KindTank {
+		return cachedCel("tank/idle")
 	}
 	return cachedCel("skidoo/idle")
 }
@@ -301,6 +308,9 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 			col := color.RGBA{R: 0xd0, G: 0xd4, B: 0xd8, A: 0xff}
 			if v.Kind == sim.KindJeep {
 				col = color.RGBA{R: 0x4a, G: 0x6a, B: 0x28, A: 0xff}
+			}
+			if v.Kind == sim.KindTank {
+				col = color.RGBA{R: 0x3a, G: 0x48, B: 0x28, A: 0xff}
 			}
 			fillRect(dst, int(sx-10*s), int(sy-5*s), int(20*s), int(10*s), col)
 			continue

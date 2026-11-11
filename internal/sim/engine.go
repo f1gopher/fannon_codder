@@ -32,10 +32,17 @@ func HearEngine(ownAlive, ownOccupied bool, ownSpeed float64, nearAlive, nearOcc
 }
 
 func enginePitch(speed float64) float64 {
+	return enginePitchTop(speed, VehicleMaxSpeed)
+}
+
+func enginePitchTop(speed, top float64) float64 {
 	if speed < 0 {
 		speed = 0
 	}
-	t := speed / VehicleMaxSpeed
+	if top <= 0 {
+		top = VehicleMaxSpeed
+	}
+	t := speed / top
 	if t > 1 {
 		t = 1
 	}
@@ -90,15 +97,28 @@ func (w *World) EngineHumAt(lx, ly, radius float64) EngineHum {
 	}
 	if ownAlive && ownOccupied && own != nil {
 		h.Voice = engineVoice(own.Kind)
+		h.Pitch = enginePitchTop(ownSpeed, vehicleTop(own.Kind))
 		return h
 	}
 	h.Voice = nearVoice
+	h.Pitch = enginePitchTop(nearSpeed, vehicleTop(nearVoice))
 	return h
 }
 
 func engineVoice(kind string) string {
-	if kind == KindJeep {
+	switch kind {
+	case KindJeep:
 		return KindJeep
+	case KindTank:
+		return KindTank
+	default:
+		return KindSkidoo
 	}
-	return KindSkidoo
+}
+
+func vehicleTop(kind string) float64 {
+	if kind == KindTank {
+		return VehicleMaxSpeed * TankSpeedMul
+	}
+	return VehicleMaxSpeed
 }

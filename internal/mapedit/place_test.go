@@ -494,6 +494,21 @@ func TestJeepPlaceDragDeleteAndSaveKeepsMission5(t *testing.T) {
 	if ed.vehicles[len(ed.vehicles)-1].Kind != "skidoo" || ed.vehicles[len(ed.vehicles)-1].Side != "player" {
 		t.Fatal("skidoo icon should write a player skidoo")
 	}
+	ed.stamp = stampTank
+	ed.placeAt(6*sim.TileSize, 6*sim.TileSize)
+	ti := len(ed.vehicles) - 1
+	if ed.vehicles[ti].Kind != "tank" || ed.vehicles[ti].Side != "enemy" || !ed.vehicles[ti].Armed {
+		t.Fatalf("tank %+v", ed.vehicles[ti])
+	}
+	ed.flipSide()
+	if ed.vehicles[ti].Side != "player" {
+		t.Fatal("F should allow a player tank")
+	}
+	ed.beginGrab(pick{kind: pickVehicle, i: ti}, 6*sim.TileSize, 6*sim.TileSize)
+	ed.dragGrab(7*sim.TileSize, 6*sim.TileSize)
+	if ed.vehicles[ti].X != 7 {
+		t.Fatalf("tank drag %+v", ed.vehicles[ti])
+	}
 	ed.dirty = true
 	path := filepath.Join(t.TempDir(), "phase.json")
 	if err := ed.writePhase(path); err != nil {
@@ -507,7 +522,7 @@ func TestJeepPlaceDragDeleteAndSaveKeepsMission5(t *testing.T) {
 	if err := json.Unmarshal(raw, p); err != nil {
 		t.Fatal(err)
 	}
-	skis, jeeps := 0, 0
+	skis, jeeps, tanks := 0, 0, 0
 	for _, spec := range p.Vehicles {
 		if spec.Kind == "skidoo" {
 			skis++
@@ -515,8 +530,18 @@ func TestJeepPlaceDragDeleteAndSaveKeepsMission5(t *testing.T) {
 		if spec.Kind == "jeep" {
 			jeeps++
 		}
+		if spec.Kind == "tank" && spec.Side == "player" && spec.X == 7 {
+			tanks++
+		}
 	}
-	if skis != 3 || jeeps != 0 {
+	ed.removeSelected()
+	for _, spec := range ed.vehicles {
+		if spec.Kind == "tank" {
+			t.Fatal("tank stayed after delete")
+		}
+	}
+
+	if skis != 3 || jeeps != 0 || tanks != 1 {
 		t.Fatalf("saved %+v", p.Vehicles)
 	}
 	if _, ok := ToolHit(8+2, barRowHeight(3)*2+8, 3); !ok {

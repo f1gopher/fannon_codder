@@ -150,6 +150,7 @@ func Projectiles(dst *ebiten.Image, w *sim.World) {
 	}
 	tracer := activeSheets().Get("fx/tracer")
 	rocket := activeSheets().Get("fx/rocket")
+	shell := activeSheets().Get("fx/shell")
 	for i := range w.Projectiles {
 		p := &w.Projectiles[i]
 		if !p.Alive {
@@ -158,8 +159,12 @@ func Projectiles(dst *ebiten.Image, w *sim.World) {
 		ang := math.Atan2(p.VY, p.VX)
 		x := w.Camera.ScreenX(p.X)
 		y := w.Camera.ScreenY(p.Y)
-		if p.Kind == sim.ProjRocket {
-			if rocket != nil && drawStill(dst, rocket, 0, x, y, ang, true) {
+		if p.Kind == sim.ProjRocket || p.Kind == sim.ProjShell {
+			sh := rocket
+			if p.Kind == sim.ProjShell {
+				sh = shell
+			}
+			if sh != nil && drawStill(dst, sh, 0, x, y, ang, true) {
 				continue
 			}
 			fillRectF(dst, x-2, y-1, 5, 3, rocketShot)

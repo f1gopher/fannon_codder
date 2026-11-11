@@ -26,9 +26,19 @@ const (
 
 // KindSkidoo is the snow vehicle. KindJeep uses the same movement, gun, ram,
 // and enemy AI with another sheet and another engine.
+// KindTank is slower, does not skid, and fires a shell instead of the gun.
 const (
 	KindSkidoo = "skidoo"
 	KindJeep   = "jeep"
+	KindTank   = "tank"
+)
+
+const (
+	// TankSpeedMul is about half the skidoo. TankStandoff is outside the ram.
+	TankSpeedMul = 0.5
+	TankStandoff = 40.0
+	// ShellReload is the gap between shells. One reaction, then this steady clock.
+	ShellReload = 1.15
 )
 
 // Vehicle is a skidoo or a jeep. Kind selects the sheet and the engine loop.
@@ -79,6 +89,14 @@ func (w *World) AddSkidoo(p Vec2, side Side, armed bool) *Vehicle {
 func (w *World) AddJeep(p Vec2, side Side, armed bool) *Vehicle {
 	v := w.AddSkidoo(p, side, armed)
 	v.Kind = KindJeep
+	return v
+}
+
+// AddTank parks a tank. An enemy tank starts with a driver aboard.
+// The player boards it like a skidoo. Right click fires a shell.
+func (w *World) AddTank(p Vec2, side Side, armed bool) *Vehicle {
+	v := w.AddSkidoo(p, side, armed)
+	v.Kind = KindTank
 	return v
 }
 
@@ -305,7 +323,11 @@ func (w *World) stepVehicles(dt float64) {
 		} else if w.leaderVehicle() == v {
 			w.applyDrive(v, w.DriveX, w.DriveY, w.Driving, dt)
 			if w.Firing && v.Armed {
-				w.vehicleShoot(v, w.AimX, w.AimY, dt)
+				if v.Kind == KindTank {
+					w.vehicleShell(v, w.AimX, w.AimY, dt)
+				} else {
+					w.vehicleShoot(v, w.AimX, w.AimY, dt)
+				}
 			}
 		} else {
 			w.applyDrive(v, v.X, v.Y, false, dt)
@@ -340,6 +362,10 @@ func (w *World) stepEnemyVehicle(v *Vehicle, dt float64) {
 		w.idleVehicleGun(v)
 		return
 	}
+	if v.Kind == KindTank {
+		w.stepEnemyTank(v, px, py, dt)
+		return
+	}
 	if !v.Armed {
 		w.applyDrive(v, px, py, true, dt)
 		return
@@ -368,6 +394,46 @@ func turnVehicle(v *Vehicle, px, py, dt float64) {
 		d = -step
 	}
 	v.Facing = wrapAngle(v.Facing + d)
+}
+
+// stepEnemyTank closes, then holds outside the ram and fires shells.
+// It does not ram and it does not use the infantry burst.
+func (w *World) stepEnemyTank(v *Vehicle, px, py, dt float64) {
+	dist := hypot(px-v.X, py-v.Y)
+	hold := dist <= TankStandoff
+	w.applyDrive(v, px, py, !hold, dt)
+	if !v.Armed {
+		w.idleVehicleGun(v)
+		return
+	}
+	if hold {
+		turnVehicle(v, px, py, dt)
+	}
+	see := hold && w.lineClear(v.X, v.Y, px, py)
+	w.stepTankGun(v, px, py, see, dt)
+}
+
+// stepTankGun waits out one grunt reaction, then reloads. No burst and no pause.
+func (w *World) stepTankGun(v *Vehicle, px, py float64, see bool, dt float64) {
+	u := w.vehicleGunner(v)
+	if u == nil || !see {
+		w.idleVehicleGun(v)
+		return
+	}
+	if u.ReactAt == 0 {
+		if w.rng == nil {
+			w.rng = newRNG()
+		}
+		u.ReactAt = EnemyReact + (w.rng.Float64()*2-1)*EnemyReactJitter
+	}
+	u.SpotT += dt
+	if u.SpotT+1e-9 < u.ReactAt {
+		return
+	}
+	if vehicleFacingError(v, px, py) > EnemyFaceTol {
+		return
+	}
+	w.vehicleShell(v, px, py, dt)
 }
 
 func vehicleFacingError(v *Vehicle, px, py float64) float64 {
@@ -444,13 +510,19 @@ func (w *World) stepVehicleGun(v *Vehicle, px, py float64, see bool, dt float64)
 
 func (w *World) applyDrive(v *Vehicle, tx, ty float64, holding bool, dt float64) {
 	ice := w.Map.TileAtPixel(v.X, v.Y) == TileIce
+	minS, maxS := VehicleMinSpeed, VehicleMaxSpeed
+	if v.Kind == KindTank {
+		ice = false
+		minS *= TankSpeedMul
+		maxS *= TankSpeedMul
+	}
 	if holding {
 		v.Hold += dt
 		t := v.Hold / VehicleHoldFull
 		if t > 1 {
 			t = 1
 		}
-		speed := VehicleMinSpeed + (VehicleMaxSpeed-VehicleMinSpeed)*t
+		speed := minS + (maxS-minS)*t
 		if w.Map.TileAtPixel(v.X, v.Y) == TileWaterShallow {
 			speed *= ShallowSpeedMul
 		}
@@ -541,7 +613,7 @@ func (w *World) vehicleDriver(v *Vehicle) int {
 }
 
 func (w *World) ram(v *Vehicle) {
-	if !v.Alive || hypot(v.VX, v.VY) < 8 {
+	if v.Kind == KindTank || !v.Alive || hypot(v.VX, v.VY) < 8 {
 		return
 	}
 	for i := range w.Units {
@@ -572,6 +644,26 @@ func (w *World) vehicleShoot(v *Vehicle, tx, ty, dt float64) {
 	ang := math.Atan2(dy, dx)
 	v.Facing = ang
 	w.fireVehicleMG(v, ang)
+}
+
+// vehicleShell is the tank's right-click, and the enemy tank's reload.
+// Grenades and rockets still do not fire from inside.
+func (w *World) vehicleShell(v *Vehicle, tx, ty, dt float64) {
+	if v == nil || !v.Alive || !v.Armed || v.Kind != KindTank {
+		return
+	}
+	v.FireCD -= dt
+	if v.FireCD > 0 {
+		return
+	}
+	v.FireCD = ShellReload
+	dx, dy := tx-v.X, ty-v.Y
+	if dx == 0 && dy == 0 {
+		dx = 1
+	}
+	ang := math.Atan2(dy, dx)
+	v.Facing = ang
+	w.launchShell(w.vehicleDriver(v), v.Side, v.X, v.Y, ang)
 }
 
 func (w *World) fireVehicleMG(v *Vehicle, ang float64) {

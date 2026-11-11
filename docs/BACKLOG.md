@@ -52,20 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 8. Tank and shell
-
-`kind` `tank` is a new vehicle. Slower than the skidoo, about half `VehicleMaxSpeed`. It does not skid. The player boards and drives it like a skidoo. Right click fires a shell, not the mounted gun. Grenades and rockets still do not fire from inside.
-
-A shell is a projectile that explodes like a small rocket. It destroys a skidoo, a jeep, a tank, a reinforced door, a factory, and a computer. MG fire and grenades do not destroy a tank. A rocket does.
-
-An enemy tank starts with a driver, as the skidoo does. It closes, stops outside ram range, and fires shells. It does not use the infantry burst. No pathfinding.
-
-Editor. A tank icon writes `vehicles[].kind` of `tank`, side enemy, armed true. Drag, delete, F, and A are the jeep rules. A player tank is allowed.
-
-Pictures. `tank/idle` and `tank/move`, 320×220, anchor 160,200, five stored rows. Bigger than the jeep. Idle is one frame. Move is four frames at 8 fps, tracks turning. The barrel points with the hull. `tank/wreck` is one burned hull, same cell, and it stays for the phase. `fx/shell` is one east cel, 32×16, anchor 16,8, drawn along its velocity. No muzzle flash. The impact is `fx/blast` and the same particle cloud as a rocket, drawn a little smaller.
-
-Sound. Launch emits `CueShell`: a low cough, shorter and duller than `CueRocket`, about 120 ms. The impact emits `CueBoom` and does not also emit `CueShell`. A grenade that fails to hurt it emits `CueClank`. The engine is a new low loop, slower than the jeep, pitched by the tank's own top speed. Board and leave reuse `CueBoard` and `CueExit`. The crew's death yell still plays when the tank dies.
-
 ### 9. Big gun
 
 `kind` `turret` does not move and cannot be boarded. It turns at `EnemyTurnRate` and fires the tank shell at a player in the open, using the grunt reaction once, then a steady reload. No ram.

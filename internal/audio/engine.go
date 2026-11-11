@@ -146,36 +146,62 @@ func (m *Mixer) initEngine() {
 	jp.SetVolume(engineVolume)
 	m.jeep = js
 	m.jeepPlayer = jp
+	ts := newLoopReader(TankPCM())
+	tp, err := m.ctx.NewPlayer(ts)
+	if err != nil {
+		return
+	}
+	tp.SetVolume(engineVolume)
+	m.tank = ts
+	m.tankPlayer = tp
+}
+
+// TankPCM is one cycle of a low diesel loop, slower than the jeep's four-stroke.
+// 25 Hz wraps inside the 0.2 s clip (five cycles).
+func TankPCM() []byte {
+	const hz = 25.0
+	out := make([]byte, engineFrames*4)
+	for i := 0; i < engineFrames; i++ {
+		t := float64(i) / SampleRate
+		cycle := 2 * math.Pi * t
+		throb := 0.72 + 0.28*math.Sin(cycle*hz/2)
+		s := math.Sin(cycle*hz)*0.62 +
+			math.Sin(cycle*hz*2)*0.16 +
+			math.Sin(cycle*hz*0.5)*0.12
+		putStereo(out, i, s*throb*0.95)
+	}
+	return out
 }
 
 // SetEngine starts or stops one vehicle loop and sets its playback rate.
-// voice is sim.KindJeep or the skidoo. The other loop stays paused.
-// pitch is EngineIdlePitch at rest and EngineTopPitch at full speed.
+// voice is sim.KindJeep, sim.KindTank, or the skidoo. The other loops stay paused.
+// pitch is EngineIdlePitch at rest and EngineTopPitch at that vehicle's top speed.
 // Calling it every frame does not restart the loop.
 func (m *Mixer) SetEngine(run bool, pitch float64, voice string) {
 	if m == nil || m.engine == nil || m.enginePlayer == nil {
 		return
 	}
-	if voice != sim.KindJeep {
-		voice = sim.KindSkidoo
-	}
 	reader := m.engine
 	player := m.enginePlayer
-	other := m.jeepPlayer
-	if voice == sim.KindJeep {
+	switch voice {
+	case sim.KindJeep:
 		if m.jeep == nil || m.jeepPlayer == nil {
 			return
 		}
 		reader = m.jeep
 		player = m.jeepPlayer
-		other = m.enginePlayer
+	case sim.KindTank:
+		if m.tank == nil || m.tankPlayer == nil {
+			return
+		}
+		reader = m.tank
+		player = m.tankPlayer
+	default:
+		voice = sim.KindSkidoo
 	}
 	if !run {
 		if m.engineOn {
-			m.enginePlayer.Pause()
-			if m.jeepPlayer != nil {
-				m.jeepPlayer.Pause()
-			}
+			m.pauseEngines()
 		}
 		m.engineOn = false
 		m.engineVoice = ""
@@ -185,10 +211,20 @@ func (m *Mixer) SetEngine(run bool, pitch float64, voice string) {
 	if m.engineOn && m.engineVoice == voice {
 		return
 	}
-	if other != nil {
-		other.Pause()
-	}
+	m.pauseEngines()
 	m.engineOn = true
 	m.engineVoice = voice
 	player.Play()
+}
+
+func (m *Mixer) pauseEngines() {
+	if m.enginePlayer != nil {
+		m.enginePlayer.Pause()
+	}
+	if m.jeepPlayer != nil {
+		m.jeepPlayer.Pause()
+	}
+	if m.tankPlayer != nil {
+		m.tankPlayer.Pause()
+	}
 }

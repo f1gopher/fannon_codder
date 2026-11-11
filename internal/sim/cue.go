@@ -24,8 +24,11 @@ const (
 	// CueClick, CueWin, CueFail, CueBrief, and CueHill are menu stings.
 	// Nothing in the world emits them. Scenes play them with PlayKind.
 	CueClick
-	// CueClank is a grenade or a barrel hitting a reinforced door and doing nothing.
+	// CueClank is a grenade or a barrel hitting a reinforced door, or a grenade
+	// hitting a tank, and doing nothing.
 	CueClank
+	// CueShell is the tank gun's launch cough. The impact stays CueBoom.
+	CueShell
 	CueWin
 	CueFail
 	CueBrief

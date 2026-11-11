@@ -346,12 +346,16 @@ func (w *World) stepProjectiles(dt float64) {
 		p.X += nx * step
 		p.Y += ny * step
 		p.Left -= step
-		if p.Kind == ProjRocket {
+		if p.Kind == ProjRocket || p.Kind == ProjShell {
 			if hx, hy, hit := w.rocketHit(p.OwnerID, x0, y0, p.X, p.Y); hit || p.Left <= 0 {
 				if !hit {
 					hx, hy = p.X, p.Y
 				}
-				w.explodeRocket(hx, hy, p.OwnerID)
+				if p.Kind == ProjShell {
+					w.explodeShell(hx, hy, p.OwnerID)
+				} else {
+					w.explodeRocket(hx, hy, p.OwnerID)
+				}
 				continue
 			}
 			out = append(out, *p)

@@ -74,7 +74,8 @@ type Library struct {
 // Props use tree/sway, hut/door, hut/plain, hut/reinforced, hut/factory,
 // hut/computer, hut/factory-wreck, hut/computer-wreck, crate/grenade, crate/rocket,
 // barrel/drum,
-// skidoo/idle, skidoo/move, chopper/fly, prop/snowman, prop/igloo.
+// skidoo/idle, skidoo/move, tank/idle, tank/move, tank/wreck, chopper/fly, prop/snowman, prop/igloo.
+// fx/shell is the tank round, one east cel spun along its velocity.
 // chopper/fly is the opening aircraft, one south-east frame. The rotor
 // is drawn on top of it.
 // prop/scrub stays on disk and is not drawn.

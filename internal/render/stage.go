@@ -586,7 +586,7 @@ func collectBodies(w *sim.World, terrain string) []body {
 	}
 	for i := range w.Vehicles {
 		v := w.Vehicles[i]
-		if !v.Alive {
+		if !v.Alive && v.Kind != sim.KindTank {
 			continue
 		}
 		bodies = append(bodies, vehicleBody(cam, v))
@@ -903,6 +903,15 @@ func vehicleBody(cam sim.Camera, v sim.Vehicle) body {
 // vehicleSheet is the painted body. A jeep with no gun uses the plain pair.
 // The skidoo sheet does not change when the gun is absent.
 func vehicleSheet(v sim.Vehicle, moving bool) string {
+	if v.Kind == sim.KindTank {
+		if !v.Alive {
+			return "tank/wreck"
+		}
+		if moving {
+			return "tank/move"
+		}
+		return "tank/idle"
+	}
 	if v.Kind == sim.KindJeep {
 		if !v.Armed {
 			if moving {

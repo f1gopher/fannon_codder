@@ -322,6 +322,8 @@ func (p *Phase) World() (*sim.World, error) {
 			w.AddSkidoo(sim.TileCenter(v.X, v.Y), side, v.Armed)
 		case sim.KindJeep:
 			w.AddJeep(sim.TileCenter(v.X, v.Y), side, v.Armed)
+		case sim.KindTank:
+			w.AddTank(sim.TileCenter(v.X, v.Y), side, v.Armed)
 		default:
 			return nil, fmt.Errorf("unknown vehicle %q", v.Kind)
 		}

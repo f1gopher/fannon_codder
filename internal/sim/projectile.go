@@ -6,6 +6,7 @@ type ProjKind int
 const (
 	ProjMG ProjKind = iota
 	ProjRocket
+	ProjShell
 )
 
 // Projectile is a machine-gun round or a bazooka rocket.

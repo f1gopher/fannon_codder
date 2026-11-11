@@ -15,7 +15,7 @@ var barStamps = []string{
 }
 
 // barRow2 is the second menu row. Shift+1 selects the first icon, and so on.
-var barRow2 = []string{stampCivilian, stampHostage, stampTent, stampLeader, stampHandover, stampHome, stampReinforced}
+var barRow2 = []string{stampCivilian, stampHostage, stampTent, stampLeader, stampHandover, stampHome, stampReinforced, stampFactory, stampComputer}
 
 func menuRows() [][]string {
 	return [][]string{barStamps, barRow2}
@@ -102,7 +102,7 @@ func iconCels() []*propCel {
 		_, plain, grenade, rockets, barrel := sheets()
 		door, _, _, _, _ := sheets()
 		civil := civilianCel()
-		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel(), leaderCel(), handoverCel(), homeCel(), reinforcedCel()}
+		iconLib.cels = []*propCel{grunt, gren, rocket, grunt, barrel, plain, door, grenade, rockets, civil, hostageCel(), tentCel(), leaderCel(), handoverCel(), homeCel(), reinforcedCel(), factoryCel(), computerCel()}
 	})
 	return iconLib.cels
 }
@@ -139,6 +139,10 @@ func (e *Editor) drawBar(screen *ebiten.Image) {
 			} else if stamp == stampHome {
 				fillRect(screen, int(x+6), int(y+size*0.32), int(size-12), int(size*0.48), color.RGBA{R: 0xf0, G: 0xe6, B: 0xc8, A: 255})
 				fillRect(screen, int(x+size/2-2), int(y+size*0.52), 4, int(size*0.28), color.RGBA{R: 0xf0, G: 0xc0, B: 0x40, A: 255})
+			} else if stamp == stampFactory {
+				fillRect(screen, int(x+4), int(y+size*0.35), int(size-8), int(size*0.4), color.RGBA{R: 0x8a, G: 0x6a, B: 0x3a, A: 255})
+			} else if stamp == stampComputer {
+				fillRect(screen, int(x+size*0.3), int(y+size*0.22), int(size*0.4), int(size*0.55), color.RGBA{R: 0x3a, G: 0xc0, B: 0x88, A: 255})
 			} else if stamp == stampReinforced {
 				fillRect(screen, int(x+6), int(y+size*0.28), int(size-12), int(size*0.52), color.RGBA{R: 0x6a, G: 0x72, B: 0x78, A: 255})
 				fillRect(screen, int(x+size*0.38), int(y+size*0.48), int(size*0.24), int(size*0.28), color.RGBA{R: 0x22, G: 0x26, B: 0x28, A: 255})
@@ -199,6 +203,10 @@ func stampTip(stamp string) string {
 		return "Home — left click places"
 	case stampReinforced:
 		return "Reinforced door — left click places"
+	case stampFactory:
+		return "Factory — left click places"
+	case stampComputer:
+		return "Computer — left click places"
 	default:
 		return "Left click places"
 	}

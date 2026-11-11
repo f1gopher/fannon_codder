@@ -292,13 +292,15 @@ func (w *World) blastAt(x, y float64, ownerID int, rocket bool) {
 		if !circleHitsRect(x, y, GrenadeRadius, b.X, b.Y, b.W, b.H) {
 			continue
 		}
-		if b.Kind == HutReinforced && !rocket {
+		if b.hardened() && !rocket {
 			clank = true
 			continue
 		}
 		b.Alive = false
 		b.HP = 0
-		w.launchRoof(b, x, y, ownerID)
+		if b.Kind != HutComputer {
+			w.launchRoof(b, x, y, ownerID)
+		}
 	}
 	if clank {
 		w.emit(CueClank, x, y)

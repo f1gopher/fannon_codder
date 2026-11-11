@@ -548,6 +548,9 @@ func collectBodies(w *sim.World, terrain string) []body {
 	for i := range w.Buildings {
 		b := w.Buildings[i]
 		if !b.Alive {
+			if b.Kind == sim.HutFactory || b.Kind == sim.HutComputer {
+				bodies = append(bodies, wreckBody(cam, b))
+			}
 			continue
 		}
 		bodies = append(bodies, buildingBody(cam, b))
@@ -604,6 +607,10 @@ func buildingBody(cam sim.Camera, b sim.Building) body {
 		key = "hut/home"
 	} else if b.Kind == sim.HutReinforced {
 		key = "hut/reinforced"
+	} else if b.Kind == sim.HutFactory {
+		key = "hut/factory"
+	} else if b.Kind == sim.HutComputer {
+		key = "hut/computer"
 	} else if b.HasDoor {
 		key = "hut/door"
 	}
@@ -646,11 +653,13 @@ func roofBody(cam sim.Camera, r sim.Roof) body {
 	key := "hut/plain"
 	if r.Kind == sim.HutReinforced {
 		key = "hut/reinforced"
+	} else if r.Kind == sim.HutFactory {
+		key = "hut/factory"
 	} else if r.Door {
 		key = "hut/door"
 	}
 	sh := activeSheets().Get(key)
-	img, ax, ay := roofImage(sh)
+	img, ax, ay := roofImage(sh, r.Kind)
 	if img == nil {
 		return body{y: r.Y, draw: func(dst *ebiten.Image) {
 			fillRectF(dst, sx-10, sy-4, 20, 6, hutFill)
@@ -670,7 +679,67 @@ func roofBody(cam sim.Camera, r sim.Roof) body {
 
 // roofImage is the eaves and chimney cut from a hut frame. The anchor is the
 // bottom centre of that crop, which is where the roof sat on the walls.
-func roofImage(sh *Sheet) (*ebiten.Image, int, int) {
+func wreckBody(cam sim.Camera, b sim.Building) body {
+	y := b.Y + b.H
+	sx := cam.ScreenX(b.X + b.W/2)
+	sy := cam.ScreenY(y)
+	key := "hut/factory-wreck"
+	if b.Kind == sim.HutComputer {
+		key = "hut/computer-wreck"
+	}
+	sh := activeSheets().Get(key)
+	var img *ebiten.Image
+	if sh != nil {
+		img, _ = sh.still(0)
+	}
+	if img == nil {
+		return body{y: y, draw: func(dst *ebiten.Image) { drawBuildingRect(dst, cam, b) }}
+	}
+	rgba := sh.stillRGBA()
+	return body{
+		y: y,
+		shadow: func(dst *ebiten.Image) {
+			castForm(dst, rgba, sh.AnchorX, sh.AnchorY, sx, sy)
+		},
+		draw: func(dst *ebiten.Image) {
+			DrawSprite(dst, img, sh.AnchorX, sh.AnchorY, false, sx, sy)
+		},
+	}
+}
+
+func roofImage(sh *Sheet, kind sim.BuildingKind) (*ebiten.Image, int, int) {
+	if kind == sim.HutFactory {
+		return factoryRoof(sh)
+	}
+	return hutRoof(sh)
+}
+
+// factoryRoof is the chimney and the eaves across the long shed.
+func factoryRoof(sh *Sheet) (*ebiten.Image, int, int) {
+	if sh == nil {
+		return nil, 0, 0
+	}
+	full, ok := sh.still(0)
+	if !ok || full == nil {
+		return nil, 0, 0
+	}
+	roofCels.mu.Lock()
+	defer roofCels.mu.Unlock()
+	if roofCels.m == nil {
+		roofCels.m = map[*ebiten.Image]*ebiten.Image{}
+	}
+	if img := roofCels.m[full]; img != nil {
+		return img, full.Bounds().Dx() / 2, 180
+	}
+	cropped := ebiten.NewImage(full.Bounds().Dx(), 180)
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(-float64(full.Bounds().Min.X), -float64(full.Bounds().Min.Y))
+	cropped.DrawImage(full, op)
+	roofCels.m[full] = cropped
+	return cropped, full.Bounds().Dx() / 2, 180
+}
+
+func hutRoof(sh *Sheet) (*ebiten.Image, int, int) {
 	if sh == nil {
 		return nil, 0, 0
 	}

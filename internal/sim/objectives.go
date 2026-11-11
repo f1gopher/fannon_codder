@@ -26,6 +26,10 @@ const (
 	// GetCivilianHome is met when every civilian marked home has entered a home.
 	// That civilian's death loses the phase. A wandering civilian does not.
 	GetCivilianHome
+	// DestroyFactory is met when every factory is gone.
+	DestroyFactory
+	// DestroyComputer is met when every computer is gone.
+	DestroyComputer
 )
 
 func ParseObjective(s string) (Objective, bool) {
@@ -42,6 +46,10 @@ func ParseObjective(s string) (Objective, bool) {
 		return KidnapLeader, true
 	case "get_civilian_home":
 		return GetCivilianHome, true
+	case "destroy_factory":
+		return DestroyFactory, true
+	case "destroy_computer":
+		return DestroyComputer, true
 	default:
 		return 0, false
 	}
@@ -233,6 +241,14 @@ func (w *World) objectivesMet() bool {
 			}
 		case GetCivilianHome:
 			if w.homeFailed() || w.homeOutstanding() {
+				return false
+			}
+		case DestroyFactory:
+			if w.anyKind(HutFactory) {
+				return false
+			}
+		case DestroyComputer:
+			if w.anyKind(HutComputer) {
 				return false
 			}
 		}

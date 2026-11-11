@@ -436,8 +436,63 @@ func TestReinforcedPlaceDragDeleteAndSave(t *testing.T) {
 	if !found {
 		t.Fatalf("saved %+v", p.Buildings)
 	}
-	if allStamps()[len(allStamps())-1] != stampReinforced {
-		t.Fatal("reinforced door is not the last second-row icon")
+	if allStamps()[len(allStamps())-1] != stampComputer {
+		t.Fatal("the computer is not the last second-row icon")
+	}
+}
+
+func TestFactoryAndComputerPlaceDragDeleteAndSave(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed.stamp = stampFactory
+	ed.placeAt(20*sim.TileSize, 14*sim.TileSize)
+	i := len(ed.buildings) - 1
+	b := ed.buildings[i]
+	if b.Kind != "factory" || b.Door || b.W != 4 || b.H != 3 || ed.sel.kind != pickHut {
+		t.Fatalf("placed %+v", b)
+	}
+	if b.X+b.W > ed.grid.W || b.Y+b.H > ed.grid.H {
+		t.Fatalf("factory footprint left the map %+v grid %dx%d", b, ed.grid.W, ed.grid.H)
+	}
+	c := sim.TileCenter(b.X, b.Y+b.H-1)
+	ed.beginGrab(pick{kind: pickHut, i: i}, c.X, c.Y)
+	ed.dragGrab(c.X+8*sim.TileSize, c.Y+8*sim.TileSize)
+	if ed.buildings[i].X+4 > ed.grid.W || ed.buildings[i].Y+3 > ed.grid.H {
+		t.Fatalf("drag left the map %+v", ed.buildings[i])
+	}
+	ed.removeSelected()
+	ed.stamp = stampComputer
+	ed.placeAt(2*sim.TileSize, 2*sim.TileSize)
+	j := len(ed.buildings) - 1
+	if ed.buildings[j].Kind != "computer" || ed.buildings[j].W != 1 || ed.buildings[j].H != 1 {
+		t.Fatalf("computer %+v", ed.buildings[j])
+	}
+	ed.dirty = true
+	path := filepath.Join(t.TempDir(), "phase.json")
+	if err := ed.writePhase(path); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &data.Phase{}
+	if err := json.Unmarshal(raw, p); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, spec := range p.Buildings {
+		if spec.Kind == "factory" {
+			t.Fatal("deleted factory was written")
+		}
+		if spec.Kind == "computer" && spec.W == 1 && spec.H == 1 && !spec.Door {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("saved %+v", p.Buildings)
 	}
 }
 

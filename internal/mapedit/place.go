@@ -49,6 +49,8 @@ const (
 	stampHandover  = "handover"
 	stampHome       = "home"
 	stampReinforced = "reinforced"
+	stampFactory    = "factory"
+	stampComputer   = "computer"
 )
 
 func stampName(s string) string {
@@ -83,13 +85,17 @@ func stampName(s string) string {
 		return "home"
 	case stampReinforced:
 		return "reinforced door"
+	case stampFactory:
+		return "factory"
+	case stampComputer:
+		return "computer"
 	default:
 		return "grunt"
 	}
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol point    H home flag    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    S saves"
+	return "left-click places    drag moves    Del removes    W patrol point    H home flag    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {
@@ -304,8 +310,14 @@ func (e *Editor) placeAt(wx, wy float64) {
 	case stampBarrel:
 		e.barrels = append(e.barrels, data.BarrelSpec{X: tx, Y: ty})
 		e.sel = pick{kind: pickBarrel, i: len(e.barrels) - 1}
-	case stampHut, stampDoor, stampTent, stampHandover, stampHome, stampReinforced:
+	case stampHut, stampDoor, stampTent, stampHandover, stampHome, stampReinforced, stampFactory, stampComputer:
 		tw, th := 2, 2
+		if e.stamp == stampFactory {
+			tw, th = 4, 3
+		}
+		if e.stamp == stampComputer {
+			tw, th = 1, 1
+		}
 		if tx > e.grid.W-tw {
 			tx = e.grid.W - tw
 		}
@@ -333,6 +345,12 @@ func (e *Editor) placeAt(wx, wy float64) {
 			b.Kind = "reinforced"
 			b.Door = true
 			b.Spawn = 2.5
+		}
+		if e.stamp == stampFactory {
+			b.Kind = "factory"
+		}
+		if e.stamp == stampComputer {
+			b.Kind = "computer"
 		}
 		e.buildings = append(e.buildings, b)
 		e.sel = pick{kind: pickHut, i: len(e.buildings) - 1}

@@ -52,23 +52,6 @@ Cannon Fodder 1 has one enemy trooper. The extra people are the hostage, the ene
 
 Do these from the top. One chunk a session. The big map is last and uses every chunk above it.
 
-### 6. Factory and computer
-
-Two objective structures. They do not spawn troops.
-
-- `kind` `factory` is a larger footprint (default 4×3 tiles). It blocks movement. `destroy_factory` is met when it is gone. A grenade does not hurt it. A rocket does.
-- `kind` `computer` is small (default 1×1). `destroy_computer` is the same weapon rule.
-
-They are not `destroy_enemy_buildings` targets.
-
-Editor. A factory icon writes a 4×3 building `kind` of `factory`. A computer icon writes a 1×1 building `kind` of `computer`. Neither has a door. Drag keeps the footprint inside the map. Delete removes that one building.
-
-Pictures. `hut/factory` is 512×400, anchor on the foot at the bottom centre, one frame. A long shed and a chimney, about twice a hut. The roof cut comes from this painting. `hut/computer` is 128×160, anchor on the foot, four frames at 6 fps, looping: a small cabinet with a slow glow. Both cast the usual hut shadow.
-
-Destruction reuses `fx/blast` and the hut fire. The factory throws its own roof. The computer does not. A scorched wreck of each stays: `hut/factory-wreck` and `hut/computer-wreck`, one frame, the same cell as the live sheet.
-
-Sound. A grenade that does nothing emits `CueClank`. Destruction emits `CueBoom`. The glow is silent.
-
 ### 7. Jeep
 
 `vehicles[].kind` of `jeep` is the skidoo struct, speeds, gun, ram, and enemy AI, with another sheet. `skidoo` stays the snow vehicle. Armed and unarmed, player and enemy, already work. Snow phases keep their skidoos.

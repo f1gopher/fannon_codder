@@ -47,6 +47,12 @@ func drawBuildingRect(dst *ebiten.Image, cam sim.Camera, b sim.Building) {
 	if b.Kind == sim.HutReinforced {
 		fill = steelFill
 	}
+	if b.Kind == sim.HutFactory {
+		fill = color.RGBA{R: 0x8a, G: 0x6a, B: 0x3a, A: 0xff}
+	}
+	if b.Kind == sim.HutComputer {
+		fill = color.RGBA{R: 0x3a, G: 0xc0, B: 0x88, A: 0xff}
+	}
 	fillRectF(dst, x, y, b.W, b.H, fill)
 	if b.Kind == sim.HutTent {
 		fillRectF(dst, x+b.W/2-1, y+b.H/2-6, 2, 12, crossFill)

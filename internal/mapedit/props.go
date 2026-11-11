@@ -29,7 +29,7 @@ type propCel struct {
 
 var propLib struct {
 	once                                                       sync.Once
-	door, plain, tent, handover, home, reinforced, grenade, rocket, barrel, civil, hostage, leader *propCel
+	door, plain, tent, handover, home, reinforced, factory, computer, grenade, rocket, barrel, civil, hostage, leader *propCel
 }
 
 func sheets() (door, plain, grenade, rocket, barrel *propCel) {
@@ -40,6 +40,8 @@ func sheets() (door, plain, grenade, rocket, barrel *propCel) {
 		propLib.handover, _ = loadCel("hut/handover")
 		propLib.home, _ = loadCel("hut/home")
 		propLib.reinforced, _ = loadCel("hut/reinforced")
+		propLib.factory, _ = loadCel("hut/factory")
+		propLib.computer, _ = loadCel("hut/computer")
 		propLib.leader, _ = loadCelRow("leader/idle", 2)
 		propLib.grenade, _ = loadCel("crate/grenade")
 		propLib.rocket, _ = loadCel("crate/rocket")
@@ -83,6 +85,16 @@ func leaderCel() *propCel {
 func reinforcedCel() *propCel {
 	sheets()
 	return propLib.reinforced
+}
+
+func factoryCel() *propCel {
+	sheets()
+	return propLib.factory
+}
+
+func computerCel() *propCel {
+	sheets()
+	return propLib.computer
 }
 
 type celManifest struct {
@@ -184,6 +196,10 @@ func (e *Editor) drawProps(dst *ebiten.Image) {
 			cel = homeCel()
 		} else if b.Kind == "reinforced" {
 			cel = reinforcedCel()
+		} else if b.Kind == "factory" {
+			cel = factoryCel()
+		} else if b.Kind == "computer" {
+			cel = computerCel()
 		} else if b.Door {
 			cel = door
 		}
@@ -300,6 +316,12 @@ func drawHutFallback(dst *ebiten.Image, b data.BuildingSpec, s float64, e *Edito
 	}
 	if b.Kind == "reinforced" {
 		col = color.RGBA{R: 0x6a, G: 0x72, B: 0x78, A: 0xff}
+	}
+	if b.Kind == "factory" {
+		col = color.RGBA{R: 0x8a, G: 0x6a, B: 0x3a, A: 0xff}
+	}
+	if b.Kind == "computer" {
+		col = color.RGBA{R: 0x3a, G: 0xc0, B: 0x88, A: 0xff}
 	}
 	bw := int(float64(tw*sim.TileSize) * s)
 	bh := int(float64(th*sim.TileSize) * s)

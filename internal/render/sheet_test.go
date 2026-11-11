@@ -628,6 +628,18 @@ func TestHutCrateAndSkidooSheets(t *testing.T) {
 			t.Fatalf("%s smoke does not move", key)
 		}
 	}
+	fac := lib.Get("hut/factory")
+	if fac == nil || fac.Frames != 1 || fac.FrameW != 512 || fac.FrameH != 400 || fac.AnchorX != 256 || fac.AnchorY != 392 {
+		t.Fatalf("factory %+v", fac)
+	}
+	comp := lib.Get("hut/computer")
+	if comp == nil || comp.Frames != 4 || comp.FPS != 6 || !comp.Loop || comp.FrameW != 128 || comp.FrameH != 160 || comp.AnchorX != 64 || comp.AnchorY != 152 {
+		t.Fatalf("computer %+v", comp)
+	}
+	glow := decodeArtPNG(t, "hut/computer.png")
+	if frameDelta(glow, 128, 0, 1) < 0.01 {
+		t.Fatal("computer glow does not change")
+	}
 	for _, key := range []string{"crate/grenade", "crate/rocket"} {
 		sh := lib.Get(key)
 		if sh == nil || sh.Frames != 1 || sh.FrameW != 128 || sh.FrameH != 128 || sh.AnchorX != 64 || sh.AnchorY != 64 {

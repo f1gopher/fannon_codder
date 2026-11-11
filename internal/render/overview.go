@@ -119,6 +119,12 @@ func Overview(dst *ebiten.Image, w *sim.World, terrain string) {
 		if b.Kind == sim.HutHome {
 			col = color.RGBA{R: 0xf0, G: 0xe6, B: 0xc8, A: 0xff}
 		}
+		if b.Kind == sim.HutFactory {
+			col = color.RGBA{R: 0x8a, G: 0x6a, B: 0x3a, A: 0xff}
+		}
+		if b.Kind == sim.HutComputer {
+			col = color.RGBA{R: 0x3a, G: 0xc0, B: 0x88, A: 0xff}
+		}
 		fillRect(dst, x, y, bw, bh, col)
 	}
 	for i := range w.Barrels {

@@ -26,6 +26,10 @@ const (
 	HutHome
 	// HutReinforced is a door hut. Only a rocket destroys it.
 	HutReinforced
+	// HutFactory is a long shed. Only a rocket destroys it. It does not spawn.
+	HutFactory
+	// HutComputer is a small cabinet. Only a rocket destroys it. It does not spawn.
+	HutComputer
 )
 
 // Building is a hut or a rescue tent.
@@ -138,6 +142,48 @@ func (w *World) AddHandover(tx, ty, tw, th int) int {
 	return len(w.Buildings) - 1
 }
 
+// AddFactory places a 4×3 shed. A grenade does not hurt it. A rocket does.
+func (w *World) AddFactory(tx, ty, tw, th int) int {
+	if tw < 1 {
+		tw = 4
+	}
+	if th < 1 {
+		th = 3
+	}
+	b := Building{
+		X:     float64(tx * TileSize),
+		Y:     float64(ty * TileSize),
+		W:     float64(tw * TileSize),
+		H:     float64(th * TileSize),
+		Kind:  HutFactory,
+		HP:    buildingHP,
+		Alive: true,
+	}
+	w.Buildings = append(w.Buildings, b)
+	return len(w.Buildings) - 1
+}
+
+// AddComputer places a 1×1 cabinet. A grenade does not hurt it. A rocket does.
+func (w *World) AddComputer(tx, ty, tw, th int) int {
+	if tw < 1 {
+		tw = 1
+	}
+	if th < 1 {
+		th = 1
+	}
+	b := Building{
+		X:     float64(tx * TileSize),
+		Y:     float64(ty * TileSize),
+		W:     float64(tw * TileSize),
+		H:     float64(th * TileSize),
+		Kind:  HutComputer,
+		HP:    buildingHP,
+		Alive: true,
+	}
+	w.Buildings = append(w.Buildings, b)
+	return len(w.Buildings) - 1
+}
+
 // AddHome places the cottage a marked civilian walks into. It does not burn.
 func (w *World) AddHome(tx, ty, tw, th int) int {
 	if tw < 1 {
@@ -162,6 +208,11 @@ func (w *World) AddHome(tx, ty, tw, th int) int {
 // marker is a tent, a handover, or a home. None of them block, burn, or hide a shot.
 func (b *Building) marker() bool {
 	return b != nil && (b.Kind == HutTent || b.Kind == HutHandover || b.Kind == HutHome)
+}
+
+// hardened is a structure a grenade or a barrel cannot open.
+func (b *Building) hardened() bool {
+	return b != nil && (b.Kind == HutReinforced || b.Kind == HutFactory || b.Kind == HutComputer)
 }
 
 // Holds is true when (x, y) is inside a standing building.
@@ -235,6 +286,16 @@ func (w *World) livingCount(side Side) int {
 		}
 	}
 	return n
+}
+
+func (w *World) anyKind(k BuildingKind) bool {
+	for i := range w.Buildings {
+		b := &w.Buildings[i]
+		if b.Alive && b.Kind == k {
+			return true
+		}
+	}
+	return false
 }
 
 func (w *World) anyDoorBuilding() bool {

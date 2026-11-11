@@ -287,6 +287,10 @@ func (p *Phase) World() (*sim.World, error) {
 				spawn = sim.SpawnEvery
 			}
 			w.AddReinforced(b.X, b.Y, b.W, b.H, spawn)
+		case "factory":
+			w.AddFactory(b.X, b.Y, b.W, b.H)
+		case "computer":
+			w.AddComputer(b.X, b.Y, b.W, b.H)
 		default:
 			return nil, fmt.Errorf("unknown building %q", b.Kind)
 		}

@@ -12,13 +12,14 @@ func TestTankIsSlowAndFiresAShell(t *testing.T) {
 		t.Fatal("the squad should board the tank")
 	}
 	w.SetDrive(400, 40, true)
-	for i := 0; i < 100; i++ {
+	// 24 units, one every 0.12 s, is just under 3 s from a standstill.
+	for i := 0; i < 200; i++ {
 		w.SetDrive(400, 40, true)
 		w.Step(1.0 / 60)
 	}
 	v = w.vehicleByID(v.ID)
 	speed := hypot(v.VX, v.VY)
-	top := VehicleMaxSpeed * TankSpeedMul
+	top := TankMaxSpeed
 	if speed > top+1 || speed < top*0.85 {
 		t.Fatalf("tank speed %v, top %v", speed, top)
 	}

@@ -118,7 +118,7 @@ func engineVoice(kind string) string {
 
 func vehicleTop(kind string) float64 {
 	if kind == KindTank {
-		return VehicleMaxSpeed * TankSpeedMul
+		return TankMaxSpeed
 	}
 	return VehicleMaxSpeed
 }

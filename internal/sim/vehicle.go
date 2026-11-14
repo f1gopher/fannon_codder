@@ -4,9 +4,14 @@ import "math"
 
 const (
 	VehicleCapacity = 8
-	VehicleMinSpeed = 28.0
-	VehicleMaxSpeed = 88.0
-	VehicleHoldFull = 1.4 // seconds of hold to reach top speed
+	// OpenFodder adds mSpeed into a 16.16 position as (32767>>2)*mSpeed
+	// once per 60 ms phase. vehicleSpeedUnit is one of those units in px/s.
+	vehicleSpeedUnit = float64(32767>>2) / 65536.0 / 0.06
+	// VehicleMaxSpeed is the jeep and the skidoo (mSpeed 0x32). They gain
+	// 3 units every 60 ms tick, so the cap is about one second from a standstill.
+	VehicleMaxSpeed = 50 * vehicleSpeedUnit
+	jeepAccelUnits  = 3.0
+	jeepAccelTick   = 0.06
 	VehicleMGRange  = 110.0
 	VehicleMGRoF    = 8.0
 	VehicleBoardR   = 16.0
@@ -36,8 +41,11 @@ const (
 )
 
 const (
-	// TankSpeedMul is about half the skidoo. TankStandoff is outside the ram.
-	TankSpeedMul = 0.5
+	// TankMaxSpeed is mSpeed 0x18. The tank gains 1 unit every other 60 ms tick.
+	TankMaxSpeed   = 24 * vehicleSpeedUnit
+	tankAccelUnits = 1.0
+	tankAccelTick  = 0.12
+	// TankStandoff is outside the ram.
 	TankStandoff = 40.0
 	// ShellReload is the gap between shells. One reaction, then this steady clock.
 	ShellReload = 1.15
@@ -55,7 +63,9 @@ type Vehicle struct {
 	Alive     bool
 	Capacity  int
 	Occupants []int
-	Hold      float64
+	// Hold is time since the last OpenFodder speed step. Units is mSpeed.
+	Hold  float64
+	Units float64
 	FireCD    float64
 	Blink     float64
 	// SpotT and ReactAt are the turret's one grunt reaction. A tank uses its driver.
@@ -600,19 +610,25 @@ func (w *World) stepVehicleGun(v *Vehicle, px, py float64, see bool, dt float64)
 
 func (w *World) applyDrive(v *Vehicle, tx, ty float64, holding bool, dt float64) {
 	ice := w.Map.TileAtPixel(v.X, v.Y) == TileIce
-	minS, maxS := VehicleMinSpeed, VehicleMaxSpeed
+	top, gain, tick := VehicleMaxSpeed, jeepAccelUnits, jeepAccelTick
 	if v.Kind == KindTank {
 		ice = false
-		minS *= TankSpeedMul
-		maxS *= TankSpeedMul
+		top, gain, tick = TankMaxSpeed, tankAccelUnits, tankAccelTick
 	}
 	if holding {
-		v.Hold += dt
-		t := v.Hold / VehicleHoldFull
-		if t > 1 {
-			t = 1
+		// The original adds speed at the start of the tick, then moves.
+		if v.Units == 0 && v.Hold == 0 {
+			v.Units = gain
 		}
-		speed := minS + (maxS-minS)*t
+		v.Hold += dt
+		for v.Hold >= tick {
+			v.Hold -= tick
+			v.Units += gain
+		}
+		if v.Units > top/vehicleSpeedUnit {
+			v.Units = top / vehicleSpeedUnit
+		}
+		speed := v.Units * vehicleSpeedUnit
 		if w.Map.TileAtPixel(v.X, v.Y) == TileWaterShallow {
 			speed *= ShallowSpeedMul
 		}
@@ -636,6 +652,7 @@ func (w *World) applyDrive(v *Vehicle, tx, ty float64, holding bool, dt float64)
 		v.Facing = math.Atan2(v.VY, v.VX)
 	} else {
 		v.Hold = 0
+		v.Units = 0
 		if ice {
 			decay := math.Exp(-iceSkidRate * dt)
 			v.VX *= decay
@@ -703,7 +720,7 @@ func (w *World) vehicleDriver(v *Vehicle) int {
 }
 
 func (w *World) ram(v *Vehicle) {
-	if v.Kind == KindTank || v.Kind == KindTurret || v.Kind == KindChopper || !v.Alive || hypot(v.VX, v.VY) < 8 {
+	if v.Kind == KindTank || v.Kind == KindTurret || v.Kind == KindChopper || !v.Alive || hypot(v.VX, v.VY) < vehicleSpeedUnit {
 		return
 	}
 	for i := range w.Units {

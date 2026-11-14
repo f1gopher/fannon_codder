@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"fannon-codder/internal/sim"
 )
 
@@ -124,4 +126,141 @@ func canopyCover(p terrainPaint, wx, wy float64) uint8 {
 func pixAt(p terrainPaint, wx, wy float64) [3]uint8 {
 	o := p.ground.PixOffset(int(wx*terrainPx), int(wy*terrainPx))
 	return [3]uint8{p.ground.Pix[o], p.ground.Pix[o+1], p.ground.Pix[o+2]}
+}
+
+func TestRasterMatchesTheRay(t *testing.T) {
+	const w, h = 48, 36
+	rings := [][][2]float64{
+		{{4, 4}, {40, 4}, {40, 20}, {4, 20}},
+		{{2, 2}, {30, 28}, {8, 30}},
+		{{10, 8.5}, {36, 8.5}, {36, 22}, {10, 22}},
+		{{6, 6}, {20, 6}, {20, 14}, {28, 14}, {28, 6}, {40, 6}, {40, 30}, {6, 30}},
+		{{8, 10}, {24, 4}, {18, 16}, {30, 28}, {8, 22}},
+		{{-4, -4}, {10, -4}, {10, 8}, {-4, 8}},
+		{{0, 0}, {47, 0}, {47, 35}, {0, 35}, {0, 0}},
+		{{1.5, 3}, {20, 3}, {20, 3}, {12, 18}},
+	}
+	open := surfGrass
+	for i, pts := range rings {
+		ch := Chart{
+			W: w, H: h, Terrain: "jungle",
+			Regions: []ChartRegion{{Tile: sim.TileWaterDeep, Points: pts}},
+		}
+		got := rasterChart(ch, open)
+		for y := 0; y < h; y++ {
+			py := float64(y) + 0.5
+			for x := 0; x < w; x++ {
+				want := open
+				if pointInRing(float64(x)+0.5, py, pts) {
+					want = surfDeep
+				}
+				if got[y*w+x] != want {
+					t.Fatalf("ring %d at %d,%d got %v want %v", i, x, y, got[y*w+x], want)
+				}
+			}
+		}
+	}
+}
+
+func TestPrepareUsesTheWarmPaint(t *testing.T) {
+	ch := Chart{
+		W: 64, H: 48, Terrain: "jungle",
+		Regions: []ChartRegion{{
+			Tile:   sim.TileTree,
+			Points: [][2]float64{{8, 8}, {40, 8}, {40, 36}, {8, 36}},
+		}},
+	}
+	chartNow.hash = 0
+	chartNow.view = nil
+	chartUp = chartUpload{}
+	chartWarm.mu.Lock()
+	chartWarm.hash = 0
+	chartWarm.paint = terrainPaint{}
+	chartWarm.ready = false
+	chartWarm.wait = nil
+	chartWarm.mu.Unlock()
+
+	chartPaintMu.Lock()
+	before := paintCharts
+	chartPaintMu.Unlock()
+	WarmChart(ch)
+	h := hashChart(ch)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		chartWarm.mu.Lock()
+		ready := chartWarm.ready && chartWarm.hash == h && chartWarm.paint.ground != nil
+		chartWarm.mu.Unlock()
+		if ready {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("warm paint did not finish")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	chartPaintMu.Lock()
+	painted := paintCharts
+	chartPaintMu.Unlock()
+	if painted != before+1 {
+		t.Fatalf("warm paints %d, want 1", painted-before)
+	}
+	v := PrepareChart(ch)
+	chartPaintMu.Lock()
+	after := paintCharts
+	chartPaintMu.Unlock()
+	if after != painted {
+		t.Fatal("PrepareChart painted again")
+	}
+	if v == nil || v.ground == nil || len(v.canopies) == 0 {
+		t.Fatal("warm chart did not upload")
+	}
+	c := v.canopies[0]
+	if !c.padded || c.img == nil || c.img.Bounds().Min.X != 1 || c.img.Bounds().Min.Y != 1 {
+		t.Fatalf("canopy pad %+v bounds %v", c.padded, c.img.Bounds())
+	}
+	// Drawing uses the padded rect and does not read the texture back.
+	dst := ebiten.NewImage(32, 32)
+	c.Draw(dst, 0, 0, 1)
+}
+
+func TestPumpWarmFinishesOnTheGameThread(t *testing.T) {
+	ch := Chart{
+		W: 64, H: 48, Terrain: "jungle",
+		Regions: []ChartRegion{{
+			Tile:   sim.TileTree,
+			Points: [][2]float64{{8, 8}, {40, 8}, {40, 36}, {8, 36}},
+		}},
+	}
+	chartNow.hash = 0
+	chartNow.view = nil
+	chartUp = chartUpload{}
+	chartWarm.mu.Lock()
+	chartWarm.hash = 0
+	chartWarm.paint = terrainPaint{}
+	chartWarm.ready = false
+	chartWarm.wait = nil
+	chartWarm.mu.Unlock()
+
+	WarmChart(ch)
+	h := hashChart(ch)
+	deadline := time.Now().Add(5 * time.Second)
+	for !PumpWarm(ch, time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("warm upload did not finish")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	chartPaintMu.Lock()
+	painted := paintCharts
+	chartPaintMu.Unlock()
+	v := PrepareChart(ch)
+	chartPaintMu.Lock()
+	after := paintCharts
+	chartPaintMu.Unlock()
+	if after != painted {
+		t.Fatal("PrepareChart painted after the pump")
+	}
+	if v == nil || v.ground == nil || len(v.canopies) == 0 || chartNow.hash != h {
+		t.Fatal("pumped chart was not cached")
+	}
 }

@@ -4,6 +4,8 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"runtime"
+	"sync"
 
 	"fannon-codder/internal/sim"
 )
@@ -1623,7 +1625,7 @@ func paintOneCanopy(m sim.Map, surf []surface, ids []int, id int, lk look, noise
 	for i := range owner {
 		owner[i] = -1
 	}
-	cover, tips, ccx, ccy := splatCrowns(crowns, originX, originY, pw, ph)
+	cover, tips, ccx, ccy, _, _ := splatCrowns(crowns, originX, originY, pw, ph)
 	gw := ground.Bounds().Dx()
 	gh := ground.Bounds().Dy()
 	for py := 0; py < ph; py++ {
@@ -1740,7 +1742,9 @@ func standOutward(surf []surface, w, h, tx, ty int) (float64, float64, bool) {
 // splatCrowns writes the signed distance of the crown cluster. Each crown is
 // its own circle, so the outline is a bunch of bushes and not one blob.
 // Tips hold the soft shrubs that sit outside that mass.
-func splatCrowns(crowns []crown, originX, originY float64, pw, ph int) (cover, tips, ccx, ccy []float32) {
+// spanLo and spanHi bound the source pixels a row must colour: cover at
+// most 12, or a sprig of at least 0.02. Pixels outside that stay clear.
+func splatCrowns(crowns []crown, originX, originY float64, pw, ph int) (cover, tips, ccx, ccy []float32, spanLo, spanHi []int) {
 	n := pw * ph
 	cover = make([]float32, n)
 	tips = make([]float32, n)
@@ -1749,26 +1753,120 @@ func splatCrowns(crowns []crown, originX, originY float64, pw, ph int) (cover, t
 	for i := range cover {
 		cover[i] = 99
 	}
+	spanLo = make([]int, ph)
+	spanHi = make([]int, ph)
+	for i := range spanLo {
+		spanLo[i] = pw
+		spanHi[i] = -1
+	}
+	discs := make([]splatDisc, 0, len(crowns)*8)
+	bins := make([][]int, ph)
 	for i := range crowns {
 		cr := &crowns[i]
-		splatDisc(cover, ccx, ccy, originX, originY, pw, ph, cr.cx, cr.cy, cr.mainR, cr.cx, cr.cy)
+		discs = addSplat(discs, bins, originX, originY, pw, ph, cr.cx, cr.cy, cr.mainR, cr.cx, cr.cy, false)
 		for n := range cr.lobes {
 			lb := &cr.lobes[n]
-			splatDisc(cover, ccx, ccy, originX, originY, pw, ph, lb.x, lb.y, lb.r, cr.cx, cr.cy)
+			discs = addSplat(discs, bins, originX, originY, pw, ph, lb.x, lb.y, lb.r, cr.cx, cr.cy, false)
 		}
 		if !cr.edge {
 			continue
 		}
 		for n := range cr.sprigs {
 			lb := &cr.sprigs[n]
-			splatTip(tips, originX, originY, pw, ph, lb.x, lb.y, lb.r)
+			discs = addSplat(discs, bins, originX, originY, pw, ph, lb.x, lb.y, lb.r, 0, 0, true)
 		}
 	}
-	return cover, tips, ccx, ccy
+	// Each row walks discs in crown order and owns its pixels, so the
+	// nearest disc matches a single-threaded splat.
+	parallelStripes(ph, func(py int) {
+		row := py * pw
+		dy0 := originY + (float64(py)+0.5)/float64(terrainPx)
+		scale := float64(terrainPx)
+		for _, id := range bins[py] {
+			d := &discs[id]
+			dy := dy0 - d.ly
+			dy2 := dy * dy
+			if dy2 > d.rad2 {
+				continue
+			}
+			half := math.Sqrt(d.rad2 - dy2)
+			px0 := int(math.Floor((d.lx-half-originX)*scale-0.5)) - 1
+			px1 := int(math.Ceil((d.lx+half-originX)*scale-0.5)) + 2
+			if px0 < d.x0 {
+				px0 = d.x0
+			}
+			if px1 > d.x1 {
+				px1 = d.x1
+			}
+			coverRow := cover[row:]
+			for px := px0; px < px1; px++ {
+				i := row + px
+				if !d.tip {
+					// A disc cannot beat a signed distance already below its
+					// own centre, so the inner pixels of a later lobe are skipped.
+					limit := float64(coverRow[px]) + d.r
+					if limit <= 0 {
+						continue
+					}
+					dx := originX + (float64(px)+0.5)/float64(terrainPx) - d.lx
+					d2 := dx*dx + dy2
+					if d2 > d.rad2 || d2 >= limit*limit {
+						continue
+					}
+					dist := float32(math.Sqrt(d2) - d.r)
+					if dist < coverRow[px] {
+						coverRow[px] = dist
+						ccx[i] = d.cx
+						ccy[i] = d.cy
+						if dist <= 12 {
+							if px < spanLo[py] {
+								spanLo[py] = px
+							}
+							if px > spanHi[py] {
+								spanHi[py] = px
+							}
+						}
+					}
+					continue
+				}
+				dx := originX + (float64(px)+0.5)/float64(terrainPx) - d.lx
+				d2 := dx*dx + dy2
+				if d2 > d.rad2 {
+					continue
+				}
+				ld := math.Sqrt(d2) - d.r
+				a := float32((1 - smooth01((ld+1.6)/8.2)) * 0.58)
+				if a > tips[i] {
+					tips[i] = a
+					if float64(tips[i]) >= 0.02 {
+						if px < spanLo[py] {
+							spanLo[py] = px
+						}
+						if px > spanHi[py] {
+							spanHi[py] = px
+						}
+					}
+				}
+			}
+		}
+	})
+	return cover, tips, ccx, ccy, spanLo, spanHi
 }
 
-func splatDisc(cover, ccx, ccy []float32, originX, originY float64, pw, ph int, lx, ly, r, crownX, crownY float64) {
-	const fringe = 12.0
+// splatDisc is one circle stamped into the canopy field.
+type splatDisc struct {
+	x0, x1  int
+	lx, ly  float64
+	r, rad2 float64
+	cx, cy  float32
+	tip     bool
+}
+
+func addSplat(discs []splatDisc, bins [][]int, originX, originY float64, pw, ph int, lx, ly, r, crownX, crownY float64, tip bool) []splatDisc {
+	fringe := 12.0
+	if tip {
+		fringe = 8
+	}
 	rad := r + fringe
 	x0 := int(math.Floor((lx - rad - originX) * terrainPx))
 	y0 := int(math.Floor((ly - rad - originY) * terrainPx))
@@ -1786,66 +1884,20 @@ func splatDisc(cover, ccx, ccy []float32, originX, originY float64, pw, ph int, 
 	if y1 > ph {
 		y1 = ph
 	}
-	rad2 := rad * rad
-	cx := float32(crownX)
-	cy := float32(crownY)
-	for py := y0; py < y1; py++ {
-		dy := originY + (float64(py)+0.5)/terrainPx - ly
-		row := py * pw
-		for px := x0; px < x1; px++ {
-			dx := originX + (float64(px)+0.5)/terrainPx - lx
-			d2 := dx*dx + dy*dy
-			if d2 > rad2 {
-				continue
-			}
-			d := float32(math.Sqrt(d2) - r)
-			i := row + px
-			if d < cover[i] {
-				cover[i] = d
-				ccx[i] = cx
-				ccy[i] = cy
-			}
-		}
+	if y0 >= y1 || x0 >= x1 {
+		return discs
 	}
-}
-
-func splatTip(tips []float32, originX, originY float64, pw, ph int, lx, ly, r float64) {
-	const fringe = 8.0
-	rad := r + fringe
-	x0 := int(math.Floor((lx - rad - originX) * terrainPx))
-	y0 := int(math.Floor((ly - rad - originY) * terrainPx))
-	x1 := int(math.Ceil((lx + rad - originX) * terrainPx))
-	y1 := int(math.Ceil((ly + rad - originY) * terrainPx))
-	if x0 < 0 {
-		x0 = 0
+	discs = append(discs, splatDisc{
+		x0: x0, x1: x1,
+		lx: lx, ly: ly, r: r, rad2: rad * rad,
+		cx: float32(crownX), cy: float32(crownY),
+		tip: tip,
+	})
+	id := len(discs) - 1
+	for y := y0; y < y1; y++ {
+		bins[y] = append(bins[y], id)
 	}
-	if y0 < 0 {
-		y0 = 0
-	}
-	if x1 > pw {
-		x1 = pw
-	}
-	if y1 > ph {
-		y1 = ph
-	}
-	rad2 := rad * rad
-	for py := y0; py < y1; py++ {
-		dy := originY + (float64(py)+0.5)/terrainPx - ly
-		row := py * pw
-		for px := x0; px < x1; px++ {
-			dx := originX + (float64(px)+0.5)/terrainPx - lx
-			d2 := dx*dx + dy*dy
-			if d2 > rad2 {
-				continue
-			}
-			ld := math.Sqrt(d2) - r
-			a := float32((1 - smooth01((ld+1.6)/8.2)) * 0.58)
-			i := row + px
-			if a > tips[i] {
-				tips[i] = a
-			}
-		}
-	}
+	return discs
 }
 
 // canopyAlpha keeps the middle of a crown solid and lets the outer leaves
@@ -1901,6 +1953,12 @@ func mergeFringe(c color.RGBA, ground *image.RGBA, gw, gh int, wx, wy, a float64
 	return mixRGBA(c, g, (0.5-a)*0.8)
 }
 
+// pxBox is the source-pixel bounds of one tree's foliage.
+type pxBox struct {
+	minX, minY int
+	maxX, maxY int
+}
+
 func sliceRun(can treeCanopy, owner []int16, pw, idx, tx, ty int) treeRun {
 	b := can.img.Bounds()
 	x0 := int(math.Floor((float64(tx*sim.TileSize) - canopyPad - can.originX) * terrainPx))
@@ -1941,6 +1999,10 @@ func sliceRun(can treeCanopy, owner []int16, pw, idx, tx, ty int) treeRun {
 			}
 		}
 	}
+	return sliceBoxed(can, minX, minY, maxX, maxY, tx, ty)
+}
+
+func sliceBoxed(can treeCanopy, minX, minY, maxX, maxY, tx, ty int) treeRun {
 	if maxX < minX {
 		return treeRun{foot: float64((ty + 1) * sim.TileSize), footX: float64(tx*sim.TileSize) + sim.TileSize/2}
 	}
@@ -2049,12 +2111,13 @@ func stampTreeShade(dst *image.RGBA, m sim.Map, surf []surface, lk look) {
 	// One sample per world pixel. The ground is scaled with a linear filter,
 	// and the shade itself is a wide falloff, so the extra source pixels
 	// would not move the edge.
+	near := newCrownNear(crowns)
 	for py := y0; py < y1; py += terrainPx {
 		wy := (float64(py) + 0.5) / terrainPx
 		for px := x0; px < x1; px += terrainPx {
 			wx := (float64(px) + 0.5) / terrainPx
 			// Sample back toward the light so the shade falls south-east.
-			d := shadeDist(crowns, wx-3.2, wy-4.0)
+			d := near.dist(wx-3.2, wy-4.0)
 			if d > 16 {
 				continue
 			}
@@ -2096,12 +2159,89 @@ func stampTreeShade(dst *image.RGBA, m sim.Map, surf []surface, lk look) {
 	}
 }
 
-// shadeDist is the canopy distance used for the ground shadow. Lobes are
-// folded into a slightly larger crown so the shade stays soft and cheap.
-func shadeDist(crowns []crown, wx, wy float64) float64 {
+// crownNear answers shade distance without walking every crown. A query
+// only sees crowns within three tiles, which is the old shadeDist window.
+type crownNear struct {
+	crowns []crown
+	x0, y0 int
+	w, h   int
+	bins   [][]int
+}
+
+func newCrownNear(crowns []crown) *crownNear {
+	n := &crownNear{crowns: crowns}
+	if len(crowns) == 0 {
+		return n
+	}
+	minX, minY := crowns[0].tx, crowns[0].ty
+	maxX, maxY := minX, minY
+	for i := range crowns {
+		cr := &crowns[i]
+		if cr.tx < minX {
+			minX = cr.tx
+		}
+		if cr.ty < minY {
+			minY = cr.ty
+		}
+		if cr.tx > maxX {
+			maxX = cr.tx
+		}
+		if cr.ty > maxY {
+			maxY = cr.ty
+		}
+	}
+	n.x0 = minX - 3
+	n.y0 = minY - 3
+	n.w = maxX - minX + 7
+	n.h = maxY - minY + 7
+	n.bins = make([][]int, n.w*n.h)
+	for i := range crowns {
+		cr := &crowns[i]
+		n.bins[(cr.ty-n.y0)*n.w+(cr.tx-n.x0)] = append(n.bins[(cr.ty-n.y0)*n.w+(cr.tx-n.x0)], i)
+	}
+	return n
+}
+
+func (n *crownNear) dist(wx, wy float64) float64 {
 	best := 99.0
-	gx := int(math.Floor(wx / sim.TileSize))
-	gy := int(math.Floor(wy / sim.TileSize))
+	if n == nil || len(n.crowns) == 0 {
+		return best
+	}
+	gx := int(math.Floor(wx / float64(sim.TileSize)))
+	gy := int(math.Floor(wy / float64(sim.TileSize)))
+	for ty := gy - 3; ty <= gy+3; ty++ {
+		if ty < n.y0 || ty >= n.y0+n.h {
+			continue
+		}
+		row := (ty - n.y0) * n.w
+		for tx := gx - 3; tx <= gx+3; tx++ {
+			if tx < n.x0 || tx >= n.x0+n.w {
+				continue
+			}
+			for _, i := range n.bins[row+(tx-n.x0)] {
+				cr := &n.crowns[i]
+				dx := wx - cr.cx
+				dy := wy - cr.cy
+				d2 := dx*dx + dy*dy
+				if d2 > 42*42 {
+					continue
+				}
+				d := math.Sqrt(d2) - cr.mainR - 3.5
+				if d < best {
+					best = d
+				}
+			}
+		}
+	}
+	return best
+}
+
+// shadeDistScan is the unindexed shade distance. Tests check the index
+// against it.
+func shadeDistScan(crowns []crown, wx, wy float64) float64 {
+	best := 99.0
+	gx := int(math.Floor(wx / float64(sim.TileSize)))
+	gy := int(math.Floor(wy / float64(sim.TileSize)))
 	for i := range crowns {
 		cr := &crowns[i]
 		if absInt(cr.tx-gx) > 3 || absInt(cr.ty-gy) > 3 {
@@ -2119,6 +2259,326 @@ func shadeDist(crowns []crown, wx, wy float64) float64 {
 		}
 	}
 	return best
+}
+
+// cellNear is the same window as nearestTree: four tiles around the sample.
+type cellNear struct {
+	cells []image.Point
+	x0    int
+	y0    int
+	w     int
+	h     int
+	bins  [][]int
+	// slot is the one tree in a tile, -1 if none, -2 if a tile has several.
+	slot []int16
+}
+
+func newCellNear(cells []image.Point) *cellNear {
+	n := &cellNear{cells: cells}
+	if len(cells) == 0 {
+		return n
+	}
+	minX, minY := cells[0].X, cells[0].Y
+	maxX, maxY := minX, minY
+	for _, c := range cells[1:] {
+		if c.X < minX {
+			minX = c.X
+		}
+		if c.Y < minY {
+			minY = c.Y
+		}
+		if c.X > maxX {
+			maxX = c.X
+		}
+		if c.Y > maxY {
+			maxY = c.Y
+		}
+	}
+	n.x0 = minX - 4
+	n.y0 = minY - 4
+	n.w = maxX - minX + 9
+	n.h = maxY - minY + 9
+	n.bins = make([][]int, n.w*n.h)
+	n.slot = make([]int16, n.w*n.h)
+	for i := range n.slot {
+		n.slot[i] = -1
+	}
+	for i, c := range cells {
+		at := (c.Y-n.y0)*n.w + (c.X - n.x0)
+		n.bins[at] = append(n.bins[at], i)
+		if n.slot[at] == -1 {
+			n.slot[at] = int16(i)
+		} else {
+			n.slot[at] = -2
+		}
+	}
+	return n
+}
+
+// one is the only tree in that tile, or -1 when the tile is empty or shared.
+func (n *cellNear) one(tx, ty int) int {
+	if n.slot == nil || tx < n.x0 || ty < n.y0 || tx >= n.x0+n.w || ty >= n.y0+n.h {
+		return -1
+	}
+	s := n.slot[(ty-n.y0)*n.w+(tx-n.x0)]
+	if s < 0 {
+		return -1
+	}
+	return int(s)
+}
+
+// nearest matches nearestTree. gap is how much closer the winner is than
+// the next cell, in world pixels. A wide gap means a small neighbourhood
+// of the sample has the same winner. The gap is never larger than the
+// true one: a short search reports a smaller gap so a block owner is
+// used only when every sample in the block really shares the winner.
+//
+// A cell two tiles away is at least a tile and a half from a sample, so
+// a winner closer than that is final and the 3×3 neighbourhood is enough.
+func (n *cellNear) nearest(wx, wy float64) (idx int, gap float64) {
+	if n == nil || len(n.cells) == 0 {
+		return 0, 0
+	}
+	// A sample inside a tile that holds one tree is closest to that tree,
+	// unless it sits on the shared edge. The gap is measured to the nearest
+	// other grid centre, which is never farther than the real runner-up.
+	T := float64(sim.TileSize)
+	gx := int(math.Floor(wx / T))
+	gy := int(math.Floor(wy / T))
+	if id := n.one(gx, gy); id >= 0 {
+		cell := n.cells[id]
+		ox := wx - (float64(cell.X)*T + T/2)
+		oy := wy - (float64(cell.Y)*T + T/2)
+		d2 := ox*ox + oy*oy
+		other := otherCentre(ox, oy, T)
+		if d2 < other-1e-6 {
+			return id, math.Sqrt(other) - math.Sqrt(d2)
+		}
+	}
+	far := T + T/2
+	far2 := far * far
+	best, bestD, second := n.scan(wx, wy, 1)
+	if bestD >= far2 {
+		best, bestD, second = n.scan(wx, wy, 4)
+		if second == math.MaxFloat64 {
+			return best, 1e9
+		}
+		return best, math.Sqrt(second) - math.Sqrt(bestD)
+	}
+	if second > far2 {
+		second = far2
+	}
+	if bestD == math.MaxFloat64 {
+		return best, 0
+	}
+	return best, math.Sqrt(second) - math.Sqrt(bestD)
+}
+
+// otherCentre is the squared distance from a sample to the nearest other
+// tile centre. ox and oy are the sample's offset from its own tile centre.
+func otherCentre(ox, oy, T float64) float64 {
+	best := math.MaxFloat64
+	for _, dx := range [3]float64{-T, 0, T} {
+		for _, dy := range [3]float64{-T, 0, T} {
+			if dx == 0 && dy == 0 {
+				continue
+			}
+			x := ox - dx
+			y := oy - dy
+			d := x*x + y*y
+			if d < best {
+				best = d
+			}
+		}
+	}
+	return best
+}
+
+func (n *cellNear) scan(wx, wy float64, rad int) (best int, bestD, second float64) {
+	bestD = math.MaxFloat64
+	second = math.MaxFloat64
+	gx := int(math.Floor(wx / float64(sim.TileSize)))
+	gy := int(math.Floor(wy / float64(sim.TileSize)))
+	for ty := gy - rad; ty <= gy+rad; ty++ {
+		if ty < n.y0 || ty >= n.y0+n.h {
+			continue
+		}
+		row := (ty - n.y0) * n.w
+		for tx := gx - rad; tx <= gx+rad; tx++ {
+			if tx < n.x0 || tx >= n.x0+n.w {
+				continue
+			}
+			for _, i := range n.bins[row+(tx-n.x0)] {
+				cell := n.cells[i]
+				dx := float64(cell.X*sim.TileSize) + sim.TileSize/2 - wx
+				dy := float64(cell.Y*sim.TileSize) + sim.TileSize/2 - wy
+				d := dx*dx + dy*dy
+				if d < bestD-1e-6 {
+					second = bestD
+					bestD = d
+					best = i
+					continue
+				}
+				if math.Abs(d-bestD) <= 1e-6 {
+					prev := n.cells[best]
+					if cell.Y > prev.Y || (cell.Y == prev.Y && cell.X > prev.X) {
+						best = i
+					}
+					if bestD < second {
+						second = bestD
+					}
+					continue
+				}
+				if d < second {
+					second = d
+				}
+			}
+		}
+	}
+	return best, bestD, second
+}
+
+// index is the nearest tree. It skips the runner-up distance the block
+// test needs, which the per-pixel path does not use.
+func (n *cellNear) index(wx, wy float64) int {
+	if n == nil || len(n.cells) == 0 {
+		return 0
+	}
+	T := float64(sim.TileSize)
+	gx := int(math.Floor(wx / T))
+	gy := int(math.Floor(wy / T))
+	if id := n.one(gx, gy); id >= 0 {
+		cell := n.cells[id]
+		ox := wx - (float64(cell.X)*T + T/2)
+		oy := wy - (float64(cell.Y)*T + T/2)
+		if ox*ox+oy*oy < otherCentre(ox, oy, T)-1e-6 {
+			return id
+		}
+	}
+	best, bestD := n.bestSlot(wx, wy, 1)
+	if bestD >= (T+T/2)*(T+T/2) {
+		best, _ = n.bestSlot(wx, wy, 4)
+	}
+	return best
+}
+
+func (n *cellNear) bestSlot(wx, wy float64, rad int) (best int, bestD float64) {
+	bestD = math.MaxFloat64
+	gx := int(math.Floor(wx / float64(sim.TileSize)))
+	gy := int(math.Floor(wy / float64(sim.TileSize)))
+	T := float64(sim.TileSize)
+	half := float64(sim.TileSize / 2)
+	for ty := gy - rad; ty <= gy+rad; ty++ {
+		if ty < n.y0 || ty >= n.y0+n.h {
+			continue
+		}
+		row := (ty - n.y0) * n.w
+		for tx := gx - rad; tx <= gx+rad; tx++ {
+			if tx < n.x0 || tx >= n.x0+n.w {
+				continue
+			}
+			s := n.slot[row+(tx-n.x0)]
+			if s == -1 {
+				continue
+			}
+			if s == -2 {
+				for _, i := range n.bins[row+(tx-n.x0)] {
+					best, bestD = nearer(n.cells, best, bestD, i, wx, wy, T, half)
+				}
+				continue
+			}
+			best, bestD = nearer(n.cells, best, bestD, int(s), wx, wy, T, half)
+		}
+	}
+	return best, bestD
+}
+
+func nearer(cells []image.Point, best int, bestD float64, i int, wx, wy, T, half float64) (int, float64) {
+	cell := cells[i]
+	dx := float64(cell.X)*T + half - wx
+	dy := float64(cell.Y)*T + half - wy
+	d := dx*dx + dy*dy
+	if d < bestD-1e-6 {
+		return i, d
+	}
+	if math.Abs(d-bestD) <= 1e-6 {
+		prev := cells[best]
+		if cell.Y > prev.Y || (cell.Y == prev.Y && cell.X > prev.X) {
+			return i, bestD
+		}
+	}
+	return best, bestD
+}
+
+// stripeWorkers is how many goroutines parallelStripes uses for n rows.
+func stripeWorkers(n int) int {
+	workers := runtime.GOMAXPROCS(0)
+	if workers < 2 || n < 32 {
+		return 1
+	}
+	if workers > n {
+		return n
+	}
+	return workers
+}
+
+// parallelStripes gives each core every k-th row so a horizontal river
+// or tree line does not land on one core.
+func parallelStripes(n int, fn func(y int)) {
+	parallelStripesW(n, func(_, y int) { fn(y) })
+}
+
+// parallelStripesW is parallelStripes with the worker index, so a worker
+// can keep its own scratch.
+func parallelStripesW(n int, fn func(worker, y int)) {
+	workers := stripeWorkers(n)
+	if workers < 2 {
+		for y := 0; y < n; y++ {
+			fn(0, y)
+		}
+		return
+	}
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func(w int) {
+			defer wg.Done()
+			for y := w; y < n; y += workers {
+				fn(w, y)
+			}
+		}(w)
+	}
+	wg.Wait()
+}
+
+// parallelBands runs fn on disjoint y ranges, one per core.
+func parallelBands(n int, fn func(y0, y1 int)) {
+	workers := runtime.GOMAXPROCS(0)
+	if workers < 2 || n < 32 {
+		fn(0, n)
+		return
+	}
+	if workers > n {
+		workers = n
+	}
+	var wg sync.WaitGroup
+	step := (n + workers - 1) / workers
+	for i := 0; i < workers; i++ {
+		y0 := i * step
+		if y0 >= n {
+			break
+		}
+		y1 := y0 + step
+		if y1 > n {
+			y1 = n
+		}
+		wg.Add(1)
+		go func(y0, y1 int) {
+			defer wg.Done()
+			fn(y0, y1)
+		}(y0, y1)
+	}
+	wg.Wait()
 }
 
 func foliageNoise(wx, wy float64) float64 {

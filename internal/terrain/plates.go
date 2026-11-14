@@ -110,6 +110,55 @@ func (p *painted) atScale(wx, wy, scale float64) color.RGBA {
 	}
 }
 
+// atHalf is atScale(wx, wy, 4) when wx*4 and wy*4 land on a half pixel
+// (integer origin, source pixel centres). The fraction is always 1/2, so
+// the bilinear mix is the nested average of the 2×2.
+func (p *painted) atHalf(ix, iy int) color.RGBA {
+	if p == nil || p.w < 2 || p.h < 2 {
+		return color.RGBA{A: 255}
+	}
+	x0 := foldHalf(ix, p.w)
+	y0 := foldHalf(iy, p.h)
+	if x0 >= p.w-1 {
+		x0 = p.w - 2
+	}
+	if y0 >= p.h-1 {
+		y0 = p.h - 2
+	}
+	if x0 < 0 {
+		x0 = 0
+	}
+	if y0 < 0 {
+		y0 = 0
+	}
+	i00 := (y0*p.w + x0) * 4
+	i10 := i00 + 4
+	i01 := i00 + p.w*4
+	i11 := i01 + 4
+	pix := p.pix
+	avg := func(a, b int) int { return (int(pix[a]) + int(pix[b])) >> 1 }
+	return color.RGBA{
+		R: uint8((avg(i00, i10) + avg(i01, i11)) >> 1),
+		G: uint8((avg(i00+1, i10+1) + avg(i01+1, i11+1)) >> 1),
+		B: uint8((avg(i00+2, i10+2) + avg(i01+2, i11+2)) >> 1),
+		A: 255,
+	}
+}
+
+// foldHalf is floor(mirror(i+0.5)).
+func foldHalf(i, n int) int {
+	span := n - 1
+	period := span * 2
+	m := i % period
+	if m < 0 {
+		m += period
+	}
+	if m >= span {
+		return period - m - 1
+	}
+	return m
+}
+
 func (p *painted) px(x, y int) color.RGBA {
 	i := (y*p.w + x) * 4
 	return color.RGBA{R: p.pix[i], G: p.pix[i+1], B: p.pix[i+2], A: 255}

@@ -3,12 +3,14 @@ package app
 import (
 	"fmt"
 	"image/color"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/campaign"
 	"fannon-codder/internal/render"
+	"fannon-codder/internal/terrain"
 )
 
 var (
@@ -22,7 +24,7 @@ var (
 
 const (
 	loadX, loadY, loadW, loadH = 8, 8, 40, 14
-	saveY, saveW, saveH       = 8, 40, 14
+	saveY, saveW, saveH        = 8, 40, 14
 )
 
 // saveX keeps the save mark on the right of whatever width the picture is.
@@ -38,14 +40,24 @@ func saveX(frameW float64) float64 {
 type BootHill struct {
 	prog   *Progress
 	heroes bool
+	chart  terrain.Chart
+	warm   bool
 }
 
 func NewBootHill(prog *Progress) *BootHill { return &BootHill{prog: prog} }
 
-func (b *BootHill) Enter() {}
+func (b *BootHill) Enter() {
+	if b == nil {
+		return
+	}
+	b.chart, b.warm = warmPhase(b.prog)
+}
 func (b *BootHill) Leave() {}
 
 func (b *BootHill) Update(h Host) error {
+	if b.warm {
+		terrain.PumpWarm(b.chart, 6*time.Millisecond)
+	}
 	p := h.Pointer()
 	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
 		b.heroes = !b.heroes
@@ -66,6 +78,7 @@ func (b *BootHill) Update(h Host) error {
 			b.prog.SaveNotice = "No save"
 		} else {
 			b.prog.SaveNotice = "Loaded"
+			b.chart, b.warm = warmPhase(b.prog)
 		}
 		return nil
 	}

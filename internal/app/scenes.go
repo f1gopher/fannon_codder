@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -51,6 +52,9 @@ var (
 // Title is the click-through splash.
 type Title struct {
 	continues bool
+	chart     terrain.Chart
+	warm      bool
+	started   bool
 }
 
 func NewTitle() *Title { return &Title{} }
@@ -59,6 +63,13 @@ func (t *Title) Enter() {}
 func (t *Title) Leave() {}
 
 func (t *Title) Update(h Host) error {
+	if !t.started {
+		t.started = true
+		t.chart, t.warm = warmPhase(h.Progress())
+	}
+	if t.warm {
+		terrain.PumpWarm(t.chart, 6*time.Millisecond)
+	}
 	if prog := h.Progress(); prog != nil && prog.MissionsCompleted >= 5 {
 		t.continues = true
 	}
@@ -219,6 +230,26 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	nameSquad(w, men)
 	b.deployed = men
 	return finishBattle(b)
+}
+
+// warmPhase starts the region paint for the phase the player is about to
+// play. Boot Hill and the briefing both call it. A second call for the
+// same chart does not paint again.
+func warmPhase(p *Progress) (terrain.Chart, bool) {
+	if p == nil || p.Phase == nil || !p.CanStart() {
+		return terrain.Chart{}, false
+	}
+	ch, ok := phaseChart(p.Phase)
+	if !ok {
+		return terrain.Chart{}, false
+	}
+	grid, err := p.Phase.Grid()
+	if err != nil {
+		return terrain.Chart{}, false
+	}
+	ch.Live = grid
+	terrain.WarmChart(ch)
+	return ch, true
 }
 
 func phaseChart(p *data.Phase) (terrain.Chart, bool) {

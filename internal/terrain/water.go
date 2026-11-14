@@ -91,42 +91,47 @@ func smoothShore(toWater, toLand []float32, w, h int) []float32 {
 func boxBlur(src []float32, w, h, rad int) []float32 {
 	tmp := make([]float32, len(src))
 	dst := make([]float32, len(src))
-	pref := make([]float32, max(w, h)+1)
-	for y := 0; y < h; y++ {
-		row := y * w
-		pref[0] = 0
-		for x := 0; x < w; x++ {
-			pref[x+1] = pref[x] + src[row+x]
-		}
-		for x := 0; x < w; x++ {
-			x0 := x - rad
-			x1 := x + rad
-			if x0 < 0 {
-				x0 = 0
+	parallelBands(h, func(y0, y1 int) {
+		pref := make([]float32, w+1)
+		for y := y0; y < y1; y++ {
+			row := y * w
+			pref[0] = 0
+			for x := 0; x < w; x++ {
+				pref[x+1] = pref[x] + src[row+x]
 			}
-			if x1 >= w {
-				x1 = w - 1
+			for x := 0; x < w; x++ {
+				x0 := x - rad
+				x1 := x + rad
+				if x0 < 0 {
+					x0 = 0
+				}
+				if x1 >= w {
+					x1 = w - 1
+				}
+				tmp[row+x] = (pref[x1+1] - pref[x0]) / float32(x1-x0+1)
 			}
-			tmp[row+x] = (pref[x1+1] - pref[x0]) / float32(x1-x0+1)
 		}
-	}
-	for x := 0; x < w; x++ {
-		pref[0] = 0
-		for y := 0; y < h; y++ {
-			pref[y+1] = pref[y] + tmp[y*w+x]
-		}
-		for y := 0; y < h; y++ {
-			y0 := y - rad
-			y1 := y + rad
-			if y0 < 0 {
-				y0 = 0
+	})
+	parallelBands(w, func(x0, x1 int) {
+		pref := make([]float32, h+1)
+		for x := x0; x < x1; x++ {
+			pref[0] = 0
+			for y := 0; y < h; y++ {
+				pref[y+1] = pref[y] + tmp[y*w+x]
 			}
-			if y1 >= h {
-				y1 = h - 1
+			for y := 0; y < h; y++ {
+				y0 := y - rad
+				y1 := y + rad
+				if y0 < 0 {
+					y0 = 0
+				}
+				if y1 >= h {
+					y1 = h - 1
+				}
+				dst[y*w+x] = (pref[y1+1] - pref[y0]) / float32(y1-y0+1)
 			}
-			dst[y*w+x] = (pref[y1+1] - pref[y0]) / float32(y1-y0+1)
 		}
-	}
+	})
 	return dst
 }
 

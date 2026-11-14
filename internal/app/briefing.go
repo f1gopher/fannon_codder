@@ -3,27 +3,40 @@ package app
 import (
 	"fmt"
 	"image/color"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/render"
 	"fannon-codder/internal/sim"
+	"fannon-codder/internal/terrain"
 )
 
 var briefBG = color.RGBA{R: 0x10, G: 0x18, B: 0x10, A: 0xff}
 
 // Briefing shows the phase title and objective, then deploys.
 type Briefing struct {
-	prog *Progress
+	prog  *Progress
+	chart terrain.Chart
+	warm  bool
 }
 
 func NewBriefing(prog *Progress) *Briefing { return &Briefing{prog: prog} }
 
-func (b *Briefing) Enter() {}
+func (b *Briefing) Enter() {
+	if b == nil {
+		return
+	}
+	b.chart, b.warm = warmPhase(b.prog)
+}
+
 func (b *Briefing) Leave() {}
 
 func (b *Briefing) Update(h Host) error {
+	if b.warm {
+		terrain.PumpWarm(b.chart, 6*time.Millisecond)
+	}
 	p := h.Pointer()
 	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 		if b.prog.CanStart() {

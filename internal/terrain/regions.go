@@ -4,6 +4,9 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"sort"
+	"sync"
+	"time"
 
 	"fannon-codder/internal/sim"
 )
@@ -32,7 +35,90 @@ var chartNow struct {
 	view *View
 }
 
-// PrepareChart caches one painted region map.
+// chartPaintMu keeps paintChart off the shared shore and field caches
+// while a briefing warm runs beside the game thread.
+var chartPaintMu sync.Mutex
+
+// paintCharts counts paintChart calls so a test can see that PrepareChart
+// uploaded a warm result instead of painting again.
+var paintCharts int
+
+type chartWarmState struct {
+	mu    sync.Mutex
+	hash  uint64
+	paint terrainPaint
+	ready bool
+	wait  chan struct{}
+}
+
+var chartWarm chartWarmState
+
+// WarmChart paints c on a worker. The battle uploads that picture.
+// A chart already cached, or already warming, is left alone.
+func WarmChart(c Chart) {
+	if c.W < 1 || c.H < 1 {
+		return
+	}
+	h := hashChart(c)
+	if chartNow.view != nil && chartNow.view.ground != nil && chartNow.hash == h {
+		return
+	}
+	chartWarm.mu.Lock()
+	if chartWarm.hash == h && (chartWarm.ready || chartWarm.wait != nil) {
+		chartWarm.mu.Unlock()
+		return
+	}
+	done := make(chan struct{})
+	chartWarm.hash = h
+	chartWarm.paint = terrainPaint{}
+	chartWarm.ready = false
+	chartWarm.wait = done
+	chartWarm.mu.Unlock()
+	go func(c Chart, h uint64, done chan struct{}) {
+		painted := paintChart(c)
+		chartWarm.mu.Lock()
+		if chartWarm.wait == done {
+			chartWarm.hash = h
+			chartWarm.paint = painted
+			chartWarm.ready = true
+		}
+		chartWarm.mu.Unlock()
+		close(done)
+	}(c, h, done)
+}
+
+// takeWarm waits for a warm paint of h and hands it over. The CPU images
+// are cleared so they are not kept after the upload.
+func takeWarm(h uint64) (terrainPaint, bool) {
+	chartWarm.mu.Lock()
+	wait := chartWarm.wait
+	same := chartWarm.hash == h
+	ready := chartWarm.ready && same
+	paint := chartWarm.paint
+	chartWarm.mu.Unlock()
+	if !same {
+		return terrainPaint{}, false
+	}
+	if !ready {
+		if wait == nil {
+			return terrainPaint{}, false
+		}
+		<-wait
+	}
+	chartWarm.mu.Lock()
+	defer chartWarm.mu.Unlock()
+	if chartWarm.hash != h || !chartWarm.ready || chartWarm.paint.ground == nil {
+		return terrainPaint{}, false
+	}
+	paint = chartWarm.paint
+	chartWarm.paint = terrainPaint{}
+	chartWarm.ready = false
+	chartWarm.wait = nil
+	return paint, true
+}
+
+// PrepareChart caches one painted region map. A warm paint for this chart
+// is uploaded instead of painted again.
 func PrepareChart(c Chart) *View {
 	if c.W < 1 || c.H < 1 {
 		return &View{}
@@ -41,30 +127,135 @@ func PrepareChart(c Chart) *View {
 	if chartNow.view != nil && chartNow.view.ground != nil && chartNow.hash == h {
 		return chartNow.view
 	}
-	painted := paintChart(c)
-	view := &View{
-		ground: uploadStraight(painted.ground),
-		anim:   uploadStraight(painted.anim),
-		mask:   uploadStraight(painted.mask),
+	if chartUp.view != nil && chartUp.hash == h {
+		uploadMore(true, 0)
+		return publishUpload()
 	}
-	for i := range painted.trees {
-		can := painted.trees[i]
-		for _, run := range can.runs {
-			if run.sprite == nil || run.sprite.Bounds().Empty() {
-				continue
-			}
-			view.canopies = append(view.canopies, Canopy{
-				img:    uploadStraight(run.sprite),
-				WorldX: run.world,
-				NorthY: run.north,
-				FootX:  run.footX,
-				FootY:  run.foot,
-			})
+	painted, ok := takeWarm(h)
+	if !ok {
+		painted = paintChart(c)
+	}
+	startUpload(painted, h)
+	uploadMore(true, 0)
+	return publishUpload()
+}
+
+// chartUpload is a warm paint being moved to the GPU on the game thread.
+type chartUpload struct {
+	hash  uint64
+	paint terrainPaint
+	view  *View
+	next  int
+	total int
+}
+
+var chartUp chartUpload
+
+// PumpWarm uploads a finished warm paint on the game thread. budget is how
+// long one call may spend on canopy slices after the ground is up. It
+// returns true when the chart is cached and the battle will not paint or
+// upload it again. Call it from Update.
+func PumpWarm(c Chart, budget time.Duration) bool {
+	if c.W < 1 || c.H < 1 {
+		return false
+	}
+	h := hashChart(c)
+	if chartNow.view != nil && chartNow.view.ground != nil && chartNow.hash == h {
+		return true
+	}
+	if chartUp.view != nil && chartUp.hash != h {
+		chartUp = chartUpload{}
+	}
+	if chartUp.view == nil {
+		paint, ok := peekWarm(h)
+		if !ok {
+			return false
 		}
+		startUpload(paint, h)
 	}
-	chartNow.hash = h
-	chartNow.view = view
+	uploadMore(false, budget)
+	if chartUp.next < chartUp.total {
+		return false
+	}
+	publishUpload()
+	return true
+}
+
+func peekWarm(h uint64) (terrainPaint, bool) {
+	chartWarm.mu.Lock()
+	defer chartWarm.mu.Unlock()
+	if chartWarm.hash != h || !chartWarm.ready || chartWarm.paint.ground == nil {
+		return terrainPaint{}, false
+	}
+	paint := chartWarm.paint
+	chartWarm.paint = terrainPaint{}
+	chartWarm.ready = false
+	chartWarm.wait = nil
+	return paint, true
+}
+
+func startUpload(paint terrainPaint, h uint64) {
+	chartUp = chartUpload{
+		hash:  h,
+		paint: paint,
+		view: &View{
+			ground: uploadStraight(paint.ground),
+			anim:   uploadStraight(paint.anim),
+			mask:   uploadStraight(paint.mask),
+		},
+		total: runCount(paint.trees),
+	}
+}
+
+func uploadMore(all bool, budget time.Duration) {
+	u := &chartUp
+	start := time.Now()
+	for u.next < u.total {
+		if !all && u.next > 0 && time.Since(start) >= budget {
+			return
+		}
+		run := runAt(u.paint.trees, u.next)
+		u.next++
+		if run.sprite == nil || run.sprite.Bounds().Empty() {
+			continue
+		}
+		u.view.canopies = append(u.view.canopies, Canopy{
+			img:    uploadCanopy(run.sprite),
+			padded: true,
+			WorldX: run.world,
+			NorthY: run.north,
+			FootX:  run.footX,
+			FootY:  run.foot,
+		})
+	}
+}
+
+func publishUpload() *View {
+	chartNow.hash = chartUp.hash
+	chartNow.view = chartUp.view
+	view := chartUp.view
+	chartUp = chartUpload{}
 	return view
+}
+
+func runCount(trees []treeCanopy) int {
+	n := 0
+	for i := range trees {
+		n += len(trees[i].runs)
+	}
+	return n
+}
+
+func runAt(trees []treeCanopy, n int) treeRun {
+	i := 0
+	for t := range trees {
+		runs := trees[t].runs
+		if n < i+len(runs) {
+			return runs[n-i]
+		}
+		i += len(runs)
+	}
+	return treeRun{}
 }
 
 // PrepareChartLive paints c, and drops a mine mark whose cell is no longer a mine.
@@ -105,6 +296,13 @@ func (c Chart) liveMines() bool {
 }
 
 func paintChart(c Chart) terrainPaint {
+	chartPaintMu.Lock()
+	defer chartPaintMu.Unlock()
+	paintCharts++
+	return paintChartNow(c)
+}
+
+func paintChartNow(c Chart) terrainPaint {
 	lk := lookOf(c.Terrain)
 	ww, wh := c.W, c.H
 	prepareGrass(ww, wh, lk.kind)
@@ -121,20 +319,7 @@ func paintChart(c Chart) terrainPaint {
 	ground := image.NewRGBA(image.Rect(0, 0, pw, ph))
 	kind := make([]uint8, pw*ph)
 	noise := buildNoise(max(1, ww/sim.TileSize), max(1, wh/sim.TileSize), 11)
-	for py := 0; py < ph; py++ {
-		wy := (float64(py) + 0.5) / float64(terrainPx)
-		iy := clampi(int(wy), 0, wh-1)
-		row := py * pw
-		gy := iy * ww
-		for px := 0; px < pw; px++ {
-			wx := (float64(px) + 0.5) / float64(terrainPx)
-			ix := clampi(int(wx), 0, ww-1)
-			gi := gy + ix
-			col, k := chartPixel(lk, grid[gi], wx, wy)
-			setRGBA(ground, px, py, col)
-			kind[row+px] = k
-		}
-	}
+	fillChartGround(ground, kind, grid, lk, ww, wh)
 	seeds := chartSeeds(grid, ww, wh)
 	if len(seeds) > 0 {
 		crowns := make([]crown, len(seeds))
@@ -161,23 +346,54 @@ func rasterChart(c Chart, open surface) []surface {
 	for i := range g {
 		g[i] = open
 	}
+	xs := make([]float64, 0, 8)
 	for _, r := range c.Regions {
 		if len(r.Points) < 3 {
 			continue
 		}
-		s := chartSurface(r.Tile, open)
-		x0, y0, x1, y1 := ringBounds(r.Points, c.W, c.H)
-		for y := y0; y < y1; y++ {
-			row := y * c.W
-			py := float64(y) + 0.5
-			for x := x0; x < x1; x++ {
-				if pointInRing(float64(x)+0.5, py, r.Points) {
-					g[row+x] = s
-				}
+		xs = fillRing(g, c.W, xs, r.Points, chartSurface(r.Tile, open))
+	}
+	return g
+}
+
+// fillRing sets samples inside the ring. A sample sits at the cell centre.
+// The crossings use the same edge rule as pointInRing.
+func fillRing(g []surface, w int, xs []float64, pts [][2]float64, s surface) []float64 {
+	x0, y0, x1, y1 := ringBounds(pts, w, len(g)/w)
+	for y := y0; y < y1; y++ {
+		py := float64(y) + 0.5
+		xs = xs[:0]
+		j := len(pts) - 1
+		for i := range pts {
+			yi, yj := pts[i][1], pts[j][1]
+			if (yi > py) != (yj > py) {
+				xin := (pts[j][0]-pts[i][0])*(py-yi)/(yj-yi) + pts[i][0]
+				xs = append(xs, xin)
+			}
+			j = i
+		}
+		if len(xs) == 0 {
+			continue
+		}
+		sort.Float64s(xs)
+		// From the left of the map, an odd number of crossings still ahead
+		// means this centre is inside. Passing a crossing (centre >= xin)
+		// drops it, which matches the ray test x < xin.
+		inside := len(xs)%2 == 1
+		ci := 0
+		row := y * w
+		for x := x0; x < x1; x++ {
+			center := float64(x) + 0.5
+			for ci < len(xs) && !(center < xs[ci]) {
+				inside = !inside
+				ci++
+			}
+			if inside {
+				g[row+x] = s
 			}
 		}
 	}
-	return g
+	return xs
 }
 
 // Contains reports whether the world point is inside this ring.
@@ -251,6 +467,95 @@ func pointInRing(x, y float64, p [][2]float64) bool {
 	return in
 }
 
+// shoreFlat is how far inland a world-pixel centre must be before the
+// whole 4×4 source block is past the shore early-out (sd > 36). Samples
+// sit at most 0.375 world pixels from that centre.
+const shoreFlat = 38.0
+
+// fillChartGround writes the ground colour. Inland procedural pixels are
+// one colour per world pixel, so the block is stamped once. Shore, water,
+// and plate samples still run per source pixel. Rows do not overlap.
+func fillChartGround(ground *image.RGBA, kind []uint8, grid []surface, lk look, ww, wh int) {
+	pw := ww * terrainPx
+	parallelStripes(wh, func(y int) {
+		wy := float64(y) + 0.5
+		gy := y * ww
+		py := y * terrainPx
+		for x := 0; x < ww; x++ {
+			wx := float64(x) + 0.5
+			s := grid[gy+x]
+			if col, k, ok := uniformPixel(lk, s, wx, wy); ok {
+				stampBlock(ground, kind, x*terrainPx, py, pw, col, k)
+				continue
+			}
+			for sy := 0; sy < terrainPx; sy++ {
+				pyy := py + sy
+				wyy := (float64(pyy) + 0.5) / float64(terrainPx)
+				row := pyy * pw
+				for sx := 0; sx < terrainPx; sx++ {
+					pxx := x*terrainPx + sx
+					wxx := (float64(pxx) + 0.5) / float64(terrainPx)
+					col, k := chartPixel(lk, s, wxx, wyy)
+					setRGBA(ground, pxx, pyy, col)
+					kind[row+pxx] = k
+				}
+			}
+		}
+	})
+}
+
+func stampBlock(dst *image.RGBA, kind []uint8, x, y, pw int, c color.RGBA, k uint8) {
+	for sy := 0; sy < terrainPx; sy++ {
+		o := dst.PixOffset(x, y+sy)
+		row := (y+sy)*pw + x
+		for sx := 0; sx < terrainPx; sx++ {
+			dst.Pix[o] = c.R
+			dst.Pix[o+1] = c.G
+			dst.Pix[o+2] = c.B
+			dst.Pix[o+3] = c.A
+			kind[row] = k
+			o += 4
+			row++
+		}
+	}
+}
+
+// uniformPixel reports the colour of a world pixel when every source sample
+// inside it matches chartPixel. wx and wy are the pixel centre.
+func uniformPixel(lk look, s surface, wx, wy float64) (color.RGBA, uint8, bool) {
+	if snowCliff != nil && !cliffBlocks(s) && snowCliff.hotAt(wx, wy) {
+		return color.RGBA{}, 0, false
+	}
+	switch s {
+	case surfBridge, surfShallow, surfDeep, surfIce, surfSand, surfCliff, surfRamp:
+		return color.RGBA{}, 0, false
+	}
+	if shoreToWater != nil {
+		sd, ok := shoreField(wx, wy)
+		if ok && sd <= shoreFlat {
+			return color.RGBA{}, 0, false
+		}
+	}
+	base := s
+	if s == surfTree || s == surfMine {
+		base = lk.open
+	}
+	switch lk.kind {
+	case Jungle, Desert, Forest:
+		if base != surfGrass {
+			return color.RGBA{}, 0, false
+		}
+	case Snow:
+		if base != surfSnow && base != surfGrass {
+			return color.RGBA{}, 0, false
+		}
+	default:
+		return color.RGBA{}, 0, false
+	}
+	c, k := lk.plateColor(base, wx, wy)
+	return c, k, true
+}
+
 func chartPixel(lk look, s surface, wx, wy float64) (color.RGBA, uint8) {
 	if snowCliff != nil && !cliffBlocks(s) && snowCliff.hotAt(wx, wy) {
 		return paintSnowCliffPixel(lk, s, wx, wy, false, color.RGBA{}, 0)
@@ -268,6 +573,22 @@ func chartPixelPaint(lk look, s surface, wx, wy float64) (color.RGBA, uint8) {
 			c = mixRGBA(c, color.RGBA{R: 232, G: 242, B: 246, A: 255}, 0.28)
 		}
 		return c, maskNone
+	}
+	// Water replaces the plate colour. plateColor would paint the same
+	// water and this function would paint it again.
+	if s == surfShallow || s == surfDeep {
+		if shoreToWater == nil {
+			return lk.plateColor(s, wx, wy)
+		}
+		sd, ok := shoreField(wx, wy)
+		if !ok {
+			return lk.plateColor(s, wx, wy)
+		}
+		sd += shoreFlow(wx, wy)
+		if sd > 0 {
+			return wetSand(lk, wx, wy, sd), maskNone
+		}
+		return waterColor(lk, wx, wy, -sd, -sd), waterMask(-sd)
 	}
 	base := s
 	if s == surfTree || s == surfMine {
@@ -327,8 +648,17 @@ func chartWaterDist(grid []surface, w, h int) (toWater, toLand []float32) {
 	if !any {
 		return nil, nil
 	}
-	chamfer(toWater, w, h)
-	chamfer(toLand, w, h)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		chamfer(toWater, w, h)
+	}()
+	go func() {
+		defer wg.Done()
+		chamfer(toLand, w, h)
+	}()
+	wg.Wait()
 	return toWater, toLand
 }
 
@@ -495,11 +825,17 @@ func shadeCrowns(dst *image.RGBA, crowns []crown, lk look) {
 	x1 = clampi(x1, 0, pw)
 	y1 = clampi(y1, 0, ph)
 	strength := make([]uint8, pw*ph)
-	for py := y0; py < y1; py += terrainPx {
+	near := newCrownNear(crowns)
+	rows := 0
+	if y1 > y0 {
+		rows = (y1 - y0 + terrainPx - 1) / terrainPx
+	}
+	parallelStripes(rows, func(i int) {
+		py := y0 + i*terrainPx
 		wy := (float64(py) + 0.5) / float64(terrainPx)
 		for px := x0; px < x1; px += terrainPx {
 			wx := (float64(px) + 0.5) / float64(terrainPx)
-			d := shadeDist(crowns, wx-3.2, wy-4.0)
+			d := near.dist(wx-3.2, wy-4.0)
 			if d > 16 {
 				continue
 			}
@@ -520,19 +856,27 @@ func shadeCrowns(dst *image.RGBA, crowns []crown, lk look) {
 				}
 			}
 		}
-	}
-	for i, v := range strength {
-		if v == 0 {
-			continue
+	})
+	parallelStripes(ph, func(y int) {
+		if y < y0 || y >= y1 {
+			return
 		}
-		o := i * 4
-		c := color.RGBA{R: dst.Pix[o], G: dst.Pix[o+1], B: dst.Pix[o+2], A: dst.Pix[o+3]}
-		c = mixRGBA(c, lk.shadow, float64(v)/255)
-		dst.Pix[o] = c.R
-		dst.Pix[o+1] = c.G
-		dst.Pix[o+2] = c.B
-		dst.Pix[o+3] = c.A
-	}
+		row := y * pw
+		base := row * 4
+		for x := x0; x < x1; x++ {
+			v := strength[row+x]
+			if v == 0 {
+				continue
+			}
+			o := base + x*4
+			c := color.RGBA{R: dst.Pix[o], G: dst.Pix[o+1], B: dst.Pix[o+2], A: dst.Pix[o+3]}
+			c = mixRGBA(c, lk.shadow, float64(v)/255)
+			dst.Pix[o] = c.R
+			dst.Pix[o+1] = c.G
+			dst.Pix[o+2] = c.B
+			dst.Pix[o+3] = c.A
+		}
+	})
 }
 
 func stampChartMines(dst *image.RGBA, grid []surface, w, h int, pal Palette) {
@@ -642,40 +986,137 @@ func paintSeedCanopy(seeds []treeSeed, lk look, noise *noiseGrid, ground *image.
 	for i := range owner {
 		owner[i] = -1
 	}
-	cover, tips, ccx, ccy := splatCrowns(crowns, originX, originY, pw, ph)
+	cover, tips, ccx, ccy, spanLo, spanHi := splatCrowns(crowns, originX, originY, pw, ph)
 	gw := ground.Bounds().Dx()
 	gh := ground.Bounds().Dy()
-	for py := 0; py < ph; py++ {
+	near := newCellNear(cells)
+	// A world pixel holds a 4×4 block of source samples. Those samples share
+	// a nearest tree when the winner leads by more than the block diagonal.
+	const ownerGap = 1.061
+	ox4, oy4 := 0, 0
+	half := originX == math.Trunc(originX) && originY == math.Trunc(originY)
+	if half {
+		ox4 = int(originX) * 4
+		oy4 = int(originY) * 4
+	}
+	canopy := lk.canopy
+	workers := stripeWorkers(ph)
+	localBox := make([][]pxBox, workers)
+	for w := 0; w < workers; w++ {
+		localBox[w] = make([]pxBox, len(cells))
+		for i := range localBox[w] {
+			localBox[w][i] = pxBox{minX: pw, minY: ph, maxX: -1, maxY: -1}
+		}
+	}
+	parallelStripesW(ph, func(worker, py int) {
+		if spanHi[py] < spanLo[py] {
+			return
+		}
 		wy := originY + (float64(py)+0.5)/float64(terrainPx)
 		row := py * pw
-		for px := 0; px < pw; px++ {
+		boxes := localBox[worker]
+		blockOwn := -2
+		for px := spanLo[py]; px <= spanHi[py]; px++ {
+			if px&(terrainPx-1) == 0 {
+				blockOwn = -2
+			}
 			d := float64(cover[row+px])
 			sprig := float64(tips[row+px])
 			if d > 12 && sprig < 0.02 {
 				continue
 			}
 			wx := originX + (float64(px)+0.5)/float64(terrainPx)
-			a := canopyAlpha(d, wx, wy, noise)
+			// Foliage noise stays inside ±2.6, so a crown this deep is
+			// solid and one this far out is clear. Same result as canopyAlpha.
+			var a float64
+			if d <= -6.8 {
+				a = 1
+			} else if d >= 10.1 {
+				a = 0
+			} else {
+				a = canopyAlpha(d, wx, wy, noise)
+			}
 			if sprig > a {
 				a = sprig
 			}
 			if a < 0.012 {
 				continue
 			}
-			c := lk.canopy.atScale(wx, wy, 4)
-			c = shadeCrown(c, d, wx-float64(ccx[row+px]), wy-float64(ccy[row+px]), lk, sampleNoise(noise, wx*1.7, wy*1.7))
-			c = mergeFringe(c, ground, gw, gh, wx, wy, a, lk)
+			var c color.RGBA
+			if half {
+				c = canopy.atHalf(ox4+px, oy4+py)
+			} else {
+				c = canopy.atScale(wx, wy, 4)
+			}
+			n := 0.0
+			if lk.snowCaps {
+				n = sampleNoise(noise, wx*1.7, wy*1.7)
+			}
+			c = shadeCrown(c, d, wx-float64(ccx[row+px]), wy-float64(ccy[row+px]), lk, n)
+			if a > 0.5 {
+				if a < 0.85 && int(c.R)+int(c.G)+int(c.B) < 96 {
+					c = mixRGBA(c, lk.leaf, 0.45)
+				}
+			} else {
+				c = mergeFringe(c, ground, gw, gh, wx, wy, a, lk)
+			}
 			c.A = uint8(a * 255)
 			if c.A == 0 {
 				continue
 			}
 			setRGBA(img, px, py, c)
-			owner[row+px] = int16(nearestTree(cells, wx, wy))
+			if blockOwn == -2 {
+				cx := originX + (float64(px&^(terrainPx-1))+2)/float64(terrainPx)
+				cy := originY + (float64(py&^(terrainPx-1))+2)/float64(terrainPx)
+				idx, gap := near.nearest(cx, cy)
+				if gap > ownerGap {
+					blockOwn = idx
+				} else {
+					blockOwn = -1
+				}
+			}
+			own := blockOwn
+			if own < 0 {
+				own = near.index(wx, wy)
+			}
+			owner[row+px] = int16(own)
+			b := &boxes[own]
+			if px < b.minX {
+				b.minX = px
+			}
+			if py < b.minY {
+				b.minY = py
+			}
+			if px > b.maxX {
+				b.maxX = px
+			}
+			if py > b.maxY {
+				b.maxY = py
+			}
 		}
-	}
+	})
 	can := treeCanopy{img: img, originX: originX, originY: originY}
 	for i, cell := range cells {
-		can.runs = append(can.runs, sliceRun(can, owner, pw, i, cell.X, cell.Y))
+		box := pxBox{minX: pw, minY: ph, maxX: -1, maxY: -1}
+		for w := 0; w < workers; w++ {
+			b := localBox[w][i]
+			if b.maxX < 0 {
+				continue
+			}
+			if b.minX < box.minX {
+				box.minX = b.minX
+			}
+			if b.minY < box.minY {
+				box.minY = b.minY
+			}
+			if b.maxX > box.maxX {
+				box.maxX = b.maxX
+			}
+			if b.maxY > box.maxY {
+				box.maxY = b.maxY
+			}
+		}
+		can.runs = append(can.runs, sliceBoxed(can, box.minX, box.minY, box.maxX, box.maxY, cell.X, cell.Y))
 	}
 	return can
 }

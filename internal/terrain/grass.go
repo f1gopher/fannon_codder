@@ -32,13 +32,15 @@ func prepareGrass(w, h int, kind Kind) {
 		return
 	}
 	pix := make([]color.RGBA, w*h)
-	for y := 0; y < h; y++ {
-		wy := float64(y) + 0.5
-		row := y * w
-		for x := 0; x < w; x++ {
-			pix[row+x] = grassColor(float64(x)+0.5, wy)
+	parallelBands(h, func(y0, y1 int) {
+		for y := y0; y < y1; y++ {
+			wy := float64(y) + 0.5
+			row := y * w
+			for x := 0; x < w; x++ {
+				pix[row+x] = grassColor(float64(x)+0.5, wy)
+			}
 		}
-	}
+	})
 	grassPix = pix
 	grassW = w
 }

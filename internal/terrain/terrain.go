@@ -23,9 +23,11 @@ type View struct {
 }
 
 // Canopy is one tree cell's sprite. FootY is the south edge the battle
-// Y-sorts against huts and soldiers.
+// Y-sorts against huts and soldiers. padded means img is the inner rect of
+// a one-pixel edge copy, so Draw does not read the texture back.
 type Canopy struct {
 	img            *ebiten.Image
+	padded         bool
 	WorldX, NorthY float64
 	FootX, FootY   float64
 }
@@ -78,7 +80,8 @@ func Prepare(m sim.Map, terrain string) *View {
 				continue
 			}
 			view.canopies = append(view.canopies, Canopy{
-				img:    uploadStraight(run.sprite),
+				img:    uploadCanopy(run.sprite),
+				padded: true,
 				WorldX: run.world,
 				NorthY: run.north,
 				FootX:  run.footX,
@@ -103,6 +106,63 @@ func uploadStraight(src *image.RGBA) *ebiten.Image {
 	img := ebiten.NewImage(src.Bounds().Dx(), src.Bounds().Dy())
 	img.WritePixels(pix)
 	return img
+}
+
+// uploadCanopy premultiplies src and copies one pixel of each edge before
+// the upload. Draw samples that edge with a linear filter. The returned
+// image is the inner rect, so the sprite stays the same size.
+func uploadCanopy(src *image.RGBA) *ebiten.Image {
+	if src == nil {
+		return nil
+	}
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w == 0 || h == 0 {
+		return nil
+	}
+	at := func(x, y int) (byte, byte, byte, byte) {
+		o := src.PixOffset(b.Min.X+x, b.Min.Y+y)
+		a := uint32(src.Pix[o+3])
+		return byte(uint32(src.Pix[o]) * a / 255),
+			byte(uint32(src.Pix[o+1]) * a / 255),
+			byte(uint32(src.Pix[o+2]) * a / 255),
+			src.Pix[o+3]
+	}
+	pw, ph := w+2, h+2
+	pix := make([]byte, 4*pw*ph)
+	put := func(x, y int, r, g, bl, a byte) {
+		o := (y*pw + x) * 4
+		pix[o], pix[o+1], pix[o+2], pix[o+3] = r, g, bl, a
+	}
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			r, g, bl, a := at(x, y)
+			put(x+1, y+1, r, g, bl, a)
+		}
+	}
+	for y := 0; y < h; y++ {
+		r, g, bl, a := at(0, y)
+		put(0, y+1, r, g, bl, a)
+		r, g, bl, a = at(w-1, y)
+		put(pw-1, y+1, r, g, bl, a)
+	}
+	for x := 0; x < w; x++ {
+		r, g, bl, a := at(x, 0)
+		put(x+1, 0, r, g, bl, a)
+		r, g, bl, a = at(x, h-1)
+		put(x+1, ph-1, r, g, bl, a)
+	}
+	r, g, bl, a := at(0, 0)
+	put(0, 0, r, g, bl, a)
+	r, g, bl, a = at(w-1, 0)
+	put(pw-1, 0, r, g, bl, a)
+	r, g, bl, a = at(0, h-1)
+	put(0, ph-1, r, g, bl, a)
+	r, g, bl, a = at(w-1, h-1)
+	put(pw-1, ph-1, r, g, bl, a)
+	pad := ebiten.NewImage(pw, ph)
+	pad.WritePixels(pix)
+	return pad.SubImage(image.Rect(1, 1, w+1, h+1)).(*ebiten.Image)
 }
 
 // DrawGround paints ground and shimmer. originX and originY are where world
@@ -130,7 +190,10 @@ func (c Canopy) Draw(dst *ebiten.Image, originX, originY, scale float64) {
 	// black, which reads as a line where two crowns meet. The bled frame
 	// keeps the leaf colour in range, and one extra device pixel closes
 	// the crack the vertex snap can open between the slices.
-	img := bledTerrain(c.img)
+	img := c.img
+	if !c.padded {
+		img = bledTerrain(c.img)
+	}
 	if scale <= 0 {
 		scale = 1
 	}

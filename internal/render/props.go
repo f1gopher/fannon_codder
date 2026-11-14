@@ -2,8 +2,10 @@ package render
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"fannon-codder/internal/sim"
 )
@@ -86,14 +88,52 @@ func drawVehicleRect(dst *ebiten.Image, cam sim.Camera, v *sim.Vehicle) {
 	fillRectF(dst, x+1, y+1, 18, 10, skidooFill)
 }
 
+// lampSeat is the roof beacon in world pixels, aft of the hull centre so it
+// sits on the body. rad is the glass radius.
+func lampSeat(v *sim.Vehicle) (dx, dy, rad float64) {
+	rad = 1.35
+	aft := 1.5
+	switch v.Kind {
+	case sim.KindTank:
+		rad = 2.05
+		aft = 5
+	case sim.KindJeep:
+		rad = 1.65
+		aft = 3
+	case sim.KindTurret:
+		rad = 1.45
+		aft = 0
+	}
+	dx = -math.Cos(v.Facing) * aft
+	dy = -math.Sin(v.Facing) * aft
+	return dx, dy, rad
+}
+
 func drawEnemyLamp(dst *ebiten.Image, cam sim.Camera, v *sim.Vehicle) {
-	if v.Side != sim.SideEnemy || int(v.Blink*6)%2 != 0 {
+	if dst == nil || v == nil || v.Side != sim.SideEnemy || !v.Alive {
 		return
 	}
-	// Sits on the painted hull. The blink stays a render overlay, not a second sheet.
-	x := cam.ScreenX(v.X) - 6
-	y := cam.ScreenY(v.Y) - 10
-	fillRectF(dst, x, y, 3, 3, enemyLamp)
+	dx, dy, rad := lampSeat(v)
+	ps := pictureScale
+	if ps <= 0 {
+		ps = 1
+	}
+	cx := float32((cam.ScreenX(v.X) + dx) * ps)
+	cy := float32((cam.ScreenY(v.Y) + dy) * ps)
+	on := int(v.Blink*6)%2 == 0
+	r := float32(rad * ps)
+	if on {
+		vector.FillCircle(dst, cx, cy, r+float32(1.35*ps), color.RGBA{R: 0xe0, G: 0x18, B: 0x10, A: 0x48}, true)
+	}
+	vector.FillCircle(dst, cx, cy, r+float32(0.55*ps), color.RGBA{R: 0x24, G: 0x12, B: 0x10, A: 0xff}, true)
+	glass := color.RGBA{R: 0x4a, G: 0x12, B: 0x0e, A: 0xff}
+	if on {
+		glass = enemyLamp
+	}
+	vector.FillCircle(dst, cx, cy, r, glass, true)
+	if on {
+		vector.FillCircle(dst, cx-r*0.28, cy-r*0.28, r*0.32, color.RGBA{R: 0xff, G: 0xe4, B: 0xc8, A: 0xff}, true)
+	}
 }
 
 // Bombs draws grenades in the air.

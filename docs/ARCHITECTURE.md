@@ -133,7 +133,7 @@ Mission 1 posted grunts are at tiles (16, 36), (40, 36), and (46, 34), south of 
 
 ## Vehicles
 
-`VehicleCapacity` is 8. Hold left to drive. A longer hold is faster, up to `VehicleMaxSpeed` (88) after `VehicleHoldFull` (1.4 s). Grass zeroes velocity on release. Ice keeps a skid (`iceSkidRate`). Right fires the mounted gun when `Armed` is set. Grenades and rockets do not fire from inside. Overlap within `VehicleRamR` (12) kills. Rockets and blasts destroy a skidoo. MG fire does not. Boarding hides the troopers. The enemy lamp is drawn on the same body.
+`VehicleCapacity` is 8. Hold left to drive. A longer hold is faster, up to `VehicleMaxSpeed` (88) after `VehicleHoldFull` (1.4 s). Grass zeroes velocity on release. Ice keeps a skid (`iceSkidRate`). Right fires the mounted gun when `Armed` is set. Grenades and rockets do not fire from inside. Overlap within `VehicleRamR` (12) kills. Rockets and blasts destroy a skidoo. MG fire does not. Boarding hides the troopers. A living enemy vehicle draws a round roof lamp on that body. It blinks, and a wreck does not.
 
 An armed enemy skidoo drops the throttle inside `VehicleMGRange` (110) and outside the ram, turns the hull at `EnemyTurnRate`, then uses the grunt reaction, facing tolerance, burst, and pause at `VehicleMGRoF`. The burst clock is on the driver. An unarmed enemy skidoo still closes and rams. A blocked hull slides on one axis. The player's mounted gun still aims with `vehicleShoot`.
 

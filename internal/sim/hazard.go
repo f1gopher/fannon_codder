@@ -22,7 +22,7 @@ func (w *World) trapQuicksand() {
 }
 
 func (w *World) noteQuicksand(u *Unit) {
-	if u == nil || !u.Living() || u.Sinking || u.VehicleID != 0 {
+	if u == nil || !u.Living() || u.Sinking || u.VehicleID != 0 || u.Saved {
 		return
 	}
 	if w.Map.TileAtPixel(u.X, u.Y) == TileQuicksand {
@@ -60,7 +60,7 @@ func (w *World) stepMines() {
 	seen := map[[2]int]bool{}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if !u.Living() || u.VehicleID != 0 {
+		if !u.Living() || u.VehicleID != 0 || u.Saved {
 			continue
 		}
 		tx := int(math.Floor(u.X / float64(TileSize)))
@@ -98,7 +98,7 @@ func (w *World) stepMines() {
 		}
 		w.Map.Set(tx, ty, TileGrass)
 		c := TileCenter(tx, ty)
-		w.explode(c.X, c.Y, 0)
+		w.explodeSide(c.X, c.Y, 0, v.Side)
 	}
 }
 
@@ -107,7 +107,6 @@ func (w *World) stepCivilians(dt float64) {
 	if w.rng == nil {
 		w.rng = newRNG()
 	}
-	slot := 0
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Side != SideCivilian || !u.Living() || u.Sinking || u.Saved {
@@ -118,8 +117,8 @@ func (w *World) stepCivilians(dt float64) {
 				u.Escorting = true
 			}
 			if u.Escorting {
-				w.stepEscort(u, slot, dt)
-				slot++
+				w.stepEscort(u, w.escortSlot, dt)
+				w.escortSlot++
 			} else {
 				u.VX = 0
 				u.VY = 0

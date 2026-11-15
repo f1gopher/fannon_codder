@@ -397,3 +397,60 @@ func TestRocketeerFiresSlowly(t *testing.T) {
 		t.Fatal("the second rocket should wait out the cooldown")
 	}
 }
+
+func TestDismountSkipsABlockedExit(t *testing.T) {
+	const W = 8
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	tiles := make([]Tile, W*W)
+	for x := 0; x < W; x++ {
+		tiles[3*W+x] = TileTree
+		tiles[4*W+x] = TileTree
+	}
+	w.Map = Map{W: W, H: W, Tiles: tiles}
+	v := w.AddJeep(Vec2{X: 3.5 * TileSize, Y: 2.5 * TileSize}, SidePlayer, false)
+	u := w.SpawnUnit(SidePlayer, Vec2{X: v.X, Y: v.Y})
+	u.VehicleID = v.ID
+	v.Occupants = []int{u.ID}
+	w.dismount(v)
+	if !w.walkableUnit(u.X, u.Y) {
+		t.Fatalf("dismount left a soldier in a solid at %v,%v", u.X, u.Y)
+	}
+}
+
+func TestRamAndMineSpareSavedUnits(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = []Objective{RescueHostages, ProtectCivilians}
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 8, Y: 8}})
+	hid := w.SpawnUnit(SideHostage, Vec2{X: 40, Y: 40}).ID
+	cid := w.SpawnUnit(SideCivilian, Vec2{X: 80, Y: 40}).ID
+	h := w.Unit(hid)
+	c := w.Unit(cid)
+	h.Saved = true
+	c.Saved = true
+	v := w.AddJeep(Vec2{X: 40, Y: 40}, SidePlayer, false)
+	v.VX = vehicleSpeedUnit * 4
+	w.ram(v)
+	v.X, v.Y = 80, 40
+	w.ram(v)
+	if !h.Living() || !c.Living() {
+		t.Fatal("a ram killed a saved unit")
+	}
+	tiles := make([]Tile, 8*8)
+	tiles[2*8+2] = TileMine
+	w.Map = Map{W: 8, H: 8, Tiles: tiles}
+	center := TileCenter(2, 2)
+	h.X, h.Y = center.X, center.Y
+	w.stepMines()
+	if !h.Living() {
+		t.Fatal("a mine killed a saved hostage")
+	}
+	h.HP = Dead
+	c.HP = Dead
+	w.evaluateObjectives()
+	if w.Status == Lost {
+		t.Fatal("a saved death failed the phase")
+	}
+}

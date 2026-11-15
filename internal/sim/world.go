@@ -46,6 +46,9 @@ type World struct {
 	nextID       int
 	nextVID      int
 	rng          *rand.Rand
+	// escortSlot is the next file place behind the squad, shared by
+	// hostages, the captured leader, and civilians walking home.
+	escortSlot int
 }
 
 // NewEmpty is a playable blank world (no units, no tiles).
@@ -366,6 +369,7 @@ func (w *World) Step(dt float64) {
 	}
 	w.stepPickups()
 	w.refreshTerrain()
+	w.escortSlot = 0
 	w.stepCivilians(dt)
 	w.stepHostages(dt)
 	w.stepLeaders(dt)

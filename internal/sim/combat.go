@@ -359,9 +359,9 @@ func (w *World) stepProjectiles(dt float64) {
 					hx, hy = p.X, p.Y
 				}
 				if p.Kind == ProjShell {
-					w.explodeShell(hx, hy, p.OwnerID)
+					w.explodeShellSide(hx, hy, p.OwnerID, p.OwnerSide)
 				} else {
-					w.explodeRocket(hx, hy, p.OwnerID)
+					w.explodeRocketSide(hx, hy, p.OwnerID, p.OwnerSide)
 				}
 				continue
 			}

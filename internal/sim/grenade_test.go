@@ -115,6 +115,42 @@ func TestEnemyCannotDestroyCrates(t *testing.T) {
 	}
 }
 
+func TestShellUsesItsOwnCrateRadius(t *testing.T) {
+	playerWorld := func() (*World, int) {
+		w := NewEmpty()
+		w.AI = false
+		w.Objectives = nil
+		id := w.SpawnUnit(SidePlayer, Vec2{X: 0, Y: 200}).ID
+		return w, id
+	}
+	inside, id := playerWorld()
+	inside.AddGrenadeCrate(Vec2{X: ShellBlastR * 0.5, Y: 0})
+	inside.explodeShell(0, 0, id)
+	if inside.Pickups[0].Alive {
+		t.Fatal("a crate inside the shell radius should detonate")
+	}
+	gap, id := playerWorld()
+	gap.AddGrenadeCrate(Vec2{X: (ShellBlastR + GrenadeRadius) / 2, Y: 0})
+	gap.explodeShell(0, 0, id)
+	if !gap.Pickups[0].Alive {
+		t.Fatal("a crate outside the shell radius should survive")
+	}
+}
+
+func TestOwnerlessEnemyBlastSparesCrates(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.AddGrenadeCrate(Vec2{X: 0, Y: 0})
+	w.AddRocketCrate(Vec2{X: 8, Y: 0})
+	w.explodeShellSide(0, 0, 0, SideEnemy)
+	w.explodeRocketSide(0, 0, 0, SideEnemy)
+	w.explodeSide(0, 0, 0, SideEnemy)
+	if !w.Pickups[0].Alive || !w.Pickups[1].Alive {
+		t.Fatal("an enemy blast with no soldier owner destroyed a crate")
+	}
+}
+
 func TestBarrelShotChains(t *testing.T) {
 	w := NewEmpty()
 	w.AI = false

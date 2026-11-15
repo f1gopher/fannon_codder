@@ -98,7 +98,7 @@ func (w *World) protectFailed() bool {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Side == SideCivilian && u.Dead() {
+		if u.Side == SideCivilian && u.Dead() && !u.Saved {
 			return true
 		}
 	}
@@ -112,7 +112,7 @@ func (w *World) rescueFailed() bool {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Side == SideHostage && u.Dead() {
+		if u.Side == SideHostage && u.Dead() && !u.Saved {
 			return true
 		}
 	}

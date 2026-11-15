@@ -262,7 +262,7 @@ func (w *World) stepHoming(p *Projectile, dt float64) {
 		if !hit {
 			hx, hy = p.X, p.Y
 		}
-		w.explodeRocket(hx, hy, 0)
+		w.explodeRocketSide(hx, hy, 0, p.OwnerSide)
 		p.Alive = false
 	}
 }
@@ -305,5 +305,5 @@ func (w *World) stepChopperFall(v *Vehicle, dt float64) {
 		return
 	}
 	v.Alt = 0
-	w.explodeRocket(v.X, v.Y, 0)
+	w.explodeRocketSide(v.X, v.Y, 0, v.Side)
 }

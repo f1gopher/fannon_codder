@@ -250,21 +250,34 @@ func (w *World) stepBlasts(dt float64) {
 // explode kills every man in the radius, standing or wounded, and destroys huts, crates, and barrels.
 // Grenades do not spare friendlies. A destroyed crate or barrel explodes too.
 func (w *World) explode(x, y float64, ownerID int) {
-	w.blastAt(x, y, ownerID, false, GrenadeRadius, 0)
+	w.explodeSide(x, y, ownerID, SidePlayer)
+}
+
+// explodeSide is explode with the firer's side when no soldier owns the blast.
+func (w *World) explodeSide(x, y float64, ownerID int, side Side) {
+	w.blastAt(x, y, ownerID, side, false, GrenadeRadius, 0)
 }
 
 // explodeRocket is a bazooka impact. It opens a reinforced door. A grenade does not.
 func (w *World) explodeRocket(x, y float64, ownerID int) {
-	w.blastAt(x, y, ownerID, true, GrenadeRadius, 0)
+	w.explodeRocketSide(x, y, ownerID, SidePlayer)
+}
+
+func (w *World) explodeRocketSide(x, y float64, ownerID int, side Side) {
+	w.blastAt(x, y, ownerID, side, true, GrenadeRadius, 0)
 }
 
 // explodeShell is a tank shell. It opens the same hard targets as a rocket,
 // in a smaller radius. The blast sheet and the particle cloud draw smaller.
 func (w *World) explodeShell(x, y float64, ownerID int) {
-	w.blastAt(x, y, ownerID, true, ShellBlastR, 0.72)
+	w.explodeShellSide(x, y, ownerID, SidePlayer)
 }
 
-func (w *World) blastAt(x, y float64, ownerID int, hard bool, radius, scale float64) {
+func (w *World) explodeShellSide(x, y float64, ownerID int, side Side) {
+	w.blastAt(x, y, ownerID, side, true, ShellBlastR, 0.72)
+}
+
+func (w *World) blastAt(x, y float64, ownerID int, side Side, hard bool, radius, scale float64) {
 	w.emit(CueBoom, x, y)
 	if radius <= 0 {
 		radius = GrenadeRadius
@@ -328,10 +341,10 @@ func (w *World) blastAt(x, y float64, ownerID int, hard bool, radius, scale floa
 			continue
 		}
 		b.Alive = false
-		w.explode(b.X, b.Y, ownerID)
+		w.explodeSide(b.X, b.Y, ownerID, side)
 	}
 	// Enemy fire, bombs, and rockets leave crates for the player.
-	if w.enemyOwned(ownerID) {
+	if w.sparesCrates(ownerID, side) {
 		return
 	}
 	for i := range w.Pickups {
@@ -339,18 +352,22 @@ func (w *World) blastAt(x, y float64, ownerID int, hard bool, radius, scale floa
 		if !p.Alive {
 			continue
 		}
-		if hypot(p.X-x, p.Y-y) > GrenadeRadius {
+		if hypot(p.X-x, p.Y-y) > radius {
 			continue
 		}
 		p.Alive = false
-		w.explode(p.X, p.Y, ownerID)
+		w.explodeSide(p.X, p.Y, ownerID, side)
 	}
 }
 
-// enemyOwned is true when id is a living or dead enemy soldier.
-func (w *World) enemyOwned(id int) bool {
-	u := w.Unit(id)
-	return u != nil && u.Side == SideEnemy
+// sparesCrates is true for an enemy soldier, or for a blast with no soldier
+// owner that still belongs to the enemy (a turret, a chopper, a mined jeep).
+// A missing owner is not looked up as a vehicle: those ids share the unit counter.
+func (w *World) sparesCrates(ownerID int, side Side) bool {
+	if u := w.Unit(ownerID); u != nil {
+		return u.Side == SideEnemy
+	}
+	return side == SideEnemy
 }
 
 func (w *World) tryHitCrate(p *Projectile, x0, y0, x1, y1 float64) {

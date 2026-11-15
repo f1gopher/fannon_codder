@@ -121,3 +121,28 @@ func TestHostageDoesNotBlockKillAll(t *testing.T) {
 		t.Fatalf("a hostage blocked kill-all, status=%v", w.Status)
 	}
 }
+
+func TestEscortsShareOneFile(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 40, Y: 80}})
+	home := w.SpawnUnit(SideCivilian, Vec2{X: 40, Y: 80})
+	home.MustHome = true
+	hostage := w.SpawnUnit(SideHostage, Vec2{X: 40, Y: 80})
+	leader := w.SpawnUnit(SideEnemy, Vec2{X: 40, Y: 80})
+	leader.Kind = KindLeader
+	w.Step(1.0 / 60)
+	w.CommandMove(240, 80, true)
+	for i := 0; i < 120; i++ {
+		w.Step(1.0 / 60)
+	}
+	xs := []float64{home.X, hostage.X, leader.X}
+	for i := 0; i < len(xs); i++ {
+		for j := i + 1; j < len(xs); j++ {
+			if hypot(xs[i]-xs[j], 0) < FileSpacing*0.6 {
+				t.Fatalf("escorts stacked at %v", xs)
+			}
+		}
+	}
+}

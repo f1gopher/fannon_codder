@@ -331,11 +331,36 @@ func (w *World) exitSpot(v *Vehicle, n int) Vec2 {
 		{0, 18}, {-12, 18}, {12, 18}, {-22, 18}, {22, 18}, {0, 28},
 	}
 	off := spots[n%len(spots)]
-	x, y := v.X+off.X, v.Y+off.Y
-	if w.walkableUnit(x, y) {
-		return Vec2{X: x, Y: y}
+	if p, ok := w.nearestWalkable(v.X+off.X, v.Y+off.Y, v.X, v.Y); ok {
+		return p
 	}
-	return Vec2{X: v.X + off.X, Y: v.Y + off.Y}
+	return Vec2{X: v.X, Y: v.Y}
+}
+
+// nearestWalkable prefers (x, y), then steps back toward the hull, then a
+// ring around the hull. The rejected offset is never returned.
+func (w *World) nearestWalkable(x, y, hx, hy float64) (Vec2, bool) {
+	if w.walkableUnit(x, y) {
+		return Vec2{X: x, Y: y}, true
+	}
+	for t := 0.75; t >= 0; t -= 0.25 {
+		px := hx + (x-hx)*t
+		py := hy + (y-hy)*t
+		if w.walkableUnit(px, py) {
+			return Vec2{X: px, Y: py}, true
+		}
+	}
+	for r := 8.0; r <= 40; r += 8 {
+		for k := 0; k < 8; k++ {
+			ang := float64(k) * math.Pi / 4
+			px := hx + math.Cos(ang)*r
+			py := hy + math.Sin(ang)*r
+			if w.walkableUnit(px, py) {
+				return Vec2{X: px, Y: py}, true
+			}
+		}
+	}
+	return Vec2{}, false
 }
 
 func (w *World) destroyVehicle(v *Vehicle) {
@@ -725,7 +750,7 @@ func (w *World) ram(v *Vehicle) {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Dead() || u.VehicleID != 0 {
+		if u.Dead() || u.Saved || u.VehicleID != 0 {
 			continue
 		}
 		if hypot(u.X-v.X, u.Y-v.Y) <= VehicleRamR {

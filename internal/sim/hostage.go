@@ -5,7 +5,6 @@ package sim
 // and stops when that squad stops. He does not shoot, board, or take orders.
 // Standing on a tent saves him.
 func (w *World) stepHostages(dt float64) {
-	slot := 0
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Side != SideHostage || u.Dead() || u.Saved || u.Sinking {
@@ -15,8 +14,8 @@ func (w *World) stepHostages(dt float64) {
 			u.Escorting = true
 		}
 		if u.Escorting {
-			w.stepEscort(u, slot, dt)
-			slot++
+			w.stepEscort(u, w.escortSlot, dt)
+			w.escortSlot++
 		} else {
 			u.VX = 0
 			u.VY = 0

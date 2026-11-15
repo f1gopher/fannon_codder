@@ -4,7 +4,6 @@ package sim
 // a living player on foot touches him. After that he stops shooting, leaves
 // the enemy side, and walks behind the active squad. A handover saves him.
 func (w *World) stepLeaders(dt float64) {
-	slot := 0
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.Kind != KindLeader || u.Dead() || u.Saved || u.Sinking {
@@ -22,8 +21,8 @@ func (w *World) stepLeaders(dt float64) {
 		if !u.Captured {
 			continue
 		}
-		w.stepEscort(u, slot, dt)
-		slot++
+		w.stepEscort(u, w.escortSlot, dt)
+		w.escortSlot++
 		w.saveLeader(u)
 	}
 }

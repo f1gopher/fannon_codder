@@ -44,6 +44,10 @@ func (w *World) stepAI(dt float64) {
 		}
 		if len(u.Patrol) >= 2 {
 			if w.patrolBreak(u) {
+				// Drop a look-around that had already started, so he
+				// walks back onto the curve instead of finishing it off the route.
+				u.PatrolWait = 0
+				u.PatrolSpan = 0
 				w.stepPatrolAlert(u, dt)
 			} else {
 				w.stepPatrol(u, dt)

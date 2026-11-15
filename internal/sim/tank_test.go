@@ -78,6 +78,10 @@ func TestGrenadeClanksOnATankAndAShellKillsIt(t *testing.T) {
 	if !clank {
 		t.Fatal("a grenade on a tank should clank")
 	}
+	hull := w.vehicleByID(tank.ID)
+	if len(hull.Occupants) != 1 || !w.Unit(hull.Occupants[0]).Living() {
+		t.Fatal("a grenade should leave the driver alive")
+	}
 	ski := w.AddSkidoo(Vec2{X: 200, Y: 40}, SideEnemy, false)
 	w.AddFactory(12, 2, 4, 3)
 	w.explodeShell(200, 40, w.ActiveSquad().LeaderID)
@@ -143,5 +147,25 @@ func TestEnemyTankHoldsAndFiresShells(t *testing.T) {
 	v = w.vehicleByID(id)
 	if d := hypot(v.X-220, v.Y-40); d <= VehicleRamR {
 		t.Fatalf("held inside the ram, dist %v", d)
+	}
+}
+
+func TestEnemyTankWithNoDriverStops(t *testing.T) {
+	w := NewEmpty()
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 220, Y: 40}})
+	v := w.AddTank(Vec2{X: 40, Y: 40}, SideEnemy, true)
+	id := v.ID
+	w.kill(w.Unit(v.Occupants[0]))
+	for i := 0; i < 60; i++ {
+		keepPlayerAlive(w)
+		w.Step(1.0 / 60)
+	}
+	v = w.vehicleByID(id)
+	if v.X != 40 || v.Y != 40 {
+		t.Fatalf("empty tank moved to %v,%v", v.X, v.Y)
+	}
+	if len(w.Projectiles) != 0 {
+		t.Fatal("an empty tank should not fire")
 	}
 }

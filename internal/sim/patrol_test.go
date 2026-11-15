@@ -288,3 +288,22 @@ func TestPatrolWalksSlowerThanAChase(t *testing.T) {
 		t.Fatal("patrol speed should be slower than a chase")
 	}
 }
+
+func TestContactClearsAPatrolPause(t *testing.T) {
+	w := NewEmpty()
+	w.AI = true
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 150}})
+	e := w.SpawnUnit(SideEnemy, Vec2{})
+	w.setPatrol(e, []Vec2{{}, {X: 200}})
+	id := e.ID
+	w.Unit(id).PatrolWait = 2
+	w.Unit(id).PatrolSpan = 2
+	w.Step(1.0 / 60)
+	e = w.Unit(id)
+	if e.PatrolWait != 0 || e.PatrolSpan != 0 {
+		t.Fatalf("contact should clear the pause, wait=%v span=%v", e.PatrolWait, e.PatrolSpan)
+	}
+	if e.X <= 0 {
+		t.Fatal("he should walk toward the player instead of looking around")
+	}
+}

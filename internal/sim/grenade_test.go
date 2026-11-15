@@ -365,3 +365,43 @@ func TestHutWorldClears(t *testing.T) {
 		t.Fatalf("status=%v, want Won", w.Status)
 	}
 }
+
+func TestCloserBarrelBeatsAFartherMan(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.WoundChance = 0
+	w.Objectives = nil
+	w.AddBarrel(Vec2{X: 30, Y: 0})
+	man := w.SpawnUnit(SideEnemy, Vec2{X: 34, Y: 0}).ID
+	w.Projectiles = append(w.Projectiles, Projectile{
+		X: 22, Y: 0, VX: MGSpeed, VY: 0, Left: 80,
+		Alive: true, OwnerSide: SidePlayer,
+	})
+	w.Step(1.0 / 60)
+	if w.Barrels[0].Alive {
+		t.Fatal("the closer drum should take the round")
+	}
+	if w.Unit(man).Living() {
+		t.Fatal("the blast should finish the man behind the drum")
+	}
+}
+
+func TestCloserManBeatsAFartherBarrel(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.WoundChance = 0
+	w.Objectives = nil
+	w.AddBarrel(Vec2{X: 34, Y: 0})
+	man := w.SpawnUnit(SideEnemy, Vec2{X: 26, Y: 0}).ID
+	w.Projectiles = append(w.Projectiles, Projectile{
+		X: 20, Y: 0, VX: MGSpeed, VY: 0, Left: 80,
+		Alive: true, OwnerSide: SidePlayer,
+	})
+	w.Step(1.0 / 60)
+	if !w.Barrels[0].Alive {
+		t.Fatal("the farther drum should stay")
+	}
+	if w.Unit(man).Living() {
+		t.Fatal("the closer man should take the round")
+	}
+}

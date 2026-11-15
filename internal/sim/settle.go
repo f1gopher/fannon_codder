@@ -18,7 +18,20 @@ func (w *World) Settle(dt float64) {
 	w.stepBodies(dt)
 	w.coastVehicles(dt)
 	w.stepAnimClocks(dt)
+	w.reviseOutcome()
 	w.saluteSurvivors()
+}
+
+// reviseOutcome turns a called win into a loss when Settle itself wiped
+// the squad or failed a protect, rescue, kidnap, or home. A sandbox with
+// no objectives is left as it was called. A loss stays a loss.
+func (w *World) reviseOutcome() {
+	if w == nil || w.Status == Playing || w.Status == Lost || len(w.Objectives) == 0 {
+		return
+	}
+	if !w.anyLiving(SidePlayer) || w.protectFailed() || w.rescueFailed() || w.kidnapFailed() || w.homeFailed() {
+		w.Status = Lost
+	}
 }
 
 // saluteSurvivors turns every living player soldier who is on his feet

@@ -358,6 +358,7 @@ func (w *World) stepProjectiles(dt float64) {
 				if !hit {
 					hx, hy = p.X, p.Y
 				}
+				w.disarmBarrel(hx, hy)
 				if p.Kind == ProjShell {
 					w.explodeShellSide(hx, hy, p.OwnerID, p.OwnerSide)
 				} else {
@@ -379,13 +380,7 @@ func (w *World) stepProjectiles(dt float64) {
 			p.Left = 0
 			blocked = true
 		}
-		w.tryHit(p, x0, y0, p.X, p.Y)
-		if p.Alive {
-			w.tryHitCrate(p, x0, y0, p.X, p.Y)
-		}
-		if p.Alive {
-			w.tryHitBarrel(p, x0, y0, p.X, p.Y)
-		}
+		w.resolveMG(p, x0, y0, p.X, p.Y)
 		if blocked {
 			p.Alive = false
 		}
@@ -396,7 +391,42 @@ func (w *World) stepProjectiles(dt float64) {
 	w.Projectiles = out
 }
 
-func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
+// resolveMG hits the closest of a man, a crate, and a barrel on the
+// segment. Walls and huts have already clipped the end. A tie goes to
+// the man, because he is noted first and a later target must be closer.
+// Enemy rounds leave crates.
+func (w *World) resolveMG(p *Projectile, x0, y0, x1, y1 float64) {
+	best := 1e12
+	var man *Unit
+	var crate *Pickup
+	var barrel *Barrel
+	noteMan := func(u *Unit) {
+		d := hypot(u.X-x0, u.Y-y0)
+		if d < best {
+			best = d
+			man = u
+			crate = nil
+			barrel = nil
+		}
+	}
+	noteCrate := func(c *Pickup) {
+		d := hypot(c.X-x0, c.Y-y0)
+		if d < best {
+			best = d
+			man = nil
+			crate = c
+			barrel = nil
+		}
+	}
+	noteBarrel := func(b *Barrel) {
+		d := hypot(b.X-x0, b.Y-y0)
+		if d < best {
+			best = d
+			man = nil
+			crate = nil
+			barrel = b
+		}
+	}
 	for i := range w.Units {
 		u := &w.Units[i]
 		if u.ID == p.OwnerID || u.VehicleID != 0 || u.Saved {
@@ -405,12 +435,45 @@ func (w *World) tryHit(p *Projectile, x0, y0, x1, y1 float64) {
 		if !w.mgCanHurt(p, u) || !roundStopsOn(u) {
 			continue
 		}
-		if !segmentHitsCircle(x0, y0, x1, y1, u.X, u.Y, MGHitR) {
+		if segmentHitsCircle(x0, y0, x1, y1, u.X, u.Y, MGHitR) {
+			noteMan(u)
+		}
+	}
+	if p.OwnerSide != SideEnemy {
+		for i := range w.Pickups {
+			c := &w.Pickups[i]
+			if !c.Alive {
+				continue
+			}
+			if segmentHitsCircle(x0, y0, x1, y1, c.X, c.Y, CrateHitR) {
+				noteCrate(c)
+			}
+		}
+	}
+	for i := range w.Barrels {
+		b := &w.Barrels[i]
+		if !b.Alive {
 			continue
 		}
-		w.mgStrike(p, u)
+		if segmentHitsCircle(x0, y0, x1, y1, b.X, b.Y, CrateHitR) {
+			noteBarrel(b)
+		}
+	}
+	if man != nil {
+		w.mgStrike(p, man)
 		p.Alive = false
 		return
+	}
+	if crate != nil {
+		crate.Alive = false
+		p.Alive = false
+		w.explode(crate.X, crate.Y, p.OwnerID)
+		return
+	}
+	if barrel != nil {
+		barrel.Alive = false
+		p.Alive = false
+		w.explode(barrel.X, barrel.Y, p.OwnerID)
 	}
 }
 

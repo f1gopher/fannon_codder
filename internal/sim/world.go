@@ -40,6 +40,10 @@ type World struct {
 	RocketShare  AmmoShare
 	Special      Special
 	BoardID      int
+	// BoardSquad is the squad that was ordered to board. It stays that
+	// squad if another one is selected before they arrive. Meaningful
+	// only while BoardID != 0, because SquadSnake is 0.
+	BoardSquad SquadID
 	Driving      bool
 	DriveX       float64
 	DriveY       float64
@@ -330,7 +334,7 @@ func (w *World) CommandMove(x, y float64, newOrder bool) {
 	s.DestY = y
 	s.JoinSeek = w.orderJoins(s, x, y)
 	if newOrder {
-		w.BoardID = 0
+		w.clearBoard()
 		if l := w.Unit(s.LeaderID); l != nil {
 			s.Trail = []Vec2{{X: l.X, Y: l.Y}}
 		}

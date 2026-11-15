@@ -228,6 +228,7 @@ func (w *World) CommandBoard(id int) bool {
 	}
 	w.CommandMove(v.X, v.Y, true)
 	w.BoardID = v.ID
+	w.BoardSquad = s.ID
 	if hypot(leader.X-v.X, leader.Y-v.Y) <= VehicleBoardR+8 {
 		return w.enterVehicle(v)
 	}
@@ -249,19 +250,33 @@ func (w *World) CommandExit(id int) bool {
 	return true
 }
 
+func (w *World) clearBoard() {
+	w.BoardID = 0
+	w.BoardSquad = 0
+}
+
+// boardingSquad is the squad that was told to board, not whichever squad
+// is selected now.
+func (w *World) boardingSquad() *Squad {
+	if w == nil || w.BoardID == 0 {
+		return nil
+	}
+	return w.SquadByID(w.BoardSquad)
+}
+
 func (w *World) tryCompleteBoard() {
 	if w.BoardID == 0 {
 		return
 	}
 	v := w.vehicleByID(w.BoardID)
-	s := w.ActiveSquad()
+	s := w.boardingSquad()
 	if v == nil || !v.Alive || s == nil || w.vehicleOccupied(v) {
-		w.BoardID = 0
+		w.clearBoard()
 		return
 	}
 	leader := w.Unit(s.LeaderID)
 	if leader == nil || !leader.Living() {
-		w.BoardID = 0
+		w.clearBoard()
 		return
 	}
 	if hypot(leader.X-v.X, leader.Y-v.Y) <= VehicleBoardR+8 {
@@ -270,7 +285,7 @@ func (w *World) tryCompleteBoard() {
 }
 
 func (w *World) enterVehicle(v *Vehicle) bool {
-	s := w.ActiveSquad()
+	s := w.boardingSquad()
 	if s == nil || v == nil || !v.Alive || v.Kind == KindTurret || v.Kind == KindChopper || w.vehicleOccupied(v) {
 		return false
 	}
@@ -302,7 +317,7 @@ func (w *World) enterVehicle(v *Vehicle) bool {
 	v.Occupants = append(v.Occupants, ids...)
 	v.Side = SidePlayer
 	s.HasDest = false
-	w.BoardID = 0
+	w.clearBoard()
 	w.emit(CueBoard, v.X, v.Y)
 	return true
 }
@@ -439,7 +454,13 @@ func (w *World) leaderVehicle() *Vehicle {
 // inside VehicleMGRange, which is still outside the ram, and turns the
 // hull toward that player. The mounted gun then uses the grunt reaction,
 // facing tolerance, burst, and pause. Range and rate stay the vehicle's.
+// No living driver means the hull coasts and the gun stays idle.
 func (w *World) stepEnemyVehicle(v *Vehicle, dt float64) {
+	if w.vehicleGunner(v) == nil {
+		w.applyDrive(v, v.X, v.Y, false, dt)
+		w.idleVehicleGun(v)
+		return
+	}
 	px, py, ok := w.nearestLiving(SidePlayer, v.X, v.Y)
 	if !ok {
 		w.applyDrive(v, v.X, v.Y, false, dt)

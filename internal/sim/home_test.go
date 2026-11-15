@@ -92,6 +92,39 @@ func TestWanderingDeathDoesNotFailTheHomeObjective(t *testing.T) {
 	}
 }
 
+func TestWoundedHomeCivilianCanStillBeSaved(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = []Objective{GetCivilianHome}
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 8, Y: 8}})
+	h := w.SpawnUnit(SideCivilian, Vec2{X: 80, Y: 40})
+	h.MustHome = true
+	h.Escorting = true
+	h.HP = Wounded
+	id := h.ID
+	w.AddHome(4, 2, 2, 2)
+	c := TileCenter(4, 2)
+	w.Unit(id).X, w.Unit(id).Y = c.X, c.Y+4
+	w.Step(1.0 / 60)
+	h = w.Unit(id)
+	if !h.Saved || w.Status != Won {
+		t.Fatalf("saved=%v status=%v", h.Saved, w.Status)
+	}
+}
+
+func TestWoundedWandererStaysDown(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	id := w.SpawnUnit(SideCivilian, Vec2{X: 40, Y: 40}).ID
+	w.Unit(id).HP = Wounded
+	w.Step(0.5)
+	u := w.Unit(id)
+	if u.X != 40 || u.Y != 40 {
+		t.Fatalf("a wounded wanderer moved to %v,%v", u.X, u.Y)
+	}
+}
+
 func TestHomeIgnoresAGrenade(t *testing.T) {
 	w := NewEmpty()
 	id := w.AddHome(2, 2, 2, 2)

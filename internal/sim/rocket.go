@@ -158,5 +158,14 @@ func (w *World) rocketHit(owner int, x0, y0, x1, y1 float64) (float64, float64, 
 			consider(p.X, p.Y)
 		}
 	}
+	for i := range w.Barrels {
+		b := &w.Barrels[i]
+		if !b.Alive {
+			continue
+		}
+		if segmentHitsCircle(x0, y0, x1, y1, b.X, b.Y, CrateHitR) {
+			consider(b.X, b.Y)
+		}
+	}
 	return hx, hy, ok
 }

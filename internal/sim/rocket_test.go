@@ -90,3 +90,42 @@ func TestStartRocketsPerTrooper(t *testing.T) {
 		t.Fatalf("4 troopers × 1 = %d", w.ActiveSquad().Rockets)
 	}
 }
+
+func TestRocketAndShellStopOnABarrel(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 0, Y: 0}})
+	leader := w.ActiveSquad().LeaderID
+	w.AddBarrel(Vec2{X: 80, Y: 0})
+	foe := w.SpawnUnit(SideEnemy, Vec2{X: 92, Y: 16}).ID
+	w.launchRocket(leader, SidePlayer, 0, 0, 200, 0)
+	for i := 0; i < 40; i++ {
+		w.Step(1.0 / 60)
+	}
+	if w.Barrels[0].Alive {
+		t.Fatal("a rocket should set off the drum in front of the aim point")
+	}
+	if w.Unit(foe).Living() {
+		t.Fatal("the blast should kill the man beside the drum")
+	}
+	if w.Unit(leader).Kills != 1 {
+		t.Fatalf("kills=%d, want 1", w.Unit(leader).Kills)
+	}
+
+	s := NewEmpty()
+	s.AI = false
+	s.Objectives = nil
+	s.AddBarrel(Vec2{X: 70, Y: 0})
+	far := s.SpawnUnit(SideEnemy, Vec2{X: 160, Y: 0}).ID
+	s.launchShell(0, SidePlayer, 0, 0, 0)
+	for i := 0; i < 60; i++ {
+		s.Step(1.0 / 60)
+	}
+	if s.Barrels[0].Alive {
+		t.Fatal("a shell should stop on the drum")
+	}
+	if !s.Unit(far).Living() {
+		t.Fatal("the man past the drum should still be standing")
+	}
+}

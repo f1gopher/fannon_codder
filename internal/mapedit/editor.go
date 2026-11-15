@@ -274,11 +274,11 @@ func (e *Editor) Update() error {
 	}
 	ebiten.SetWindowTitle(e.label())
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) && e.index > 0 {
-		e.load(e.index - 1)
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
+		e.scrollY -= sim.TileSize
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) && e.index+1 < len(e.phases) {
-		e.load(e.index + 1)
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
+		e.scrollY += sim.TileSize
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowLeft) {
 		e.scrollX -= sim.TileSize

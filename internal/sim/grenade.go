@@ -286,7 +286,9 @@ func (w *World) blastAt(x, y float64, ownerID int, side Side, hard bool, radius,
 	clank := false
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Dead() || u.Saved {
+		// Crew stay with the hull. A grenade clanks on a tank and leaves
+		// the driver alive. A hard blast destroys the hull, which kills them.
+		if u.Dead() || u.Saved || u.VehicleID != 0 {
 			continue
 		}
 		if hypot(u.X-x, u.Y-y) > radius {
@@ -370,39 +372,18 @@ func (w *World) sparesCrates(ownerID int, side Side) bool {
 	return side == SideEnemy
 }
 
-func (w *World) tryHitCrate(p *Projectile, x0, y0, x1, y1 float64) {
-	if p.OwnerSide == SideEnemy {
-		return
-	}
-	for i := range w.Pickups {
-		c := &w.Pickups[i]
-		if !c.Alive {
-			continue
-		}
-		if !segmentHitsCircle(x0, y0, x1, y1, c.X, c.Y, CrateHitR) {
-			continue
-		}
-		c.Alive = false
-		p.Alive = false
-		w.explode(c.X, c.Y, p.OwnerID)
-		return
-	}
-}
-
-// tryHitBarrel detonates a drum a bullet passes through. Either side can set one off.
-func (w *World) tryHitBarrel(p *Projectile, x0, y0, x1, y1 float64) {
+// disarmBarrel marks a drum whose centre is the impact, so the blast does
+// not set that same drum off a second time. A neighbour still chains.
+func (w *World) disarmBarrel(x, y float64) {
 	for i := range w.Barrels {
 		b := &w.Barrels[i]
 		if !b.Alive {
 			continue
 		}
-		if !segmentHitsCircle(x0, y0, x1, y1, b.X, b.Y, CrateHitR) {
-			continue
+		if hypot(b.X-x, b.Y-y) < 1 {
+			b.Alive = false
+			return
 		}
-		b.Alive = false
-		p.Alive = false
-		w.explode(b.X, b.Y, p.OwnerID)
-		return
 	}
 }
 

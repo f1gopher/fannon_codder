@@ -199,12 +199,7 @@ func (g *Game) Update() error {
 	x, y, inside := g.frameCursor()
 	left := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 	right := ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
-	// The bars are outside the 320×256 frame. A click there is not a click.
-	if !inside {
-		left = false
-		right = false
-	}
-	g.pointer = g.tracker.Update(x, y, left, right)
+	g.pointer = g.tracker.Update(x, y, left, right, inside)
 
 	if g.next != nil {
 		// The hum belongs to the battle. A new scene starts it again if it

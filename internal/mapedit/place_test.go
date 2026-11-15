@@ -10,6 +10,21 @@ import (
 	"fannon-codder/internal/sim"
 )
 
+func TestChopperCelIsCached(t *testing.T) {
+	a := vehicleCel(data.VehicleSpec{Kind: sim.KindChopper, Armed: true})
+	b := vehicleCel(data.VehicleSpec{Kind: sim.KindChopper, Armed: true})
+	if a == nil || a != b {
+		t.Fatal("the chopper cel should be loaded once")
+	}
+	plain := vehicleCel(data.VehicleSpec{Kind: sim.KindChopper})
+	if plain == nil || plain == a {
+		t.Fatal("an unarmed chopper is a different sheet")
+	}
+	if chopperCel() != a {
+		t.Fatal("the toolbar chopper should share the armed cel")
+	}
+}
+
 func TestStampTipsNameTheTool(t *testing.T) {
 	if stampTip(stampPatrol) == "" || stampTip(stampDoor) == stampTip(stampHut) {
 		t.Fatalf("tips %q %q", stampTip(stampDoor), stampTip(stampHut))

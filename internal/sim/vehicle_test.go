@@ -454,3 +454,36 @@ func TestRamAndMineSpareSavedUnits(t *testing.T) {
 		t.Fatal("a saved death failed the phase")
 	}
 }
+
+func TestBoardStaysWithTheSquadThatOrderedIt(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 20, Y: 40}})
+	w.SpawnPlayerSquad(SquadEagle, []Vec2{{X: 200, Y: 40}})
+	v := w.AddSkidoo(Vec2{X: 200, Y: 40}, SidePlayer, false)
+	if !w.CommandBoard(v.ID) {
+		t.Fatal("snake should be ordered to board")
+	}
+	if !w.SetActiveSquad(SquadEagle) {
+		t.Fatal("select eagle")
+	}
+	w.Step(1.0 / 60)
+	snake := w.SquadByID(SquadSnake)
+	eagle := w.SquadByID(SquadEagle)
+	if w.Unit(eagle.LeaderID).VehicleID != 0 {
+		t.Fatal("the selected squad should not take the board")
+	}
+	if w.Unit(snake.LeaderID).VehicleID != 0 {
+		t.Fatal("snake has not arrived")
+	}
+	w.Unit(snake.LeaderID).X = v.X
+	w.Unit(snake.LeaderID).Y = v.Y
+	w.Step(1.0 / 60)
+	if w.Unit(snake.LeaderID).VehicleID != v.ID {
+		t.Fatal("the squad that was ordered should board")
+	}
+	if w.Unit(eagle.LeaderID).VehicleID != 0 {
+		t.Fatal("eagle stays on foot")
+	}
+}

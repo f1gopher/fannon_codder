@@ -467,7 +467,7 @@ func (b *Battle) Update(h Host) error {
 		b.world.SetDrive(wx, wy, true)
 	} else if p.LeftDown && !p.ChordGrenade {
 		b.world.CommandMove(wx, wy, true)
-	} else if p.Left && !onHUD && !b.mapOpen {
+	} else if p.Left && !p.Right && !onHUD && !b.mapOpen {
 		if s := b.world.ActiveSquad(); s != nil && s.HasDest {
 			b.world.CommandMove(wx, wy, false)
 		}

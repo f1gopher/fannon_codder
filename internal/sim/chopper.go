@@ -258,7 +258,7 @@ func (w *World) stepHoming(p *Projectile, dt float64) {
 	p.X += p.VX / speed * step
 	p.Y += p.VY / speed * step
 	p.Left -= step
-	if hx, hy, hit := w.homingHit(x0, y0, p.X, p.Y); hit || p.Left <= 0 {
+	if hx, hy, hit := w.homingHit(p.OwnerID, x0, y0, p.X, p.Y); hit || p.Left <= 0 {
 		if !hit {
 			hx, hy = p.X, p.Y
 		}
@@ -267,23 +267,37 @@ func (w *World) stepHoming(p *Projectile, dt float64) {
 	}
 }
 
-// homingHit is a man. Cover does not stop the rocket.
-func (w *World) homingHit(x0, y0, x1, y1 float64) (float64, float64, bool) {
+// homingHit is the closest living man, including one who is mounted, or a
+// hull other than the chopper that fired. Cover does not stop the rocket.
+// The muzzle sits on the firing hull's hit circle, so that hull is skipped.
+func (w *World) homingHit(owner int, x0, y0, x1, y1 float64) (float64, float64, bool) {
 	best := 1e12
 	var hx, hy float64
 	ok := false
+	consider := func(x, y float64) {
+		d := hypot(x-x0, y-y0)
+		if d < best {
+			best = d
+			hx, hy = x, y
+			ok = true
+		}
+	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Dead() || u.Saved || u.VehicleID != 0 {
+		if u.Dead() || u.Saved {
 			continue
 		}
 		if segmentHitsCircle(x0, y0, x1, y1, u.X, u.Y, MGHitR) {
-			d := hypot(u.X-x0, u.Y-y0)
-			if d < best {
-				best = d
-				hx, hy = u.X, u.Y
-				ok = true
-			}
+			consider(u.X, u.Y)
+		}
+	}
+	for i := range w.Vehicles {
+		v := &w.Vehicles[i]
+		if !v.Alive || v.ID == owner {
+			continue
+		}
+		if segmentHitsCircle(x0, y0, x1, y1, v.X, v.Y, VehicleHitR) {
+			consider(v.X, v.Y)
 		}
 	}
 	return hx, hy, ok

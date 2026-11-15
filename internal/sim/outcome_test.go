@@ -61,3 +61,55 @@ func TestBlastHoldsTheResult(t *testing.T) {
 		t.Fatalf("status %v after the blast, want Won", w.Status)
 	}
 }
+
+func TestSettleWipeBecomesALoss(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	tiles := make([]Tile, 12*8)
+	for i := range tiles {
+		tiles[i] = TileIce
+	}
+	w.Map = Map{W: 12, H: 8, Tiles: tiles}
+	at := TileCenter(6, 4)
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{at})
+	foe := w.SpawnUnit(SideEnemy, Vec2{X: 8, Y: 8})
+	w.kill(foe)
+	w.evaluateObjectives()
+	if w.Status != Won {
+		t.Fatalf("status %v, want Won before the skid", w.Status)
+	}
+	v := w.AddSkidoo(at, SidePlayer, false)
+	v.VX = 40
+	w.Settle(1.0 / 60)
+	if w.anyLiving(SidePlayer) {
+		t.Fatal("the skid should ram the last player")
+	}
+	if w.Status != Lost {
+		t.Fatalf("status %v, want Lost", w.Status)
+	}
+}
+
+func TestSettleWithALivingPlayerStaysWon(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 80, Y: 40}})
+	w.kill(w.SpawnUnit(SideEnemy, Vec2{X: 240, Y: 40}))
+	w.evaluateObjectives()
+	w.Settle(1.0 / 60)
+	if w.Status != Won {
+		t.Fatalf("status %v, want Won", w.Status)
+	}
+}
+
+func TestSettleSandboxKeepsACalledWin(t *testing.T) {
+	w := NewEmpty()
+	w.AI = false
+	w.Objectives = nil
+	w.Status = Won
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 80, Y: 40}})
+	w.kill(w.Unit(w.ActiveSquad().LeaderID))
+	w.Settle(1.0 / 60)
+	if w.Status != Won {
+		t.Fatalf("status %v, a sandbox win should stay", w.Status)
+	}
+}

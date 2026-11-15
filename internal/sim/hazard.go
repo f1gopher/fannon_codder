@@ -109,7 +109,9 @@ func (w *World) stepCivilians(dt float64) {
 	}
 	for i := range w.Units {
 		u := &w.Units[i]
-		if u.Side != SideCivilian || !u.Living() || u.Sinking || u.Saved {
+		// A wounded wanderer stays down. A wounded man who must get home
+		// still walks and can still be saved. Only death ends that escort.
+		if u.Side != SideCivilian || u.Dead() || u.Sinking || u.Saved {
 			continue
 		}
 		if u.MustHome {
@@ -124,6 +126,9 @@ func (w *World) stepCivilians(dt float64) {
 				u.VY = 0
 			}
 			w.saveHome(u)
+			continue
+		}
+		if !u.Living() {
 			continue
 		}
 		if !u.Escorting {

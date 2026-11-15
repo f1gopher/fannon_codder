@@ -19,10 +19,35 @@ type Pointer struct {
 type Tracker struct {
 	prevLeft  bool
 	prevRight bool
+	muteLeft  bool
+	muteRight bool
 }
 
 // Update records this tick's cursor and buttons. x,y are logical screen pixels.
-func (t *Tracker) Update(x, y float64, left, right bool) Pointer {
+// inside is false in the letterbox bars. A press that starts there stays mute
+// until that button is released. A drag that started inside keeps the button
+// while the cursor is outside, so coming back is not a new press.
+func (t *Tracker) Update(x, y float64, left, right, inside bool) Pointer {
+	if !inside {
+		if left && !t.prevLeft {
+			t.muteLeft = true
+		}
+		if right && !t.prevRight {
+			t.muteRight = true
+		}
+	}
+	if !left {
+		t.muteLeft = false
+	}
+	if !right {
+		t.muteRight = false
+	}
+	if t.muteLeft {
+		left = false
+	}
+	if t.muteRight {
+		right = false
+	}
 	p := Pointer{
 		X:            x,
 		Y:            y,

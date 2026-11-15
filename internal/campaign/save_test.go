@@ -1,6 +1,7 @@
 package campaign
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -72,6 +73,32 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	restored := RestorePool(got.Recruits, got.NextName)
 	if restored.Remaining() != p.Remaining() {
 		t.Fatalf("pool %d vs %d", restored.Remaining(), p.Remaining())
+	}
+}
+
+func TestSaveReplacesTheFileAndLeavesNoTemp(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "save.json")
+	if err := os.WriteFile(path, []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(path, SaveGame{PhaseIndex: 2, Graves: 3}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(path)
+	if err != nil || got.PhaseIndex != 2 || got.Graves != 3 {
+		t.Fatalf("got %+v err %v", got, err)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "save.json" {
+		names := make([]string, len(entries))
+		for i, e := range entries {
+			names[i] = e.Name()
+		}
+		t.Fatalf("dir = %v, want only save.json", names)
 	}
 }
 

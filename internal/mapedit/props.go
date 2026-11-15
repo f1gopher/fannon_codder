@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"strconv"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -114,11 +115,7 @@ func turretCel() *propCel {
 }
 
 func chopperCel() *propCel {
-	c, err := loadCelRow("chopper/attack", 2)
-	if err != nil {
-		return nil
-	}
-	return c
+	return cachedCelRow("chopper/attack", 2)
 }
 
 var celCache struct {
@@ -127,16 +124,21 @@ var celCache struct {
 }
 
 func cachedCel(key string) *propCel {
+	return cachedCelRow(key, 0)
+}
+
+func cachedCelRow(key string, row int) *propCel {
+	id := key + "#" + strconv.Itoa(row)
 	celCache.mu.Lock()
 	defer celCache.mu.Unlock()
 	if celCache.m == nil {
 		celCache.m = map[string]*propCel{}
 	}
-	if c, ok := celCache.m[key]; ok {
+	if c, ok := celCache.m[id]; ok {
 		return c
 	}
-	c, _ := loadCel(key)
-	celCache.m[key] = c
+	c, _ := loadCelRow(key, row)
+	celCache.m[id] = c
 	return c
 }
 
@@ -158,11 +160,7 @@ func vehicleCel(v data.VehicleSpec) *propCel {
 		if !v.Armed {
 			key = "chopper/plain"
 		}
-		c, err := loadCelRow(key, 2)
-		if err != nil {
-			return nil
-		}
-		return c
+		return cachedCelRow(key, 2)
 	}
 	return cachedCel("skidoo/idle")
 }

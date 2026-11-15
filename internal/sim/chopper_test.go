@@ -159,3 +159,55 @@ func TestHomingTurnsTowardTheMan(t *testing.T) {
 		t.Fatalf("the rocket should be turning north, vy %v", p.VY)
 	}
 }
+
+func TestHomingHitsABoardedSkidoo(t *testing.T) {
+	w := NewEmpty()
+	w.Objectives = nil
+	w.AI = false
+	w.SpawnPlayerSquad(SquadSnake, []Vec2{{X: 40, Y: 40}})
+	ski := w.AddSkidoo(Vec2{X: 40, Y: 40}, SidePlayer, false)
+	skiID := ski.ID
+	if !w.CommandBoard(skiID) {
+		t.Fatal("board")
+	}
+	manID := w.ActiveSquad().LeaderID
+	chop := w.AddChopper(Vec2{X: 40, Y: 200}, true, nil)
+	chopID := chop.ID
+	w.launchHoming(chop, manID, 40, 40)
+	for i := 0; i < 90; i++ {
+		w.Step(1.0 / 60)
+	}
+	if w.vehicleByID(skiID).Alive {
+		t.Fatal("a homing rocket should destroy the skidoo")
+	}
+	if w.Unit(manID).Living() {
+		t.Fatal("the rider should die with the hull")
+	}
+	if !w.vehicleByID(chopID).Alive {
+		t.Fatal("the chopper should not hit itself")
+	}
+}
+
+func TestHomingHitsAHullInTheWay(t *testing.T) {
+	w := NewEmpty()
+	w.Objectives = nil
+	w.AI = false
+	man := w.SpawnUnit(SidePlayer, Vec2{X: 40, Y: 20})
+	manID := man.ID
+	jeep := w.AddJeep(Vec2{X: 40, Y: 120}, SidePlayer, false)
+	jeepID := jeep.ID
+	chop := w.AddChopper(Vec2{X: 40, Y: 200}, true, nil)
+	w.launchHoming(chop, manID, 40, 20)
+	for i := 0; i < 90 && w.vehicleByID(jeepID).Alive; i++ {
+		w.Step(1.0 / 60)
+	}
+	if w.vehicleByID(jeepID).Alive {
+		t.Fatal("a hull in the way should stop the rocket")
+	}
+	if !w.Unit(manID).Living() {
+		t.Fatal("the man past the jeep should still be standing")
+	}
+	if !w.vehicleByID(chop.ID).Alive {
+		t.Fatal("the chopper should not hit itself")
+	}
+}

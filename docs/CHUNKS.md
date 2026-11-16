@@ -72,6 +72,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 
 ## After the numbered plan
 
+- A standard-layout joypad moves the pointer, fires, orders, and drives the menus. The mouse still works.
 - Enemy soldiers play a walk. Grunt, grenadier, and rocketeer each have a six-frame loop at 12 fps, in the same cell as their idle. A missing walk still draws idle.
 - A patrol walks a phase route back and forth at 16 px/s. Two points are straight. More points are a curve. At either end he pauses for a random 1.5–4 s and looks around. A sighting or a heard shot takes him off the route to attack or to walk in, then he returns. Mission 1 curves through (1, 1), (4, 2), and (1, 5). Mission 2 phase 1 is straight on (1, 0)–(8, 0).
 - Exploding barrels. A shot from either side, or a nearby blast, sets off a painted drum (`barrel/drum`). The blast chains. Walking past does not. Mission 1 has three on tiles (22, 35), (23, 35), and (24, 35).

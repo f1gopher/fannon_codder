@@ -2,6 +2,7 @@ package app
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -23,13 +24,21 @@ const (
 
 // Game is the Ebitengine entry point: scale, input, and the current scene.
 type Game struct {
-	scene   Scene
-	next    Scene
-	tracker input.Tracker
-	pointer input.Pointer
-	prog    *Progress
-	sound   *audio.Mixer
-	quit    quitPrompt
+	scene    Scene
+	next     Scene
+	tracker  input.Tracker
+	pointer  input.Pointer
+	pad      input.PadState
+	edges    input.Edges
+	padX     float64
+	padY     float64
+	padOwn   bool
+	sawMouse bool
+	lastMX   float64
+	lastMY   float64
+	prog     *Progress
+	sound    *audio.Mixer
+	quit     quitPrompt
 
 	// scale is offscreen pixels per world pixel. offW/offH is the picture.
 	// fbW/fbH is the final framebuffer. WindowSize stays at the size the game
@@ -110,6 +119,58 @@ func NewHazard() *Game {
 }
 
 func (g *Game) Pointer() input.Pointer { return g.pointer }
+
+// Pressed is a key edge, from the keyboard or the joypad.
+func (g *Game) Pressed(k ebiten.Key) bool {
+	return inpututil.IsKeyJustPressed(k) || g.padPressed(k)
+}
+
+// Held is a key that is down, from the keyboard or the joypad.
+func (g *Game) Held(k ebiten.Key) bool {
+	return ebiten.IsKeyPressed(k) || g.padHeld(k)
+}
+
+// SquadNudge is the bumper press: -1 previous squad, +1 next, 0 none.
+func (g *Game) SquadNudge() int { return g.edges.Squad }
+
+// StickPan is the right stick after the dead zone, each axis in [-1, 1].
+func (g *Game) StickPan() (float64, float64) { return g.edges.PanX, g.edges.PanY }
+
+func (g *Game) padPressed(k ebiten.Key) bool {
+	switch k {
+	case ebiten.KeyEnter, ebiten.KeyY:
+		return g.edges.Confirm
+	case ebiten.KeyEscape:
+		return g.edges.Cancel
+	case ebiten.KeyN:
+		return g.edges.Deny
+	case ebiten.KeyG:
+		return g.edges.Grenade
+	case ebiten.KeySpace:
+		return g.edges.Special
+	case ebiten.KeyC:
+		return g.edges.Weapon
+	case ebiten.KeyM:
+		return g.edges.Map
+	case ebiten.KeyH:
+		return g.edges.Heroes
+	case ebiten.KeyArrowUp:
+		return g.edges.Up
+	case ebiten.KeyArrowDown:
+		return g.edges.Down
+	default:
+		return false
+	}
+}
+
+func (g *Game) padHeld(k ebiten.Key) bool {
+	switch k {
+	case ebiten.KeyControlLeft, ebiten.KeyControlRight:
+		return g.edges.Fire
+	default:
+		return false
+	}
+}
 
 func (g *Game) Frame() (float64, float64) {
 	w := g.frameW
@@ -196,9 +257,9 @@ func (g *Game) Update() error {
 	if g.sound != nil {
 		g.sound.Tick(1.0 / TPS)
 	}
-	x, y, inside := g.frameCursor()
-	left := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
-	right := ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
+	x, y, inside := g.aimCursor()
+	left := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) || g.edges.Click
+	right := ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) || g.edges.Fire
 	g.pointer = g.tracker.Update(x, y, left, right, inside)
 
 	if g.next != nil {
@@ -222,14 +283,14 @@ func (g *Game) Update() error {
 	// Escape asks to quit from every screen except a live battle, which
 	// opens its own pause menu. The scene stays frozen until the player
 	// answers, so a press does not also order a move.
-	escape := inpututil.IsKeyJustPressed(ebiten.KeyEscape)
+	escape := g.Pressed(ebiten.KeyEscape)
 	if b, ok := g.scene.(*Battle); ok && b.ownsEscape(escape) {
 		return g.scene.Update(g)
 	}
 	switch g.quit.decide(
 		escape,
-		inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeyY),
-		inpututil.IsKeyJustPressed(ebiten.KeyN),
+		g.Pressed(ebiten.KeyEnter) || g.Pressed(ebiten.KeyY),
+		g.Pressed(ebiten.KeyN),
 	) {
 	case quitExit:
 		return ebiten.Termination
@@ -251,8 +312,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if b, ok := g.scene.(*Battle); ok {
 		kind = b.CursorKind(g.pointer)
 	} else if g.pointer.Right ||
-		ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
-		ebiten.IsKeyPressed(ebiten.KeyControlRight) {
+		g.Held(ebiten.KeyControlLeft) ||
+		g.Held(ebiten.KeyControlRight) {
 		kind = render.PointerCrosshair
 	}
 	if g.quit.open {
@@ -295,6 +356,53 @@ func (g *Game) DrawFinalScreen(screen ebiten.FinalScreen, offscreen *ebiten.Imag
 	op.Filter = ebiten.FilterNearest
 	op.GeoM.Translate(float64(b.Dx()-ob.Dx())/2, float64(b.Dy()-ob.Dy())/2)
 	screen.DrawImage(offscreen, op)
+}
+
+// aimCursor is the mouse, unless the joypad is steering. A mouse move takes the pointer back.
+func (g *Game) aimCursor() (x, y float64, inside bool) {
+	mx, my, inside := g.frameCursor()
+	g.edges = g.pad.Step(readPad(), 1.0/TPS)
+	if !g.sawMouse {
+		g.sawMouse = true
+		g.lastMX, g.lastMY = mx, my
+	} else if math.Hypot(mx-g.lastMX, my-g.lastMY) > 2 {
+		g.padOwn = false
+		g.lastMX, g.lastMY = mx, my
+	}
+	if g.edges.Moving && !g.dpadInMenu() {
+		if !g.padOwn {
+			g.padX, g.padY = mx, my
+			g.padOwn = true
+		}
+		g.padX = clampFrame(g.padX+g.edges.DX, g.frameW)
+		g.padY = clampFrame(g.padY+g.edges.DY, ScreenHeight)
+	}
+	if g.padOwn {
+		return g.padX, g.padY, true
+	}
+	return mx, my, inside
+}
+
+// dpadInMenu keeps a d-pad press on the pause-menu highlight.
+func (g *Game) dpadInMenu() bool {
+	if !g.edges.Digital {
+		return false
+	}
+	b, ok := g.scene.(*Battle)
+	return ok && b.menu.open
+}
+
+func clampFrame(v, max float64) float64 {
+	if max < 1 {
+		max = ScreenWidth
+	}
+	if v < 0 {
+		return 0
+	}
+	if v > max {
+		return max
+	}
+	return v
 }
 
 // frameCursor returns the pointer in world-frame pixels. inside is false in the bars.

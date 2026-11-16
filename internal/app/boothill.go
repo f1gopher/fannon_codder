@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/campaign"
 	"fannon-codder/internal/render"
@@ -59,11 +58,11 @@ func (b *BootHill) Update(h Host) error {
 		terrain.PumpWarm(b.chart, 6*time.Millisecond)
 	}
 	p := h.Pointer()
-	if inpututil.IsKeyJustPressed(ebiten.KeyH) {
+	if h.Pressed(ebiten.KeyH) {
 		b.heroes = !b.heroes
 		return nil
 	}
-	click := p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter)
+	click := p.LeftDown || h.Pressed(ebiten.KeyEnter)
 	if b.heroes {
 		if click {
 			b.heroes = false

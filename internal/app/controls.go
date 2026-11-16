@@ -196,6 +196,66 @@ func controls() []binding {
 			tokens:  []string{"KeyM", "MouseButtonLeft"},
 		},
 		{
+			section: "Joypad",
+			input:   "Left stick, or the d-pad",
+			action:  "Moves the pointer. A mouse move takes the pointer back. The d-pad also moves the pause-menu highlight, and repeats while held.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "Right stick",
+			action:  "Scrolls the battle view.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "A / Cross",
+			action:  "The same as a left click or Enter: orders, menus, and advancing a screen. Hold it to drag a move.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "B / Circle, or Start",
+			action:  "The same as Escape. On the quit prompt, B is No.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "X / Square",
+			action:  "Throws a grenade, the same as G.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "Y / Triangle",
+			action:  "Uses the selected special weapon, the same as Space. On Boot Hill it opens the heroes table, the same as H.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "Right trigger",
+			action:  "Fires toward the pointer, the same as holding the right mouse button.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "Left trigger",
+			action:  "Switches grenades and the bazooka, the same as C.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "Left bumper or right bumper",
+			action:  "Selects the previous or next squad that is still on the field.",
+			tokens:  nil,
+		},
+		{
+			section: "Joypad",
+			input:   "Back / Select",
+			action:  "Opens or closes the map, the same as M.",
+			tokens:  nil,
+		},
+		{
 			section: "Battle — end of a phase",
 			input:   "Left click, or Enter, after victory or defeat",
 			action:  "After a defeat, or in a debug sandbox, leaves for Boot Hill or the title. After a victory, opens Achievements for the soldiers still alive, then Remembrance for the soldiers who died, then Boot Hill.",
@@ -208,7 +268,7 @@ func controls() []binding {
 func controlsMarkdown() string {
 	var b strings.Builder
 	b.WriteString("# Controls\n\n")
-	b.WriteString("Everything you use to play Fannon Codder. The pointer is the mouse, in the game’s own screen, not the window’s pixel size.\n\n")
+	b.WriteString("Everything you use to play Fannon Codder. The pointer is the mouse or the joypad, in the game’s own screen, not the window’s pixel size. A joypad has to use the standard layout.\n\n")
 	b.WriteString("Closing the window also ends the game.\n\n")
 	b.WriteString("This page is generated from the control list in `internal/app/controls.go`. ")
 	b.WriteString("When a binding changes, `go test ./internal/app -run TestControlsDoc` rewrites this file and checks that every key and mouse button the game reads is described here.\n\n")

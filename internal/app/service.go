@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/campaign"
 	"fannon-codder/internal/render"
@@ -50,7 +49,7 @@ func (s *Service) Update(h Host) error {
 		return nil
 	}
 	p := h.Pointer()
-	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if p.LeftDown || h.Pressed(ebiten.KeyEnter) {
 		h.PlayKind(sim.CueClick)
 		s.i++
 		if s.i >= len(s.pages) {

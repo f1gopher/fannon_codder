@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"fannon-codder/internal/campaign"
 	"fannon-codder/internal/input"
 	"fannon-codder/internal/sim"
@@ -36,15 +38,19 @@ type switchHost struct {
 	next Scene
 }
 
-func (h *switchHost) Pointer() input.Pointer       { return input.Pointer{LeftDown: true} }
-func (h *switchHost) Switch(s Scene)               { h.next = s }
-func (h *switchHost) Progress() *Progress          { return nil }
-func (h *switchHost) PlayCues([]sim.Cue)           {}
-func (h *switchHost) SetListener(float64, float64) {}
+func (h *switchHost) Pointer() input.Pointer          { return input.Pointer{LeftDown: true} }
+func (h *switchHost) Switch(s Scene)                  { h.next = s }
+func (h *switchHost) Progress() *Progress             { return nil }
+func (h *switchHost) PlayCues([]sim.Cue)              {}
+func (h *switchHost) SetListener(float64, float64)    {}
 func (h *switchHost) SetEngine(bool, float64, string) {}
-func (h *switchHost) SetRotor(bool)                {}
-func (h *switchHost) PlayKind(sim.CueKind)         {}
-func (h *switchHost) Frame() (float64, float64)    { return 320, 256 }
+func (h *switchHost) SetRotor(bool)                   {}
+func (h *switchHost) PlayKind(sim.CueKind)            {}
+func (h *switchHost) Frame() (float64, float64)       { return 320, 256 }
+func (h *switchHost) Pressed(ebiten.Key) bool         { return false }
+func (h *switchHost) Held(ebiten.Key) bool            { return false }
+func (h *switchHost) SquadNudge() int                 { return 0 }
+func (h *switchHost) StickPan() (float64, float64)    { return 0, 0 }
 
 func TestServiceClickOpensBootHill(t *testing.T) {
 	s := NewService(NewProgress(), []campaign.Soldier{{Name: "Jools"}}, nil)

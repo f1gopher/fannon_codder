@@ -1,6 +1,6 @@
 # Controls
 
-Everything you use to play Fannon Codder. The pointer is the mouse, in the game’s own screen, not the window’s pixel size.
+Everything you use to play Fannon Codder. The pointer is the mouse or the joypad, in the game’s own screen, not the window’s pixel size. A joypad has to use the standard layout.
 
 Closing the window also ends the game.
 
@@ -64,6 +64,19 @@ This page is generated from the control list in `internal/app/controls.go`. When
 ## Battle — vehicles and map
 
 - **M, or left click the M icon** — Opens or closes the map overlay. A left click on the open map closes it.
+
+## Joypad
+
+- **Left stick, or the d-pad** — Moves the pointer. A mouse move takes the pointer back. The d-pad also moves the pause-menu highlight, and repeats while held.
+- **Right stick** — Scrolls the battle view.
+- **A / Cross** — The same as a left click or Enter: orders, menus, and advancing a screen. Hold it to drag a move.
+- **B / Circle, or Start** — The same as Escape. On the quit prompt, B is No.
+- **X / Square** — Throws a grenade, the same as G.
+- **Y / Triangle** — Uses the selected special weapon, the same as Space. On Boot Hill it opens the heroes table, the same as H.
+- **Right trigger** — Fires toward the pointer, the same as holding the right mouse button.
+- **Left trigger** — Switches grenades and the bazooka, the same as C.
+- **Left bumper or right bumper** — Selects the previous or next squad that is still on the field.
+- **Back / Select** — Opens or closes the map, the same as M.
 
 ## Battle — end of a phase
 

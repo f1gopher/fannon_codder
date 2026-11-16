@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/render"
 )
@@ -24,7 +23,7 @@ func (s *MissionStub) Leave() {}
 
 func (s *MissionStub) Update(h Host) error {
 	p := h.Pointer()
-	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if p.LeftDown || h.Pressed(ebiten.KeyEnter) {
 		h.Switch(NewBootHill(s.prog))
 	}
 	return nil

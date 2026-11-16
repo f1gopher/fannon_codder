@@ -26,6 +26,9 @@ type battleMenu struct {
 	sel       int
 	heldPause bool
 	note      string
+	seen      bool
+	lastX     float64
+	lastY     float64
 }
 
 func (m battleMenu) lines() []string {
@@ -109,6 +112,7 @@ func (b *Battle) openMenu() {
 	b.menu.open = true
 	b.menu.sel = 0
 	b.menu.note = ""
+	b.menu.seen = false
 	b.paused = true
 	if b.world != nil {
 		b.world.SetFire(b.world.AimX, b.world.AimY, false)
@@ -146,11 +150,17 @@ func (b *Battle) stepMenu(h Host, escape, up, down, confirm bool, p input.Pointe
 		b.menu.move(1)
 	}
 	fw, fh := h.Frame()
-	if row, ok := b.menu.rowAt(fw, fh, p.X, p.Y); ok {
-		b.menu.sel = row
-		if p.LeftDown {
-			confirm = true
+	if !b.menu.seen || p.X != b.menu.lastX || p.Y != b.menu.lastY {
+		b.menu.seen = true
+		b.menu.lastX = p.X
+		b.menu.lastY = p.Y
+		if row, ok := b.menu.rowAt(fw, fh, p.X, p.Y); ok {
+			b.menu.sel = row
 		}
+	}
+	if row, ok := b.menu.rowAt(fw, fh, p.X, p.Y); ok && p.LeftDown {
+		b.menu.sel = row
+		confirm = true
 	}
 	if !confirm {
 		return true, nil

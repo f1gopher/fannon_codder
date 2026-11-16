@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"fannon-codder/internal/render"
 	"fannon-codder/internal/sim"
@@ -38,7 +37,7 @@ func (b *Briefing) Update(h Host) error {
 		terrain.PumpWarm(b.chart, 6*time.Millisecond)
 	}
 	p := h.Pointer()
-	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if p.LeftDown || h.Pressed(ebiten.KeyEnter) {
 		if b.prog.CanStart() {
 			h.PlayKind(sim.CueClick)
 			h.Switch(NewBattle(b.prog))

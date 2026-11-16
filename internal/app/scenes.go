@@ -39,6 +39,10 @@ type Host interface {
 	// Frame is the logical picture size. Menus and the battle both use it
 	// once the window is wider than 320×256.
 	Frame() (w, h float64)
+	Pressed(ebiten.Key) bool
+	Held(ebiten.Key) bool
+	SquadNudge() int
+	StickPan() (x, y float64)
 }
 
 var (
@@ -74,7 +78,7 @@ func (t *Title) Update(h Host) error {
 		t.continues = true
 	}
 	p := h.Pointer()
-	if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if p.LeftDown || h.Pressed(ebiten.KeyEnter) {
 		h.PlayKind(sim.CueClick)
 		h.Switch(NewBootHill(h.Progress()))
 	}
@@ -362,10 +366,10 @@ func (b *Battle) Update(h Host) error {
 	}()
 	p := h.Pointer()
 	held, err := b.stepMenu(h,
-		inpututil.IsKeyJustPressed(ebiten.KeyEscape),
-		inpututil.IsKeyJustPressed(ebiten.KeyArrowUp),
-		inpututil.IsKeyJustPressed(ebiten.KeyArrowDown),
-		inpututil.IsKeyJustPressed(ebiten.KeyEnter),
+		h.Pressed(ebiten.KeyEscape),
+		h.Pressed(ebiten.KeyArrowUp),
+		h.Pressed(ebiten.KeyArrowDown),
+		h.Pressed(ebiten.KeyEnter),
 		p,
 	)
 	if held || err != nil {
@@ -382,7 +386,7 @@ func (b *Battle) Update(h Host) error {
 		// Shots, blasts, and throws that had already started keep playing.
 		// The squad is tallied once those can no longer change who lived.
 		b.world.Settle(1.0 / TPS)
-		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		if p.LeftDown || h.Pressed(ebiten.KeyEnter) {
 			for b.world.Pending() {
 				b.world.Settle(1.0 / TPS)
 			}
@@ -399,12 +403,12 @@ func (b *Battle) Update(h Host) error {
 			}
 			b.settleOnce(won)
 		}
-		if p.LeftDown || inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		if p.LeftDown || h.Pressed(ebiten.KeyEnter) {
 			b.leaveBattle(h, b.world.Status == sim.Won)
 		}
 		return nil
 	}
-	if b.togglePause(p) {
+	if b.togglePause(h, p) {
 		return nil
 	}
 	if b.paused {
@@ -425,7 +429,24 @@ func (b *Battle) Update(h Host) error {
 	if inpututil.IsKeyJustPressed(ebiten.Key3) {
 		b.world.SetActiveSquad(sim.SquadPanther)
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+	if d := h.SquadNudge(); d != 0 {
+		if s := b.world.ActiveSquad(); s != nil {
+			id := s.ID
+			for i := 0; i < 3; i++ {
+				id += sim.SquadID(d)
+				if id < sim.SquadSnake {
+					id = sim.SquadPanther
+				}
+				if id > sim.SquadPanther {
+					id = sim.SquadSnake
+				}
+				if b.world.SetActiveSquad(id) {
+					break
+				}
+			}
+		}
+	}
+	if h.Pressed(ebiten.KeyC) {
 		b.world.ToggleSpecial()
 	}
 	wx := b.world.Camera.WorldX(p.X)
@@ -435,10 +456,10 @@ func (b *Battle) Update(h Host) error {
 	inVeh := b.world.LeaderInVehicle()
 	// Right-held + left click, or Space: leader's selected special. Not a move order.
 	// G always throws a grenade, even when the bazooka is selected.
-	if !onHUD && !b.mapOpen && inpututil.IsKeyJustPressed(ebiten.KeyG) {
+	if !onHUD && !b.mapOpen && h.Pressed(ebiten.KeyG) {
 		b.world.ThrowGrenadeNow(wx, wy)
 	}
-	if !onHUD && !b.mapOpen && (p.ChordGrenade || inpututil.IsKeyJustPressed(ebiten.KeySpace)) {
+	if !onHUD && !b.mapOpen && (p.ChordGrenade || h.Pressed(ebiten.KeySpace)) {
 		b.world.UseSpecial(wx, wy)
 	}
 	if p.LeftDown && onHUD {
@@ -474,15 +495,15 @@ func (b *Battle) Update(h Host) error {
 	} else if inVeh {
 		b.world.SetDrive(wx, wy, false)
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
+	if h.Pressed(ebiten.KeyM) {
 		b.mapOpen = !b.mapOpen
 	}
 	if onHUD || b.mapOpen {
 		b.world.SetFire(b.world.AimX, b.world.AimY, false)
 	} else {
 		firing := p.Right ||
-			ebiten.IsKeyPressed(ebiten.KeyControlLeft) ||
-			ebiten.IsKeyPressed(ebiten.KeyControlRight)
+			h.Held(ebiten.KeyControlLeft) ||
+			h.Held(ebiten.KeyControlRight)
 		b.world.SetFire(wx, wy, firing)
 		// The strip covers the left edge, so pan from the playfield beside it.
 		b.world.Camera.ScrollToward(
@@ -490,6 +511,11 @@ func (b *Battle) Update(h Host) error {
 			b.world.Camera.ViewW, b.world.Camera.ViewH,
 			1.0/TPS,
 		)
+	}
+	if px, py := h.StickPan(); px != 0 || py != 0 {
+		b.world.Camera.X += px * padPanSpeed / TPS
+		b.world.Camera.Y += py * padPanSpeed / TPS
+		b.world.Camera.Clamp()
 	}
 	b.world.Step(1.0 / TPS)
 	if x, y, ok := b.world.CameraFocus(); ok {
@@ -500,7 +526,7 @@ func (b *Battle) Update(h Host) error {
 
 // togglePause flips the battle on P or a click of the status-strip button.
 // A phase that is already over does not pause.
-func (b *Battle) togglePause(p input.Pointer) bool {
+func (b *Battle) togglePause(h Host, p input.Pointer) bool {
 	if b.world == nil || b.world.Status != sim.Playing {
 		return false
 	}
@@ -509,7 +535,7 @@ func (b *Battle) togglePause(p input.Pointer) bool {
 		kind, _ := render.HitHUD(b.world, p.X, p.Y)
 		click = kind == render.HitPause
 	}
-	if !click && !inpututil.IsKeyJustPressed(ebiten.KeyP) {
+	if !click && !h.Pressed(ebiten.KeyP) {
 		return false
 	}
 	b.paused = !b.paused

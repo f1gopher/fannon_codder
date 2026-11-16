@@ -22,7 +22,7 @@ Original maps, art, and audio. Do not extract or ship Amiga graphics, samples, m
 - `cmd/fannon` — window, `RunGame`
 - `cmd/mapedit` — map editor window
 - `internal/app` — `ebiten.Game`, scenes, scale, pause, quit
-- `internal/input` — pointer
+- `internal/input` — pointer and joypad
 - `internal/sim` — world, combat, AI, objectives
 - `internal/campaign` — recruits, names, ranks, heroes, save
 - `internal/render` — sheets, or a coloured rectangle when a sheet is missing. The battle ground call is a short adapter.
@@ -140,6 +140,8 @@ An armed enemy skidoo drops the throttle inside `VehicleMGRange` (110) and outsi
 `destroyVehicle` clears `Alive`, kills the crew, and empties `Occupants`.
 
 ## Camera and HUD
+
+A standard-layout joypad moves the same pointer. The left stick and the d-pad steer it. A mouse move takes it back. The right stick scrolls the view. A / Cross is a left click and Enter. B / Circle and Start are Escape (B is No on the quit prompt). X / Square throws a grenade. Y / Triangle uses the selected special, and on Boot Hill opens the heroes table. The right trigger fires. The left trigger switches grenades and the bazooka. The bumpers change squad. Back opens the map. The pause menu keeps its highlight when the pointer is still, so the d-pad can move the row. Bindings are in `controls.md`.
 
 The view is the playfield. Origin is (`HUDWidth`, 0), so a map as wide as the picture still pans by the strip. On a wide window the playfield is wider than 268×256 and shows more of the map. A phase map is at least 24×16 tiles (384×256). That covers a 1440×900 battle, whose playfield is about 358×256. `LeaderMargin` is 32. `Camera.Contain` keeps the active leader, or the driven vehicle via `CameraFocus`, inside that margin. Edge scroll uses playfield coordinates.
 

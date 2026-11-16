@@ -746,6 +746,27 @@ func TestBridgeDeckIsTimber(t *testing.T) {
 		t.Fatalf("side rail %+v, deck %+v", side.ground.RGBAAt(topX, topY), side.ground.RGBAAt(midX, midY))
 	}
 
+	chart := paintChart(Chart{
+		W: 10 * sim.TileSize, H: 8 * sim.TileSize, Terrain: "jungle",
+		Regions: []ChartRegion{
+			{Tile: sim.TileWaterDeep, Points: [][2]float64{
+				{0, 2 * sim.TileSize}, {10 * sim.TileSize, 2 * sim.TileSize},
+				{10 * sim.TileSize, 6 * sim.TileSize}, {0, 6 * sim.TileSize},
+			}},
+			{Tile: sim.TileBridge, Points: [][2]float64{
+				{4 * sim.TileSize, 2 * sim.TileSize}, {6 * sim.TileSize, 2 * sim.TileSize},
+				{6 * sim.TileSize, 6 * sim.TileSize}, {4 * sim.TileSize, 6 * sim.TileSize},
+			}},
+		},
+	})
+	got := chart.ground.RGBAAt(cx, cy)
+	if got.R < got.B+18 || got.R < got.G+8 {
+		t.Fatalf("chart deck %+v, want the same timber", got)
+	}
+	if chart.anim.RGBAAt(cx, cy).A != 0 {
+		t.Fatal("chart deck still shimmers")
+	}
+
 	snow := paintMap(riverBridge(true), "snow")
 	if lum(snow.ground.RGBAAt(cx, cy)) < lum(deck)+25 {
 		t.Fatalf("snow deck %+v, jungle %+v, want a dusting", snow.ground.RGBAAt(cx, cy), deck)

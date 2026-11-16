@@ -319,7 +319,10 @@ func paintChartNow(c Chart) terrainPaint {
 	ground := image.NewRGBA(image.Rect(0, 0, pw, ph))
 	kind := make([]uint8, pw*ph)
 	noise := buildNoise(max(1, ww/sim.TileSize), max(1, wh/sim.TileSize), 11)
+	spanMap, span := tilesFromChart(grid, ww, wh)
+	chartSpan, chartSpanW, chartSpanH = span, spanMap.W, spanMap.H
 	fillChartGround(ground, kind, grid, lk, ww, wh)
+	chartSpan = nil
 	seeds := chartSeeds(grid, ww, wh)
 	if len(seeds) > 0 {
 		crowns := make([]crown, len(seeds))
@@ -330,6 +333,9 @@ func paintChartNow(c Chart) terrainPaint {
 	}
 	stampChartMines(ground, grid, ww, wh, lk.pal)
 	anim, mask := animLayers(ground, kind)
+	if span != nil {
+		stampBridges(ground, anim, mask, spanMap, span, lk)
+	}
 	trees := paintChartCanopies(grid, ww, wh, seeds, lk, noise, ground)
 	return terrainPaint{ground: ground, anim: anim, mask: mask, trees: trees}
 }
@@ -563,16 +569,51 @@ func chartPixel(lk look, s surface, wx, wy float64) (color.RGBA, uint8) {
 	return chartPixelPaint(lk, s, wx, wy)
 }
 
+// chartSpan is the tile grid for the chart being painted. Bridge pixels
+// take the water or bank under the span. stampBridges draws the deck after.
+var (
+	chartSpan  []surface
+	chartSpanW int
+	chartSpanH int
+)
+
+// tilesFromChart samples each tile at its centre. A bridge cell is one
+// whose centre lies in the bridge region, matching how the battle walks.
+func tilesFromChart(grid []surface, ww, wh int) (sim.Map, []surface) {
+	tw := ww / sim.TileSize
+	th := wh / sim.TileSize
+	if tw < 1 || th < 1 || len(grid) < ww*wh {
+		return sim.Map{}, nil
+	}
+	surf := make([]surface, tw*th)
+	for ty := 0; ty < th; ty++ {
+		for tx := 0; tx < tw; tx++ {
+			cx := tx*sim.TileSize + sim.TileSize/2
+			cy := ty*sim.TileSize + sim.TileSize/2
+			surf[ty*tw+tx] = grid[cy*ww+cx]
+		}
+	}
+	return sim.Map{W: tw, H: th}, surf
+}
+
 func chartPixelPaint(lk look, s surface, wx, wy float64) (color.RGBA, uint8) {
-	if s == surfBridge {
-		c := lk.pal.PlankGap
-		if int(math.Floor(wy/bridgePlank))%2 == 0 {
-			c = lk.pal.Plank
+	if s == surfBridge && chartSpan != nil {
+		tx := int(math.Floor(wx / sim.TileSize))
+		ty := int(math.Floor(wy / sim.TileSize))
+		if tx < 0 {
+			tx = 0
 		}
-		if lk.snowCaps {
-			c = mixRGBA(c, color.RGBA{R: 232, G: 242, B: 246, A: 255}, 0.28)
+		if ty < 0 {
+			ty = 0
 		}
-		return c, maskNone
+		if tx >= chartSpanW {
+			tx = chartSpanW - 1
+		}
+		if ty >= chartSpanH {
+			ty = chartSpanH - 1
+		}
+		under := bridgeUnder(chartSpan, chartSpanW, chartSpanH, tx, ty, openGround(chartSpan, chartSpanW, chartSpanH))
+		return chartPixelPaint(lk, under, wx, wy)
 	}
 	// Water replaces the plate colour. plateColor would paint the same
 	// water and this function would paint it again.

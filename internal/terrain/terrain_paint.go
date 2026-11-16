@@ -1092,16 +1092,15 @@ func stampMines(dst *image.RGBA, m sim.Map, pal Palette) {
 // A bridge deck sits a little past the walkable cells: a lip over the water
 // on the long sides, and a short landing on the bank at each end.
 const (
-	bridgeLip   = 1.35
-	bridgeEnd   = 2.4
-	bridgeRail  = 1.75
-	bridgePlank = 4.6
-	bridgeShade = 6.4
+	bridgeLip   = 1.6
+	bridgeEnd   = 2.8
+	bridgePlank = 6.4
+	bridgeShade = 5.5
 )
 
 // stampBridges paints one timber span per bridge cell. Boards run across the
-// direction of travel, the outer edges are rails, and a soft shadow falls on
-// the water. The shimmer is cleared only where the deck covers the picture.
+// direction of travel, the long edges step per board, and a shadow falls to
+// the south-east. The shimmer is cleared only where the deck covers the picture.
 func stampBridges(dst, anim, mask *image.RGBA, m sim.Map, surf []surface, lk look) {
 	w, h := m.W, m.H
 	cover := make([]bool, w*h)
@@ -1245,12 +1244,17 @@ func deckFromCell(surf []surface, axes []bool, w, h, cx, cy int, wx, wy float64)
 
 	x0, x1 := left, right
 	y0, y1 := top, bot
+	// Board ends step in and out so the long edge is not one ruled line.
+	westJag := plankEnd(wy, 3)
+	eastJag := plankEnd(wy, 5)
+	northJag := plankEnd(wx, 3)
+	southJag := plankEnd(wx, 5)
 	if vertical {
 		if !westB {
-			x0 -= bridgeLip
+			x0 -= bridgeLip + westJag
 		}
 		if !eastB {
-			x1 += bridgeLip
+			x1 += bridgeLip + eastJag
 		}
 		if !northB {
 			y0 -= bridgeEnd
@@ -1260,10 +1264,10 @@ func deckFromCell(surf []surface, axes []bool, w, h, cx, cy int, wx, wy float64)
 		}
 	} else {
 		if !northB {
-			y0 -= bridgeLip
+			y0 -= bridgeLip + northJag
 		}
 		if !southB {
-			y1 += bridgeLip
+			y1 += bridgeLip + southJag
 		}
 		if !westB {
 			x0 -= bridgeEnd
@@ -1311,21 +1315,12 @@ func deckFromCell(surf []surface, axes []bool, w, h, cx, cy int, wx, wy float64)
 	if deck <= 0 {
 		return 0, 0, 0, 0, along, across
 	}
-	if inward < bridgeRail {
-		rail = smooth01(clamp01(1 - inward/bridgeRail))
+	// The stringer is the last bit of each board, not a frame around the deck.
+	if inward < 1.35 {
+		rail = smooth01(clamp01(1 - inward/1.35))
 	}
-	if endIn < 1.9 {
-		sill = smooth01(clamp01(1 - endIn/1.9))
-	}
-	if inward < 1.2 && inward > -0.45 && endIn > 3 {
-		var mid float64
-		if vertical {
-			mid = top + sim.TileSize*0.5
-			post = bridgePost(inward, wy-mid)
-		} else {
-			mid = left + sim.TileSize*0.5
-			post = bridgePost(inward, wx-mid)
-		}
+	if endIn < 1.6 {
+		sill = smooth01(clamp01(1 - endIn/1.6))
 	}
 	return deck, rail, sill, post, along, across
 }
@@ -1344,14 +1339,6 @@ func bridgeCover(inward, endIn float64) float64 {
 		return side
 	}
 	return end
-}
-
-func bridgePost(inward, alongDelta float64) float64 {
-	pd := math.Hypot((inward-0.3)/1.05, alongDelta/1.35)
-	if pd >= 1 {
-		return 0
-	}
-	return smooth01(1 - pd)
 }
 
 func bridgeCell(surf []surface, w, h, tx, ty int) bool {
@@ -1378,9 +1365,9 @@ func bridgeShadow(surf []surface, axes []bool, w, h int, wx, wy float64) float64
 			}
 			fall := smooth01(1 - d/bridgeShade)
 			light := dx*0.35 + dy*0.95
-			side := 0.14
-			if light > 0 {
-				side = 0.32 + 0.4*clamp01(light/3)
+			side := 0.0
+			if light > 0.4 {
+				side = 0.28 + 0.45*clamp01(light/3)
 			}
 			if sh := fall * side; sh > best {
 				best = sh
@@ -1439,54 +1426,60 @@ func distOutside(px, py, x0, y0, x1, y1 float64) (d, dx, dy float64) {
 	return math.Hypot(dx, dy), dx, dy
 }
 
+// plankEnd shifts one side of a board so the deck edge is stepped, not ruled.
+// The shift stays small enough that a point 0.7px in from the cell is still deck.
+func plankEnd(along float64, salt int) float64 {
+	p := int(math.Floor(along / bridgePlank))
+	return (hash01(p, salt, 9) - 0.22) * 2.5
+}
+
 func bridgeWood(lk look, along, across, rail, sill, post float64) color.RGBA {
-	seamAlong := along + (valueNoise(across, along, 7, 11)-0.5)*1.15
+	seamAlong := along + (valueNoise(across*0.15, 3, 28, 11)-0.5)*0.28
 	span := bridgePlank
 	plank := int(math.Floor(seamAlong / span))
 	u := seamAlong/span - float64(plank)
-	grain := valueNoise(across*0.85, float64(plank)*span, 5.5, 19)
-	streak := valueNoise(across*0.25+float64(plank)*3, along*1.4, 2.2, 29)
-	tone := hash01(plank, 7, 13)
-	t := clamp01(0.34 + 0.4*grain + 0.16*(streak-0.5) + 0.22*(tone-0.5))
 	gap := lk.pal.PlankGap
 	face := lk.pal.Plank
 	hi := color.RGBA{
-		R: clampByte(int(face.R) + 38),
-		G: clampByte(int(face.G) + 28),
-		B: clampByte(int(face.B) + 14),
+		R: clampByte(int(face.R) + 28),
+		G: clampByte(int(face.G) + 18),
+		B: clampByte(int(face.B) + 8),
 		A: 255,
 	}
-	c := mixRGBA(gap, face, t)
-	crown := smooth01(clamp01((u-0.08)/0.22)) * (1 - smooth01(clamp01((u-0.62)/0.28)))
-	c = mixRGBA(c, hi, crown*0.62)
-	seamU := math.Min(u/0.13, (1-u)/0.07)
+	// One colour per board. Neighbouring boards differ enough to count.
+	tone := hash01(plank, 5, 17)
+	t := clamp01(0.55 + tone*0.38)
+	c := mixRGBA(gap, hi, t)
+	// A soft bevel: light on the north-west lip of the board, shade on the other.
+	lit := smooth01(clamp01((0.22 - u) / 0.22))
+	shade := smooth01(clamp01((u - 0.78) / 0.22))
+	c = mixRGBA(c, hi, lit*0.35)
+	c = mixRGBA(c, gap, shade*0.4)
+	seamU := math.Min(u/0.09, (1-u)/0.07)
 	seam := 1 - smooth01(clamp01(seamU))
-	dark := color.RGBA{R: gap.R * 2 / 3, G: gap.G * 2 / 3, B: gap.B * 2 / 3, A: 255}
-	c = mixRGBA(c, dark, seam*0.9)
+	dark := color.RGBA{R: gap.R / 2, G: gap.G / 2, B: gap.B / 2, A: 255}
+	c = mixRGBA(c, dark, seam)
 	if lk.snowCaps {
-		dust := crown * (0.58 + 0.22*grain) * (1 - seam*0.8) * (1 - rail*0.65)
+		dust := (1 - seam) * (0.35 + 0.35*tone) * (1 - rail*0.4)
 		c = mixRGBA(c, color.RGBA{R: 234, G: 240, B: 244, A: 255}, dust)
 	}
 	if sill > 0 {
-		c = mixRGBA(c, gap, sill*0.7)
+		c = mixRGBA(c, gap, sill*0.35)
 	}
 	if rail > 0 {
-		curb := mixRGBA(gap, color.RGBA{R: 46, G: 30, B: 16, A: 255}, 0.5)
+		// Plank ends sit on a darker runner. Still timber, not a black frame.
+		log := mixRGBA(gap, dark, 0.25)
 		if lk.snowCaps {
-			curb = mixRGBA(curb, color.RGBA{R: 206, G: 214, B: 220, A: 255}, 0.4)
+			log = mixRGBA(log, color.RGBA{R: 214, G: 220, B: 226, A: 255}, 0.28)
 		}
-		c = mixRGBA(c, curb, smooth01(rail))
-		if rail > 0.22 && rail < 0.72 {
-			catch := 1 - math.Abs(rail-0.45)/0.28
-			c = mixRGBA(c, hi, 0.32*clamp01(catch))
-		}
+		c = mixRGBA(c, log, smooth01(rail)*0.75)
 	}
 	if post > 0 {
-		bolt := color.RGBA{R: 40, G: 28, B: 16, A: 255}
+		peg := color.RGBA{R: 54, G: 36, B: 20, A: 255}
 		if lk.snowCaps {
-			bolt = mixRGBA(bolt, color.RGBA{R: 238, G: 244, B: 248, A: 255}, 0.62)
+			peg = mixRGBA(peg, color.RGBA{R: 236, G: 242, B: 246, A: 255}, 0.5)
 		}
-		c = mixRGBA(c, bolt, smooth01(post))
+		c = mixRGBA(c, peg, smooth01(post))
 	}
 	return c
 }

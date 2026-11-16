@@ -103,7 +103,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - Shores are a soft sand strip on jungle, forest, and desert, and a pale frozen lip on snow. The line waves, corners are rounded, and the water pales at the sand then fades to deep. A narrow channel stays pale. Shallow and deep plates stay on disk and are not sampled for that fade.
 - The map editor views campaign phases with the shared ground painter. It does not save.
 - V in the map editor switches that view to a labelled tile-type grid and back. It opens on the painted terrain.
-- Bridges are a timber deck with rails and a shadow on the water, painted with the ground. Snow dusts the boards.
+- Bridges are a timber deck on tile maps and on region charts. Boards run across the span, the long edges step per board, and a shadow falls to the south-east. Snow dusts the boards.
 - The MG round that kills an enemy or a player throws him about one tile along the shot. He lands, then lies dead. A civilian stays put. Later shots still leave a dead player where he fell.
 - A grenade, rocket, or other blast throws a soldier about six tiles when he is on the centre, and less the farther he stands from it. A civilian stays put.
 - A grenade, rocket, mine, or crate blast leaves a soft stain on soil, sand, or snow. It darkens the paint already there. Water and a shed fireball do not. The mark stays until the next battle.

@@ -36,6 +36,8 @@ func InfoTextHit(y, infoTop, rowH float64) (int, bool) {
 	}
 	row := int((y - infoTop) / rowH)
 	switch row {
+	case 2:
+		return typeSize, true
 	case 5, 6:
 		return typeTitle, true
 	case 7, 8:

@@ -12,8 +12,10 @@ const (
 	typeNone = iota
 	typeTitle
 	typeBrief
+	typeSize
 	titleMax = 80
 	briefMax = 400
+	sizeMax  = 32
 )
 
 func (e *Editor) typing() bool {
@@ -25,16 +27,23 @@ func (e *Editor) startType(kind int) {
 		return
 	}
 	e.typeKind = kind
-	if kind == typeTitle {
+	e.typeNote = ""
+	switch kind {
+	case typeTitle:
 		e.draft = e.phase.Title
-	} else {
+	case typeBrief:
 		e.draft = e.phase.Briefing
+	case typeSize:
+		e.draft = e.sizeDraft()
+	default:
+		e.draft = ""
 	}
 }
 
 func (e *Editor) cancelType() {
 	e.typeKind = typeNone
 	e.draft = ""
+	e.typeNote = ""
 }
 
 func (e *Editor) commitType() {
@@ -56,6 +65,10 @@ func (e *Editor) commitType() {
 			e.phase.Briefing = text
 			e.dirty = true
 		}
+	case typeSize:
+		if !e.applySize(text) {
+			return
+		}
 	}
 	e.cancelType()
 }
@@ -68,6 +81,10 @@ func (e *Editor) typeKeys() {
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyB) {
 			e.startType(typeBrief)
+			return
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyZ) {
+			e.startType(typeSize)
 		}
 		return
 	}
@@ -87,8 +104,11 @@ func (e *Editor) typeKeys() {
 		return
 	}
 	limit := briefMax
-	if e.typeKind == typeTitle {
+	switch e.typeKind {
+	case typeTitle:
 		limit = titleMax
+	case typeSize:
+		limit = sizeMax
 	}
 	for _, ch := range ebiten.AppendInputChars(nil) {
 		if ch == 0 || unicode.IsControl(ch) {
@@ -102,10 +122,20 @@ func (e *Editor) typeKeys() {
 }
 
 func (e *Editor) typePrompt() string {
-	if e.typeKind == typeTitle {
-		return "Title"
+	if e.typeNote != "" {
+		return e.typeNote
 	}
-	return "Briefing"
+	switch e.typeKind {
+	case typeTitle:
+		return "Title"
+	case typeSize:
+		if e.freeform {
+			return "Size in pixels, a multiple of 16"
+		}
+		return "Size in tiles"
+	default:
+		return "Briefing"
+	}
 }
 
 func clipLine(s string, n int) string {

@@ -139,6 +139,7 @@ When you finish an item from `docs/BACKLOG.md`, add one line under "After the nu
 - A tank is slower than the skidoo, does not skid, and fires a shell on right click. A grenade clanks. A rocket or a shell kills it. The wreck stays. `CueShell` is the launch. The editor places it with Ctrl+3.
 - A turret is a fixed enemy big gun. It turns and fires the tank shell. A grenade clanks. A rocket or a shell kills it. The wreck stays. It has no engine. The editor places it with Ctrl+4. F and A do nothing.
 - A combat chopper flies a route or holds its tile. An armed one fires a homing rocket. A low pass kills. A rocket or a shell drops the wreck, then the boom. The editor places it with Ctrl+5. A flips armed. W adds a route point.
+- The map editor changes a map's size. Z, or a click on the size line, edits it. A region map takes world pixels that divide by 16. A tile map takes tiles. The range is 24×16 through 160×160 tiles. Ground already painted stays in the top-left, and anything that falls off the new edge is removed. S writes the new `map.w` and `map.h`.
 - Mission 1 is a new 64×40 jungle route. It uses every objective from the gap list, with crates before the doors, the tank, the turret, the factory, and the chopper. No new sheets.
 - The title starts the region paint, and the title, Boot Hill, and the briefing upload it across frames. The battle uploads whatever is left. Canopy slices are padded before the upload, and a region fills by scanline.
 

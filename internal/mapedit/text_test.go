@@ -75,4 +75,7 @@ func TestInfoTextHit(t *testing.T) {
 	if _, ok := InfoTextHit(top+10, top, rh); ok {
 		t.Fatal("terrain row started text edit")
 	}
+	if kind, ok := InfoTextHit(top+25, top, rh); !ok || kind != typeSize {
+		t.Fatalf("size row kind=%d ok=%v", kind, ok)
+	}
 }

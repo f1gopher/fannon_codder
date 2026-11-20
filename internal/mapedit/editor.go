@@ -55,6 +55,7 @@ type Editor struct {
 	status                 string
 	typeKind               int
 	draft                  string
+	typeNote               string
 	sel                    pick
 	grabbing               bool
 	grab                   pick

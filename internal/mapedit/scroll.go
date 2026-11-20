@@ -24,9 +24,26 @@ func RowHeight(scale float64) float64 {
 }
 
 // InfoLines is the selected-map block under the phase list: a heading,
-// the terrain, the map size, and the view name. A tile map's size is in
-// tiles. A region map's size is world pixels.
-const InfoLines = 5
+// the terrain, the map size, the view name, the title, and the briefing.
+// A tile map's size is in tiles. A region map's size is world pixels.
+const InfoLines = 9
+
+// InfoTextHit reports whether a rail y in the info block starts title
+// or briefing editing. Heading and value rows both count.
+func InfoTextHit(y, infoTop, rowH float64) (int, bool) {
+	if rowH <= 0 || y < infoTop {
+		return 0, false
+	}
+	row := int((y - infoTop) / rowH)
+	switch row {
+	case 5, 6:
+		return typeTitle, true
+	case 7, 8:
+		return typeBrief, true
+	default:
+		return 0, false
+	}
+}
 
 // InfoHeight is that block in offscreen pixels.
 func InfoHeight(scale float64) float64 {

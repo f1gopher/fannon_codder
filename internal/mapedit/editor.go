@@ -53,6 +53,8 @@ type Editor struct {
 	dirty                  bool
 	stamp                  string
 	status                 string
+	typeKind               int
+	draft                  string
 	sel                    pick
 	grabbing               bool
 	grab                   pick
@@ -129,6 +131,7 @@ func (e *Editor) load(i int) {
 	e.armPlace = false
 	e.sel = pick{}
 	e.status = ""
+	e.cancelType()
 	if len(e.phases) == 0 {
 		e.err = fmt.Errorf("campaign has no phases")
 		return
@@ -242,6 +245,11 @@ func (e *Editor) label() string {
 
 func (e *Editor) Update() error {
 	e.time += 1.0 / tps
+	e.typeKeys()
+	if e.typing() {
+		ebiten.SetWindowTitle(e.label())
+		return nil
+	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
 	}
@@ -308,6 +316,12 @@ func (e *Editor) pointer() {
 	bar := BarHeight(e.scale)
 	onBar := cy >= 0 && cy < bar
 	down := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	if e.typing() {
+		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+			e.commitType()
+		}
+		return
+	}
 	if onBar && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if i, ok := ToolHit(cx, cy, e.scale); ok {
 			e.stamp = allStamps()[i]
@@ -316,12 +330,15 @@ func (e *Editor) pointer() {
 	}
 	if !onBar && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if cx < float64(rail) {
-			if cy < InfoTop(e.offH, e.scale) {
+			infoTop := InfoTop(e.offH, e.scale)
+			if cy < infoTop {
 				if row, ok := RailHit(cx, cy-bar, rail, RowHeight(e.scale), len(e.phases)); ok {
 					e.drag = false
 					e.stroke = nil
 					e.load(row)
 				}
+			} else if kind, ok := InfoTextHit(cy, infoTop, RowHeight(e.scale)); ok {
+				e.startType(kind)
 			}
 		} else {
 			x, y := e.worldCursor(cx, cy)
@@ -484,6 +501,30 @@ func (e *Editor) drawInfo(clip *ebiten.Image, rail int, infoTop, rh float64) {
 	drawFace(clip, e.font, e.scale, size, 8, infoTop+4+rh*2, railInkSel)
 	drawFace(clip, e.font, e.scale, "View  V", 8, infoTop+4+rh*3, railInk)
 	drawFace(clip, e.font, e.scale, e.viewName(), 8, infoTop+4+rh*4, railInkSel)
+	drawFace(clip, e.font, e.scale, "Title  T", 8, infoTop+4+rh*5, railInk)
+	drawFace(clip, e.font, e.scale, clipLine(e.phaseTitle(), 28), 8, infoTop+4+rh*6, railInkSel)
+	drawFace(clip, e.font, e.scale, "Brief  B", 8, infoTop+4+rh*7, railInk)
+	drawFace(clip, e.font, e.scale, clipLine(e.phaseBrief(), 28), 8, infoTop+4+rh*8, railInkSel)
+}
+
+func (e *Editor) phaseTitle() string {
+	if e.phase == nil {
+		return "—"
+	}
+	if e.phase.Title == "" {
+		return "—"
+	}
+	return e.phase.Title
+}
+
+func (e *Editor) phaseBrief() string {
+	if e.phase == nil {
+		return "—"
+	}
+	if e.phase.Briefing == "" {
+		return "—"
+	}
+	return e.phase.Briefing
 }
 
 func (e *Editor) viewName() string {
@@ -517,6 +558,7 @@ func (e *Editor) drawMap(screen *ebiten.Image) {
 	}
 	e.drawMarks(e.view)
 	e.drawHelp(e.view)
+	e.drawTypeBox(e.view)
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(rail), BarHeight(e.scale))
 	screen.DrawImage(e.view, op)
@@ -735,10 +777,73 @@ func (e *Editor) drawHelp(dst *ebiten.Image) {
 	if dst == nil || e.err != nil {
 		return
 	}
+	if e.typing() {
+		return
+	}
 	drawFace(dst, e.font, e.scale, e.help(), 8, 6, gridInk)
 	if e.status != "" {
 		drawFace(dst, e.font, e.scale, e.status, 8, 6+RowHeight(e.scale), gridInk)
 	}
+}
+
+func (e *Editor) drawTypeBox(dst *ebiten.Image) {
+	if dst == nil || !e.typing() {
+		return
+	}
+	s := e.scale
+	if s <= 0 {
+		s = 1
+	}
+	b := dst.Bounds()
+	pad := 12 * s / 3
+	w := float64(b.Dx()) - pad*2
+	if w > 420*s/3 {
+		w = 420 * s / 3
+	}
+	if w < 160 {
+		w = float64(b.Dx()) - pad*2
+	}
+	x := (float64(b.Dx()) - w) / 2
+	y := pad * 2
+	body := wrapDraft(e.draft+"▌", int(w/(14*s/3*0.52)))
+	lines := 1
+	for _, ch := range body {
+		if ch == '\n' {
+			lines++
+		}
+	}
+	if lines < 3 {
+		lines = 3
+	}
+	rh := RowHeight(s)
+	h := rh*float64(lines+2) + pad
+	fillRect(dst, int(x), int(y), int(w), int(h), barBG)
+	fillRect(dst, int(x), int(y), int(w), 1, railSel)
+	drawFace(dst, e.font, s, e.typePrompt()+"  Enter keeps  Esc cancels", x+pad, y+4, railInk)
+	drawFace(dst, e.font, s, body, x+pad, y+4+rh, railInkSel)
+}
+
+func wrapDraft(s string, width int) string {
+	if width < 8 {
+		width = 8
+	}
+	words := strings.Fields(s)
+	if len(words) == 0 {
+		return s
+	}
+	var b strings.Builder
+	line := words[0]
+	for _, w := range words[1:] {
+		if len(line)+1+len(w) > width {
+			b.WriteString(line)
+			b.WriteByte('\n')
+			line = w
+			continue
+		}
+		line += " " + w
+	}
+	b.WriteString(line)
+	return b.String()
 }
 
 func (e *Editor) drawSelection(dst *ebiten.Image) {

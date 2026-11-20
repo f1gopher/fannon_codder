@@ -112,7 +112,7 @@ func stampName(s string) string {
 }
 
 func (e *Editor) help() string {
-	return "left-click places    drag moves    Del removes    W patrol or chopper point    H home flag    F side    A armed    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    Ctrl+1 jeep    Ctrl+2 skidoo    Ctrl+3 tank    Ctrl+4 turret    Ctrl+5 chopper    S saves"
+	return "left-click places    drag moves    Del removes    W patrol or chopper point    H home flag    F side    A armed    T title    B briefing    Shift+1 civilian    Shift+2 hostage    Shift+3 tent    Shift+4 leader    Shift+5 handover    Shift+6 home    Shift+7 reinforced    Shift+8 factory    Shift+9 computer    Ctrl+1 jeep    Ctrl+2 skidoo    Ctrl+3 tank    Ctrl+4 turret    Ctrl+5 chopper    S saves"
 }
 
 func (e *Editor) tileAt(wx, wy float64) (int, int) {

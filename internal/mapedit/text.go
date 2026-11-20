@@ -13,9 +13,11 @@ const (
 	typeTitle
 	typeBrief
 	typeSize
-	titleMax = 80
-	briefMax = 400
-	sizeMax  = 32
+	typeMission
+	titleMax   = 80
+	briefMax   = 400
+	sizeMax    = 32
+	missionMax = 60
 )
 
 func (e *Editor) typing() bool {
@@ -35,6 +37,8 @@ func (e *Editor) startType(kind int) {
 		e.draft = e.phase.Briefing
 	case typeSize:
 		e.draft = e.sizeDraft()
+	case typeMission:
+		e.draft = e.missionName()
 	default:
 		e.draft = ""
 	}
@@ -59,6 +63,7 @@ func (e *Editor) commitType() {
 				e.phases[e.index].title = text
 			}
 			e.dirty = true
+			e.rebuildRows()
 		}
 	case typeBrief:
 		if text != e.phase.Briefing {
@@ -69,6 +74,8 @@ func (e *Editor) commitType() {
 		if !e.applySize(text) {
 			return
 		}
+	case typeMission:
+		e.renameMission(text)
 	}
 	e.cancelType()
 }
@@ -109,6 +116,8 @@ func (e *Editor) typeKeys() {
 		limit = titleMax
 	case typeSize:
 		limit = sizeMax
+	case typeMission:
+		limit = missionMax
 	}
 	for _, ch := range ebiten.AppendInputChars(nil) {
 		if ch == 0 || unicode.IsControl(ch) {

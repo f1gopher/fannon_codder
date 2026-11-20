@@ -7,6 +7,33 @@ import (
 	"fannon-codder/internal/sim"
 )
 
+func TestGroupsPhasesUnderMissions(t *testing.T) {
+	ed, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ed.missions) != 5 || ed.missions[1].Name != "Onward Virgin Soldiers" {
+		t.Fatalf("missions=%d", len(ed.missions))
+	}
+	if len(ed.rows) != 16 || !ed.rows[0].header {
+		t.Fatalf("rows=%d header=%v", len(ed.rows), ed.rows[0].header)
+	}
+	ed.load(1)
+	ed.movePhase(1)
+	if ed.missions[1].Phases[0] != "m02p02.json" || ed.phases[ed.index].file != "m02p01.json" {
+		t.Fatalf("order=%v selected=%s", ed.missions[1].Phases, ed.phases[ed.index].file)
+	}
+	ed.movePhase(-1)
+	if ed.missions[1].Phases[0] != "m02p01.json" {
+		t.Fatalf("order=%v", ed.missions[1].Phases)
+	}
+	ed.nameMission = 1
+	ed.renameMission("River Pie")
+	if ed.missions[1].Name != "River Pie" || !ed.campaignDirty {
+		t.Fatalf("name=%q dirty=%v", ed.missions[1].Name, ed.campaignDirty)
+	}
+}
+
 func TestOpensTheFirstPhase(t *testing.T) {
 	ed, err := New()
 	if err != nil {

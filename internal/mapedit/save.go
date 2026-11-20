@@ -58,9 +58,9 @@ func (e *Editor) remember() {
 		return
 	}
 	if e.memos == nil {
-		e.memos = map[int]memo{}
+		e.memos = map[string]memo{}
 	}
-	e.memos[e.index] = e.takeMemo()
+	e.memos[e.phases[e.index].file] = e.takeMemo()
 }
 
 func (e *Editor) useMemo(m memo) {
@@ -104,16 +104,26 @@ func (e *Editor) save() {
 		e.status = "nothing to save"
 		return
 	}
-	if !e.dirty {
+	if !e.dirty && !e.campaignDirty {
 		e.status = "no changes"
 		return
 	}
-	p := e.phaseForSave()
-	if err := data.SavePhase(e.phases[e.index].file, p); err != nil {
-		e.status = err.Error()
-		return
+	if e.dirty {
+		p := e.phaseForSave()
+		if err := data.SavePhase(e.phases[e.index].file, p); err != nil {
+			e.status = err.Error()
+			return
+		}
+		e.phase = p
+		e.dirty = false
+		delete(e.fresh, e.phases[e.index].file)
 	}
-	e.phase = p
-	e.dirty = false
+	if e.campaignDirty {
+		if err := e.writeCampaign(); err != nil {
+			e.status = err.Error()
+			return
+		}
+		e.campaignDirty = false
+	}
 	e.status = "saved " + e.phases[e.index].file
 }

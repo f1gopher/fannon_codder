@@ -258,7 +258,7 @@ func controls() []binding {
 		{
 			section: "Battle — end of a phase",
 			input:   "Left click, or Enter, after victory or defeat",
-			action:  "After a defeat, or in a debug sandbox, leaves for Boot Hill or the title. After a victory, opens Achievements for the soldiers still alive, then Remembrance for the soldiers who died, then Boot Hill.",
+			action:  "After a defeat, or in a debug sandbox, leaves for Boot Hill or the title. After a victory, opens Achievements for the soldiers still alive, then Remembrance for the soldiers who died. Another part of the same mission goes to that briefing with the survivors kept out. The last part returns to Boot Hill.",
 			tokens:  []string{"MouseButtonLeft", "KeyEnter"},
 		},
 	}

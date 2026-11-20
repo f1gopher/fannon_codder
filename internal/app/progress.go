@@ -17,6 +17,10 @@ type Progress struct {
 	AwaitingStub      bool // next mission has no map yet
 	SaveNotice        string
 	Heroes            []campaign.Hero
+	// Field is the squad still out between phases of one mission.
+	// Continue sends the debrief on to the next briefing, not Boot Hill.
+	Field    []campaign.Soldier
+	Continue bool
 }
 
 func NewProgress() *Progress {
@@ -31,10 +35,11 @@ func NewProgress() *Progress {
 
 func (p *Progress) reloadPhase() {
 	p.Phase = nil
-	if p.Campaign == nil || p.PhaseIndex < 0 || p.PhaseIndex >= len(p.Campaign.Phases) {
+	files := p.phaseFiles()
+	if p.PhaseIndex < 0 || p.PhaseIndex >= len(files) {
 		return
 	}
-	ph, err := data.LoadPhase(p.Campaign.Phases[p.PhaseIndex])
+	ph, err := data.LoadPhase(files[p.PhaseIndex])
 	if err != nil {
 		return
 	}
@@ -58,11 +63,33 @@ func (p *Progress) MissionNumber() int {
 	return 1
 }
 
+func (p *Progress) phaseFiles() []string {
+	if p == nil || p.Campaign == nil {
+		return nil
+	}
+	return p.Campaign.PhaseFiles()
+}
+
+func (p *Progress) MissionName() string {
+	if p == nil || p.Campaign == nil {
+		return ""
+	}
+	return p.Campaign.MissionName(p.MissionNumber())
+}
+
+func (p *Progress) available() int {
+	n := len(p.Field)
+	if p.Pool != nil {
+		n += p.Pool.Remaining()
+	}
+	return n
+}
+
 func (p *Progress) CanStart() bool {
 	if p.GameOver || p.AwaitingStub {
 		return false
 	}
-	return p.Phase != nil && p.Pool.Remaining() >= p.DeployCount()
+	return p.Phase != nil && p.available() >= p.DeployCount()
 }
 
 func (p *Progress) CanSave() bool {
@@ -73,9 +100,54 @@ func (p *Progress) MarkGameOverIfNeeded() {
 	if p.AwaitingStub {
 		return
 	}
-	if p.Pool.Remaining() < p.DeployCount() {
+	if p.available() < p.DeployCount() {
 		p.GameOver = true
 	}
+}
+
+// AfterWin advances one phase. Survivors of a mission that still has
+// parts stay out, topped up to the next deploy count. The last part
+// sends them home and recruits.
+func (p *Progress) AfterWin(survivors []campaign.Soldier) {
+	if p == nil {
+		return
+	}
+	cur := p.MissionNumber()
+	p.OnPhaseWon()
+	if p.Phase != nil && p.Phase.Mission == cur {
+		p.fitField(survivors)
+		return
+	}
+	p.Continue = false
+	p.Field = nil
+	if p.Pool != nil {
+		p.Pool.Return(survivors)
+	}
+}
+
+// fitField keeps the men who just lived, then takes or returns men so
+// the squad matches this phase. Too few men is game over.
+func (p *Progress) fitField(survivors []campaign.Soldier) {
+	need := p.DeployCount()
+	field := append([]campaign.Soldier{}, survivors...)
+	if len(field) > need {
+		p.Pool.Return(field[need:])
+		field = append([]campaign.Soldier{}, field[:need]...)
+	}
+	if len(field) < need && p.Pool != nil {
+		field = append(field, p.Pool.Deploy(need-len(field))...)
+	}
+	if len(field) < need {
+		if p.Pool != nil {
+			p.Pool.Return(field)
+		}
+		p.Field = nil
+		p.Continue = false
+		p.GameOver = true
+		return
+	}
+	p.Field = field
+	p.Continue = true
 }
 
 func (p *Progress) OnPhaseWon() {
@@ -127,6 +199,8 @@ func (p *Progress) ApplySave(s campaign.SaveGame) {
 	p.AwaitingStub = s.AwaitingStub
 	p.Pool = campaign.RestorePool(s.Recruits, s.NextName)
 	p.Heroes = append([]campaign.Hero{}, s.Heroes...)
+	p.Field = nil
+	p.Continue = false
 	p.reloadPhase()
 	// A save from before Mission 2 existed flagged the stub even though
 	// phase index 1 is now a real map. Trust the loaded phase.

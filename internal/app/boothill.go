@@ -156,11 +156,15 @@ func (b *BootHill) Draw(screen *ebiten.Image) {
 	render.Rect(screen, 4, 22, panelW, 100, color.RGBA{R: 0x14, G: 0x28, B: 0x18, A: 0xaa})
 
 	render.Text(screen, fmt.Sprintf(
-		"BOOT HILL  Mission %d  Graves %d  Queue %d",
-		b.prog.MissionNumber(), b.prog.Graves, b.prog.Pool.Remaining(),
+		"BOOT HILL  Mission %d  %s",
+		b.prog.MissionNumber(), b.prog.MissionName(),
 	), 8, 24)
+	render.Text(screen, fmt.Sprintf(
+		"Graves %d  Queue %d",
+		b.prog.Graves, b.prog.Pool.Remaining(),
+	), 8, 36)
 
-	y := 36
+	y := 48
 	shown := 0
 	if b.prog.Pool != nil {
 		for _, s := range b.prog.Pool.Recruits {

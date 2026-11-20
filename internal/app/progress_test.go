@@ -161,6 +161,41 @@ func TestCleanMission1ThenMission2Shows27(t *testing.T) {
 	}
 }
 
+func TestNextPhaseKeepsTheSquad(t *testing.T) {
+	p := NewProgress()
+	men := p.Pool.Deploy(p.DeployCount())
+	for i := range men {
+		men[i].PhasesThisMission++
+	}
+	p.Pool.Return(men)
+	p.OnPhaseWon()
+	out := p.Pool.Deploy(p.DeployCount())
+	out[0].Name = "Keep"
+	for i := range out {
+		out[i].PhasesThisMission++
+	}
+	before := p.Pool.Remaining()
+	p.AfterWin(out)
+	if !p.Continue || p.Phase == nil || p.Phase.Mission != 2 || p.Phase.Phase != 2 {
+		t.Fatalf("continue=%v phase=%v", p.Continue, p.Phase)
+	}
+	if len(p.Field) != 3 || p.Field[0].Name != "Keep" {
+		t.Fatalf("field=%v", p.Field)
+	}
+	if p.Pool.Remaining() != before {
+		t.Fatalf("queue %d, want %d still home", p.Pool.Remaining(), before)
+	}
+	if p.MissionsCompleted != 1 {
+		t.Fatalf("completed=%d", p.MissionsCompleted)
+	}
+	// The next part needs the same three, so the queue is not touched.
+	got := append([]campaign.Soldier{}, p.Field...)
+	p.Field = nil
+	if got[0].Name != "Keep" || got[0].PhasesThisMission != 1 {
+		t.Fatalf("kept=%+v", got[0])
+	}
+}
+
 func TestOldStubSaveLoadsMission2(t *testing.T) {
 	p := NewProgress()
 	men := p.Pool.Deploy(2)

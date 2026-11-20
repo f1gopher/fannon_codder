@@ -1,15 +1,45 @@
 {
-  "phases": [
-    "m01p01.json",
-    "m02p01.json",
-    "m02p02.json",
-    "m03p01.json",
-    "m04p01.json",
-    "m04p02.json",
-    "m04p03.json",
-    "m04p04.json",
-    "m05p01.json",
-    "m05p02.json",
-    "m05p03.json"
+  "missions": [
+    {
+      "number": 1,
+      "name": "The Sensible Initiation",
+      "phases": [
+        "m01p01.json"
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Onward Virgin Soldiers",
+      "phases": [
+        "m02p01.json",
+        "m02p02.json"
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Antarctic Adventure",
+      "phases": [
+        "m03p01.json"
+      ]
+    },
+    {
+      "number": 4,
+      "name": "Supa Smashing Namtastic",
+      "phases": [
+        "m04p01.json",
+        "m04p02.json",
+        "m04p03.json",
+        "m04p04.json"
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Those Vicious Vikings",
+      "phases": [
+        "m05p01.json",
+        "m05p02.json",
+        "m05p03.json"
+      ]
+    }
   ]
 }

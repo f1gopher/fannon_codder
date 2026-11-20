@@ -254,7 +254,7 @@ func TestPhasesFillTheScreen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range c.Phases {
+	for _, name := range c.PhaseFiles() {
 		w := mustWorld(t, mustPhase(t, name))
 		mw, mh := w.Map.PixelSize()
 		if mw < minW || mh < minH {
@@ -281,10 +281,10 @@ func TestPhaseTerrains(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(c.Phases) != len(want) {
-		t.Fatalf("phases = %d, terrain table = %d", len(c.Phases), len(want))
+	if len(c.PhaseFiles()) != len(want) {
+		t.Fatalf("phases = %d, terrain table = %d", len(c.PhaseFiles()), len(want))
 	}
-	for _, name := range c.Phases {
+	for _, name := range c.PhaseFiles() {
 		p := mustPhase(t, name)
 		if p.Terrain != want[name] {
 			t.Fatalf("%s terrain = %q, want %q", name, p.Terrain, want[name])
@@ -297,8 +297,12 @@ func TestCampaignRunsMission2AfterMission1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(c.Phases) < 3 || c.Phases[0] != "m01p01.json" || c.Phases[1] != "m02p01.json" || c.Phases[2] != "m02p02.json" {
-		t.Fatalf("phases=%v", c.Phases)
+	files := c.PhaseFiles()
+	if len(files) < 3 || files[0] != "m01p01.json" || files[1] != "m02p01.json" || files[2] != "m02p02.json" {
+		t.Fatalf("phases=%v", files)
+	}
+	if c.MissionName(2) != "Onward Virgin Soldiers" || len(c.Missions) != 5 {
+		t.Fatalf("missions=%d name=%q", len(c.Missions), c.MissionName(2))
 	}
 }
 

@@ -77,9 +77,10 @@ func (e *Editor) endStroke() bool {
 	cr := terrain.ChartRegion{Tile: sim.TileTree, Name: "tree", Points: pts}
 	e.chart.Regions = append(e.chart.Regions, cr)
 	if e.added == nil {
-		e.added = map[int][]terrain.ChartRegion{}
+		e.added = map[string][]terrain.ChartRegion{}
 	}
-	e.added[e.index] = append(e.added[e.index], cr)
+	file := e.phases[e.index].file
+	e.added[file] = append(e.added[file], cr)
 	return true
 }
 

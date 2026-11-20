@@ -45,7 +45,7 @@ func (s *Service) Leave() {}
 
 func (s *Service) Update(h Host) error {
 	if s.i >= len(s.pages) {
-		h.Switch(NewBootHill(s.prog))
+		s.leave(h)
 		return nil
 	}
 	p := h.Pointer()
@@ -53,10 +53,19 @@ func (s *Service) Update(h Host) error {
 		h.PlayKind(sim.CueClick)
 		s.i++
 		if s.i >= len(s.pages) {
-			h.Switch(NewBootHill(s.prog))
+			s.leave(h)
 		}
 	}
 	return nil
+}
+
+// leave opens the next part of this mission, or Boot Hill when the mission is over.
+func (s *Service) leave(h Host) {
+	if s.prog != nil && s.prog.Continue && s.prog.CanStart() {
+		h.Switch(NewBriefing(s.prog))
+		return
+	}
+	h.Switch(NewBootHill(s.prog))
 }
 
 func (s *Service) Draw(screen *ebiten.Image) {

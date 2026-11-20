@@ -5,13 +5,46 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"fannon-codder/internal/sim"
 )
 
-// Campaign lists phase files in play order.
-type Campaign struct {
+// Mission is one operation: a name and its phases, in play order.
+type Mission struct {
+	Number int      `json:"number"`
+	Name   string   `json:"name"`
 	Phases []string `json:"phases"`
+}
+
+// Campaign is the ordered list of missions. Each mission holds its phases.
+type Campaign struct {
+	Missions []Mission `json:"missions"`
+}
+
+// PhaseFiles is every phase file in play order.
+func (c *Campaign) PhaseFiles() []string {
+	if c == nil {
+		return nil
+	}
+	var out []string
+	for _, m := range c.Missions {
+		out = append(out, m.Phases...)
+	}
+	return out
+}
+
+// MissionName is the hill name for a mission number.
+func (c *Campaign) MissionName(number int) string {
+	if c == nil {
+		return ""
+	}
+	for _, m := range c.Missions {
+		if m.Number == number {
+			return m.Name
+		}
+	}
+	return ""
 }
 
 // Phase is one mission phase loaded from JSON.
@@ -118,6 +151,24 @@ func missionsDir() string {
 	return filepath.Join("data", "missions")
 }
 
+// BlankPhase is an empty region map for a new part. It is not a campaign map.
+func BlankPhase(mission, phase int, terrain string) *Phase {
+	if terrain == "" {
+		terrain = "jungle"
+	}
+	return &Phase{
+		Mission:     mission,
+		Phase:       phase,
+		Title:       "New phase",
+		Briefing:    "Clear the area.",
+		Deploy:      2,
+		Terrain:     terrain,
+		Map:         Tilemap{W: 24, H: 16, Regions: []Region{}},
+		PlayerStart: [2]int{2, 2},
+		Objectives:  []string{"kill_all_enemy"},
+	}
+}
+
 // WritePhase writes one phase file. The caller passes the full path.
 func WritePhase(path string, p *Phase) error {
 	b, err := json.MarshalIndent(p, "", "  ")
@@ -142,14 +193,55 @@ func LoadCampaign() (*Campaign, error) {
 	if err != nil {
 		return nil, err
 	}
+	return ParseCampaign(b)
+}
+
+// ParseCampaign reads a campaign document.
+func ParseCampaign(b []byte) (*Campaign, error) {
 	var c Campaign
 	if err := json.Unmarshal(b, &c); err != nil {
 		return nil, err
 	}
-	if len(c.Phases) == 0 {
+	if len(c.PhaseFiles()) == 0 {
 		return nil, fmt.Errorf("campaign has no phases")
 	}
+	seen := map[string]bool{}
+	numbers := map[int]bool{}
+	for _, m := range c.Missions {
+		if m.Number < 1 {
+			return nil, fmt.Errorf("mission number %d", m.Number)
+		}
+		if numbers[m.Number] {
+			return nil, fmt.Errorf("mission %d repeated", m.Number)
+		}
+		numbers[m.Number] = true
+		if strings.TrimSpace(m.Name) == "" {
+			return nil, fmt.Errorf("mission %d has no name", m.Number)
+		}
+		if len(m.Phases) == 0 {
+			return nil, fmt.Errorf("mission %d has no phases", m.Number)
+		}
+		for _, file := range m.Phases {
+			if seen[file] {
+				return nil, fmt.Errorf("phase %s repeated", file)
+			}
+			seen[file] = true
+		}
+	}
 	return &c, nil
+}
+
+// SaveCampaign writes campaign.json next to the phase files.
+func SaveCampaign(c *Campaign) error {
+	if c == nil || len(c.PhaseFiles()) == 0 {
+		return fmt.Errorf("campaign has no phases")
+	}
+	b, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	b = append(b, '\n')
+	return os.WriteFile(filepath.Join(missionsDir(), "campaign.json"), b, 0o644)
 }
 
 func LoadPhase(name string) (*Phase, error) {
@@ -170,7 +262,7 @@ func LoadFirstWorld() (*sim.World, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, err := LoadPhase(c.Phases[0])
+	p, err := LoadPhase(c.PhaseFiles()[0])
 	if err != nil {
 		return nil, err
 	}

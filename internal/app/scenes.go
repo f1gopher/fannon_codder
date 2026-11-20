@@ -230,7 +230,21 @@ func battleFromWorld(prog *Progress, w *sim.World, sandbox bool) *Battle {
 	if s := w.ActiveSquad(); s != nil && len(s.MemberIDs) < n {
 		n = len(s.MemberIDs)
 	}
-	men := prog.Pool.Deploy(n)
+	var men []campaign.Soldier
+	if len(prog.Field) > 0 {
+		men = append([]campaign.Soldier{}, prog.Field...)
+		prog.Field = nil
+		prog.Continue = false
+		if len(men) > n {
+			prog.Pool.Return(men[n:])
+			men = men[:n]
+		}
+		if len(men) < n {
+			men = append(men, prog.Pool.Deploy(n-len(men))...)
+		}
+	} else {
+		men = prog.Pool.Deploy(n)
+	}
 	nameSquad(w, men)
 	b.deployed = men
 	return finishBattle(b)
@@ -563,7 +577,9 @@ func (b *Battle) settleOnce(won bool) {
 	b.survivors = survivors
 	b.fallen = fallen
 	b.prog.Graves += graves
-	b.prog.Pool.Return(survivors)
+	if !won {
+		b.prog.Pool.Return(survivors)
+	}
 }
 
 func (b *Battle) tally() (graves int, survivors, fallen []campaign.Soldier) {
@@ -594,7 +610,7 @@ func (b *Battle) leaveBattle(h Host, won bool) {
 		return
 	}
 	if won {
-		b.prog.OnPhaseWon()
+		b.prog.AfterWin(b.survivors)
 		h.Switch(NewService(b.prog, b.survivors, b.fallen))
 		return
 	}

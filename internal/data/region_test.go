@@ -11,7 +11,7 @@ func TestCampaignPhasesAreRegions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range c.Phases {
+	for _, name := range c.PhaseFiles() {
 		p, err := LoadPhase(name)
 		if err != nil {
 			t.Fatal(err)

@@ -32,12 +32,18 @@ const (
 // not written. S writes the start, enemies, huts, crates, and barrels.
 type Editor struct {
 	phases   []phaseRow
+	missions []data.Mission
+	rows     []railItem
 	index    int
-	grid     sim.Map
-	biome    string
-	freeform bool
-	chart    terrain.Chart
-	err      error
+	// campaignDirty is a mission name, order, or membership change.
+	campaignDirty bool
+	fresh         map[string]bool
+	nameMission   int
+	grid          sim.Map
+	biome         string
+	freeform      bool
+	chart         terrain.Chart
+	err           error
 	// start is the player tile. hasStart is false until a phase loads.
 	start                  [2]int
 	hasStart               bool
@@ -49,7 +55,7 @@ type Editor struct {
 	hostages               []data.Enemy
 	vehicles               []data.VehicleSpec
 	phase                  *data.Phase
-	memos                  map[int]memo
+	memos                  map[string]memo
 	dirty                  bool
 	stamp                  string
 	status                 string
@@ -80,7 +86,7 @@ type Editor struct {
 	time             float64
 	gridView         bool
 	stroke           [][2]float64
-	added            map[int][]terrain.ChartRegion
+	added            map[string][]terrain.ChartRegion
 
 	scale      float64
 	offW, offH int
@@ -96,9 +102,18 @@ type Editor struct {
 }
 
 type phaseRow struct {
-	file  string
-	name  string
-	title string
+	file    string
+	name    string
+	title   string
+	mission int
+}
+
+// railItem is one row in the phase list. A header is the mission name.
+type railItem struct {
+	header  bool
+	mission int
+	phase   int
+	label   string
 }
 
 // New loads campaign.json. A missing campaign is an error. A bad phase
@@ -112,16 +127,49 @@ func New() (*Editor, error) {
 	if err != nil {
 		return nil, err
 	}
-	ed := &Editor{font: src, scale: 1, stamp: stampGrunt, memos: map[int]memo{}}
-	for _, file := range c.Phases {
-		row := phaseRow{file: file, name: strings.TrimSuffix(file, ".json")}
-		if p, err := data.LoadPhase(file); err == nil {
-			row.title = p.Title
-		}
-		ed.phases = append(ed.phases, row)
+	ed := &Editor{
+		font:     src,
+		scale:    1,
+		stamp:    stampGrunt,
+		memos:    map[string]memo{},
+		missions: append([]data.Mission{}, c.Missions...),
+		fresh:    map[string]bool{},
 	}
+	for mi, m := range ed.missions {
+		for _, file := range m.Phases {
+			row := phaseRow{file: file, name: strings.TrimSuffix(file, ".json"), mission: mi}
+			if p, err := data.LoadPhase(file); err == nil {
+				row.title = p.Title
+			}
+			ed.phases = append(ed.phases, row)
+		}
+	}
+	ed.rebuildRows()
 	ed.load(0)
 	return ed, nil
+}
+
+func (e *Editor) rebuildRows() {
+	e.rows = nil
+	for mi, m := range e.missions {
+		e.rows = append(e.rows, railItem{
+			header:  true,
+			mission: mi,
+			label:   fmt.Sprintf("M%d  %s", m.Number, m.Name),
+		})
+		for _, file := range m.Phases {
+			for pi, p := range e.phases {
+				if p.file != file {
+					continue
+				}
+				label := p.name
+				if p.title != "" {
+					label += "  " + p.title
+				}
+				e.rows = append(e.rows, railItem{mission: mi, phase: pi, label: "  " + label})
+			}
+		}
+	}
 }
 
 func (e *Editor) load(i int) {
@@ -158,7 +206,7 @@ func (e *Editor) load(i int) {
 	e.vehicles = nil
 	e.phase = nil
 	e.dirty = false
-	if m, ok := e.memos[i]; ok && m.phase != nil {
+	if m, ok := e.memos[e.phases[i].file]; ok && m.phase != nil {
 		e.index = i
 		p := m.phase
 		e.phases[i].title = p.Title
@@ -179,7 +227,7 @@ func (e *Editor) load(i int) {
 				return
 			}
 			e.chart = ch
-			e.chart.Regions = append(e.chart.Regions, e.added[i]...)
+			e.chart.Regions = append(e.chart.Regions, e.added[e.phases[i].file]...)
 		}
 		e.err = nil
 		e.grid = g
@@ -212,7 +260,7 @@ func (e *Editor) load(i int) {
 			return
 		}
 		e.chart = ch
-		e.chart.Regions = append(e.chart.Regions, e.added[i]...)
+		e.chart.Regions = append(e.chart.Regions, e.added[e.phases[i].file]...)
 	}
 	e.err = nil
 	e.grid = g
@@ -261,6 +309,22 @@ func (e *Editor) Update() error {
 	e.stampKey()
 	if inpututil.IsKeyJustPressed(ebiten.KeyS) {
 		e.save()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
+		e.nameMission = e.phaseMission()
+		e.startType(typeMission)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyBracketLeft) {
+		e.movePhase(-1)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyBracketRight) {
+		e.movePhase(1)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
+		e.addPhase()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
+		e.removePhase()
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyDelete) || inpututil.IsKeyJustPressed(ebiten.KeyBackspace) {
 		e.removeSelected()
@@ -333,10 +397,16 @@ func (e *Editor) pointer() {
 		if cx < float64(rail) {
 			infoTop := InfoTop(e.offH, e.scale)
 			if cy < infoTop {
-				if row, ok := RailHit(cx, cy-bar, rail, RowHeight(e.scale), len(e.phases)); ok {
+				if row, ok := RailHit(cx, cy-bar, rail, RowHeight(e.scale), len(e.rows)); ok {
 					e.drag = false
 					e.stroke = nil
-					e.load(row)
+					item := e.rows[row]
+					if item.header {
+						e.nameMission = item.mission
+						e.startType(typeMission)
+					} else {
+						e.load(item.phase)
+					}
 				}
 			} else if kind, ok := InfoTextHit(cy, infoTop, RowHeight(e.scale)); ok {
 				e.startType(kind)
@@ -456,23 +526,20 @@ func (e *Editor) drawRail(screen *ebiten.Image) {
 	rh := RowHeight(e.scale)
 	infoTop := InfoTop(e.offH, e.scale)
 	top := BarHeight(e.scale)
-	for i, row := range e.phases {
+	for i, row := range e.rows {
 		y := top + float64(i)*rh
 		if y+rh > infoTop {
 			break
 		}
-		if i == e.index {
+		selected := !row.header && row.phase == e.index
+		if selected || (row.header && e.nameMission == row.mission && e.typeKind == typeMission) {
 			fillRect(clip, 0, int(y), rail, int(rh)+1, railSel)
 		}
 		ink := railInk
-		if i == e.index {
+		if selected || row.header {
 			ink = railInkSel
 		}
-		label := row.name
-		if row.title != "" {
-			label += "  " + row.title
-		}
-		drawFace(clip, e.font, e.scale, label, 8, y+4, ink)
+		drawFace(clip, e.font, e.scale, row.label, 8, y+4, ink)
 	}
 	e.drawInfo(clip, rail, infoTop, rh)
 }
